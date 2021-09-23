@@ -63,6 +63,7 @@ addons:
       - python3-cffi
       - python3-setuptools
       - python3-pip
+      - libgtest-dev
     update: true
   homebrew:
     packages:
@@ -72,9 +73,6 @@ addons:
     update: true
 
 before_install:
-  - git clone --depth=1 https://github.com/google/googletest
-  - mkdir googletest/build && cd googletest/build
-  - cmake .. && make && make install
   - if [ "$DEPLOY_BUILD" = "TRUE" ]; then sudo snap install universal-ctags; fi
   - if [ "$DEPLOY_BUILD" = "TRUE" ]; then pip3 install --user codecov==2.0.22; export CFLAGS="-coverage"; fi
 
