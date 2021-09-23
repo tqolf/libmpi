@@ -1,5 +1,24 @@
 language: c
 
+os:
+  - linux
+  - osx
+
+compiler:
+  - gcc
+  - clang
+
+addons:
+  apt:
+    packages:
+      - graphviz
+      - nasm
+  homebrew:
+    packages:
+      - graphviz
+      - nasm
+    update: true
+
 script:
   - mkdir build && cd build && rm -rf ./*
   - cmake -DGCOV=ON -DCMAKE_BUILD_TYPE=Debug .. && make
