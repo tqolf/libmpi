@@ -1,5 +1,12 @@
 language: c
 
+addons:
+  apt:
+    packages:
+      - gcc-7
+      - g++-7
+      - cmake-3.15
+
 script:
   - mkdir build && cd build && rm -rf ./*
   - cmake -DGCOV=ON -DCMAKE_BUILD_TYPE=Debug .. && make
