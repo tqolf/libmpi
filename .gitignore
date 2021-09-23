@@ -31,4 +31,7 @@
 *.out
 *.app
 
-mpi/asm/
+# ignore directories
+build/**
+mpi/asm/**
+.vscode/**

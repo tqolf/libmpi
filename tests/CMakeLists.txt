@@ -1,8 +1,3 @@
-# demo: mpi
-ADD_EXECUTABLE(demo-mpi demo-mpi.cpp)
-TARGET_LINK_LIBRARIES(demo-mpi mpi crypto pthread dl)
-TARGET_STRIP_PATH_PREFIX(demo-mpi)
-
 # unit-test
 ADD_EXECUTABLE(unittest-mpi unittest-mpi.cpp)
 TARGET_LINK_LIBRARIES(unittest-mpi mpi crypto dl gtest pthread)
