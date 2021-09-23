@@ -1,0 +1,10 @@
+language: c
+
+script:
+  - mkdir build && cd build && rm -rf ./*
+  - cmake -DGCOV=ON -DCMAKE_BUILD_TYPE=Debug .. && make
+  - ./tests/unittest-mpi > /dev/null
+  - cd ..
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
