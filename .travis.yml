@@ -21,6 +21,12 @@ matrix:
       os: linux
       dist: bionic
       sudo: required
+      compiler: clang
+      env: TRAVIS_ARCH="arm64" DEPLOY_BUILD=TRUE
+    - arch: arm64
+      os: linux
+      dist: bionic
+      sudo: required
       compiler: gcc
       env: TRAVIS_ARCH="arm64"
     - arch: amd64
@@ -55,21 +61,21 @@ addons:
       - nasm
       - valgrind
       - python3-dev
-      - python3-cffi
       - python3-setuptools
       - python3-pip
-      - libgtest-dev
       - curl
     update: true
   homebrew:
     packages:
       - graphviz
       - nasm
-      - googletest
       - curl
     update: true
 
 before_install:
+  - git clone https://github.com/google/googletest.git
+  - cd googletest && mkdir build && cd build
+  - make && make install
   - if [ "$DEPLOY_BUILD" = "TRUE" ]; then sudo snap install universal-ctags; fi
   - if [ "$DEPLOY_BUILD" = "TRUE" ]; then pip3 install --user codecov==2.0.22; export CFLAGS="-coverage"; fi
 
