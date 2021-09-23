@@ -13,10 +13,12 @@ addons:
     packages:
       - graphviz
       - nasm
+      - googletest
   homebrew:
     packages:
       - graphviz
       - nasm
+      - googletest
     update: true
 
 script:
