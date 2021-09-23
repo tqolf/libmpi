@@ -1,0 +1,21 @@
+fail_fast: false
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: master
+    hooks:
+      - id: check-added-large-files
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: check-merge-conflict
+      - id: check-json
+      - id: check-yaml
+        args: [--allow-multiple-document]
+      - id: check-case-conflict
+      - id: check-symlinks
+      - id: end-of-file-fixer
+      - id: pretty-format-json
+  - repo: git://github.com/doublify/pre-commit-clang-format
+    rev: master
+    hooks:
+      - id: clang-format

@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef CRYPTO_PKEY_RSA_H
-#define CRYPTO_PKEY_RSA_H
+#ifndef MULTIPLE_PRECISION_INTEGER_RSA_H
+#define MULTIPLE_PRECISION_INTEGER_RSA_H
 
 #include <mpi/mpi.h>
 #include <mpi/mpi-montgomery.h>
@@ -53,8 +53,10 @@ typedef struct {
 rsa_key_t *rsa_new(unsigned int ebits, unsigned int nbits, unsigned int primes);
 void rsa_free(rsa_key_t *key);
 
-int rsa_import(rsa_key_t *key, const mpi_t *n, const mpi_t *e, const mpi_t *d, const mpi_t *dp, const mpi_t *dq, const mpi_t *qinv);
-rsa_key_t *rsa_generate_key(const mpi_t *pubexp, unsigned int nbits, unsigned int primes, int (*rand_bytes)(void *, unsigned char *, unsigned int), void *rand_state);
+int rsa_import(rsa_key_t *key, const mpi_t *n, const mpi_t *e, const mpi_t *d, const mpi_t *dp,
+               const mpi_t *dq, const mpi_t *qinv);
+rsa_key_t *rsa_generate_key(const mpi_t *pubexp, unsigned int nbits, unsigned int primes,
+                            int (*rand_bytes)(void *, unsigned char *, unsigned int), void *rand_state);
 
 int rsa_pub_cipher(mpi_t *r, const mpi_t *x, const rsa_key_t *key);
 int rsa_prv_cipher(mpi_t *r, const mpi_t *x, const rsa_key_t *key);

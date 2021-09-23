@@ -131,53 +131,92 @@
 #if !defined(MPI_NO_INLINE_ASM) && defined(__GNUC__) && (__GNUC__ >= 2)
 
 #if defined(__arm__) && (defined(__thumb2__) || !defined(__thumb__)) && MPI_LIMB_BITS == 32
-#define UADD_AABB(sh, sl, ah, al, bh, bl)                                                                                                     \
-    do {                                                                                                                                      \
-        if (BUILTIN_CONSTANT(bl) && -(uint32_t)(bl) < (uint32_t)(bl)) {                                                                       \
-            __asm__("subs\t%1, %4, %5\n\tadc\t%0, %2, %3" : "=r"(sh), "=&r"(sl) : "r"(ah), "rI"(bh), "%r"(al), "rI"(-(uint32_t)(bl)) : "cc"); \
-        } else {                                                                                                                              \
-            __asm__("adds\t%1, %4, %5\n\tadc\t%0, %2, %3" : "=r"(sh), "=&r"(sl) : "r"(ah), "rI"(bh), "%r"(al), "rI"(bl) : "cc");              \
-        }                                                                                                                                     \
+#define UADD_AABB(sh, sl, ah, al, bh, bl)                                \
+    do {                                                                 \
+        if (BUILTIN_CONSTANT(bl) && -(uint32_t)(bl) < (uint32_t)(bl)) {  \
+            __asm__("subs\t%1, %4, %5\n\tadc\t%0, %2, %3"                \
+                    : "=r"(sh), "=&r"(sl)                                \
+                    : "r"(ah), "rI"(bh), "%r"(al), "rI"(-(uint32_t)(bl)) \
+                    : "cc");                                             \
+        } else {                                                         \
+            __asm__("adds\t%1, %4, %5\n\tadc\t%0, %2, %3"                \
+                    : "=r"(sh), "=&r"(sl)                                \
+                    : "r"(ah), "rI"(bh), "%r"(al), "rI"(bl)              \
+                    : "cc");                                             \
+        }                                                                \
     } while (0)
 
 /* FIXME: Extend the immediate range for the low word by using both ADDS and
    SUBS, since they set carry in the same way.  We need separate definitions
    for thumb and non-thumb since thumb lacks RSC.  */
 #if defined(__thumb__)
-#define USUB_AABB(sh, sl, ah, al, bh, bl)                                                                                       \
-    do {                                                                                                                        \
-        if (BUILTIN_CONSTANT(ah) && BUILTIN_CONSTANT(bh) && (ah) == (bh)) {                                                     \
-            __asm__("subs\t%1, %2, %3\n\tsbc\t%0, %0, %0" : "=r"(sh), "=r"(sl) : "r"(al), "rI"(bl) : "cc");                     \
-        } else if (BUILTIN_CONSTANT(al)) {                                                                                      \
-            __asm__("rsbs\t%1, %5, %4\n\tsbc\t%0, %2, %3" : "=r"(sh), "=&r"(sl) : "r"(ah), "rI"(bh), "rI"(al), "r"(bl) : "cc"); \
-        } else if (BUILTIN_CONSTANT(bl)) {                                                                                      \
-            __asm__("subs\t%1, %4, %5\n\tsbc\t%0, %2, %3" : "=r"(sh), "=&r"(sl) : "r"(ah), "rI"(bh), "r"(al), "rI"(bl) : "cc"); \
-        } else {                                                                                                                \
-            __asm__("subs\t%1, %4, %5\n\tsbc\t%0, %2, %3" : "=r"(sh), "=&r"(sl) : "r"(ah), "rI"(bh), "r"(al), "rI"(bl) : "cc"); \
-        }                                                                                                                       \
+#define USUB_AABB(sh, sl, ah, al, bh, bl)                                   \
+    do {                                                                    \
+        if (BUILTIN_CONSTANT(ah) && BUILTIN_CONSTANT(bh) && (ah) == (bh)) { \
+            __asm__("subs\t%1, %2, %3\n\tsbc\t%0, %0, %0"                   \
+                    : "=r"(sh), "=r"(sl)                                    \
+                    : "r"(al), "rI"(bl)                                     \
+                    : "cc");                                                \
+        } else if (BUILTIN_CONSTANT(al)) {                                  \
+            __asm__("rsbs\t%1, %5, %4\n\tsbc\t%0, %2, %3"                   \
+                    : "=r"(sh), "=&r"(sl)                                   \
+                    : "r"(ah), "rI"(bh), "rI"(al), "r"(bl)                  \
+                    : "cc");                                                \
+        } else if (BUILTIN_CONSTANT(bl)) {                                  \
+            __asm__("subs\t%1, %4, %5\n\tsbc\t%0, %2, %3"                   \
+                    : "=r"(sh), "=&r"(sl)                                   \
+                    : "r"(ah), "rI"(bh), "r"(al), "rI"(bl)                  \
+                    : "cc");                                                \
+        } else {                                                            \
+            __asm__("subs\t%1, %4, %5\n\tsbc\t%0, %2, %3"                   \
+                    : "=r"(sh), "=&r"(sl)                                   \
+                    : "r"(ah), "rI"(bh), "r"(al), "rI"(bl)                  \
+                    : "cc");                                                \
+        }                                                                   \
     } while (0)
 #else
-#define USUB_AABB(sh, sl, ah, al, bh, bl)                                                                                           \
-    do {                                                                                                                            \
-        if (BUILTIN_CONSTANT(ah) && BUILTIN_CONSTANT(bh) && (ah) == (bh)) {                                                         \
-            __asm__("subs\t%1, %2, %3\n\tsbc\t%0, %0, %0" : "=r"(sh), "=r"(sl) : "r"(al), "rI"(bl) : "cc");                         \
-        } else if (BUILTIN_CONSTANT(al)) {                                                                                          \
-            if (BUILTIN_CONSTANT(ah)) {                                                                                             \
-                __asm__("rsbs\t%1, %5, %4\n\trsc\t%0, %3, %2" : "=r"(sh), "=&r"(sl) : "rI"(ah), "r"(bh), "rI"(al), "r"(bl) : "cc"); \
-            } else {                                                                                                                \
-                __asm__("rsbs\t%1, %5, %4\n\tsbc\t%0, %2, %3" : "=r"(sh), "=&r"(sl) : "r"(ah), "rI"(bh), "rI"(al), "r"(bl) : "cc"); \
-            }                                                                                                                       \
-        } else if (BUILTIN_CONSTANT(ah)) {                                                                                          \
-            if (BUILTIN_CONSTANT(bl)) {                                                                                             \
-                __asm__("subs\t%1, %4, %5\n\trsc\t%0, %3, %2" : "=r"(sh), "=&r"(sl) : "rI"(ah), "r"(bh), "r"(al), "rI"(bl) : "cc"); \
-            } else {                                                                                                                \
-                __asm__("rsbs\t%1, %5, %4\n\trsc\t%0, %3, %2" : "=r"(sh), "=&r"(sl) : "rI"(ah), "r"(bh), "rI"(al), "r"(bl) : "cc"); \
-            }                                                                                                                       \
-        } else if (BUILTIN_CONSTANT(bl)) {                                                                                          \
-            __asm__("subs\t%1, %4, %5\n\tsbc\t%0, %2, %3" : "=r"(sh), "=&r"(sl) : "r"(ah), "rI"(bh), "r"(al), "rI"(bl) : "cc");     \
-        } else {                                                                                                                    \
-            __asm__("subs\t%1, %4, %5\n\tsbc\t%0, %2, %3" : "=r"(sh), "=&r"(sl) : "r"(ah), "rI"(bh), "r"(al), "rI"(bl) : "cc");     \
-        }                                                                                                                           \
+#define USUB_AABB(sh, sl, ah, al, bh, bl)                                   \
+    do {                                                                    \
+        if (BUILTIN_CONSTANT(ah) && BUILTIN_CONSTANT(bh) && (ah) == (bh)) { \
+            __asm__("subs\t%1, %2, %3\n\tsbc\t%0, %0, %0"                   \
+                    : "=r"(sh), "=r"(sl)                                    \
+                    : "r"(al), "rI"(bl)                                     \
+                    : "cc");                                                \
+        } else if (BUILTIN_CONSTANT(al)) {                                  \
+            if (BUILTIN_CONSTANT(ah)) {                                     \
+                __asm__("rsbs\t%1, %5, %4\n\trsc\t%0, %3, %2"               \
+                        : "=r"(sh), "=&r"(sl)                               \
+                        : "rI"(ah), "r"(bh), "rI"(al), "r"(bl)              \
+                        : "cc");                                            \
+            } else {                                                        \
+                __asm__("rsbs\t%1, %5, %4\n\tsbc\t%0, %2, %3"               \
+                        : "=r"(sh), "=&r"(sl)                               \
+                        : "r"(ah), "rI"(bh), "rI"(al), "r"(bl)              \
+                        : "cc");                                            \
+            }                                                               \
+        } else if (BUILTIN_CONSTANT(ah)) {                                  \
+            if (BUILTIN_CONSTANT(bl)) {                                     \
+                __asm__("subs\t%1, %4, %5\n\trsc\t%0, %3, %2"               \
+                        : "=r"(sh), "=&r"(sl)                               \
+                        : "rI"(ah), "r"(bh), "r"(al), "rI"(bl)              \
+                        : "cc");                                            \
+            } else {                                                        \
+                __asm__("rsbs\t%1, %5, %4\n\trsc\t%0, %3, %2"               \
+                        : "=r"(sh), "=&r"(sl)                               \
+                        : "rI"(ah), "r"(bh), "rI"(al), "r"(bl)              \
+                        : "cc");                                            \
+            }                                                               \
+        } else if (BUILTIN_CONSTANT(bl)) {                                  \
+            __asm__("subs\t%1, %4, %5\n\tsbc\t%0, %2, %3"                   \
+                    : "=r"(sh), "=&r"(sl)                                   \
+                    : "r"(ah), "rI"(bh), "r"(al), "rI"(bl)                  \
+                    : "cc");                                                \
+        } else {                                                            \
+            __asm__("subs\t%1, %4, %5\n\tsbc\t%0, %2, %3"                   \
+                    : "=r"(sh), "=&r"(sl)                                   \
+                    : "r"(ah), "rI"(bh), "r"(al), "rI"(bl)                  \
+                    : "cc");                                                \
+        }                                                                   \
     } while (0)
 #endif
 
@@ -213,22 +252,38 @@
 #endif /* __arm__ */
 
 #if defined(__aarch64__) && MPI_LIMB_BITS == 64
-#define UADD_AABB(sh, sl, ah, al, bh, bl)                                                                                                                                             \
-    do {                                                                                                                                                                              \
-        if (BUILTIN_CONSTANT(bl) && ~(uint64_t)(bl) <= (uint64_t)(bl)) {                                                                                                              \
-            __asm__("subs\t%1, %x4, %5\n\tadc\t%0, %x2, %x3" : "=r"(sh), "=&r"(sl) : "rZ"((uint64_t)(ah)), "rZ"((uint64_t)(bh)), "%r"((uint64_t)(al)), "rI"(-(uint64_t)(bl)) : "cc"); \
-        } else {                                                                                                                                                                      \
-            __asm__("adds\t%1, %x4, %5\n\tadc\t%0, %x2, %x3" : "=r"(sh), "=&r"(sl) : "rZ"((uint64_t)(ah)), "rZ"((uint64_t)(bh)), "%r"((uint64_t)(al)), "rI"((uint64_t)(bl)) : "cc");  \
-        }                                                                                                                                                                             \
+#define UADD_AABB(sh, sl, ah, al, bh, bl)                                               \
+    do {                                                                                \
+        if (BUILTIN_CONSTANT(bl) && ~(uint64_t)(bl) <= (uint64_t)(bl)) {                \
+            __asm__("subs\t%1, %x4, %5\n\tadc\t%0, %x2, %x3"                            \
+                    : "=r"(sh), "=&r"(sl)                                               \
+                    : "rZ"((uint64_t)(ah)), "rZ"((uint64_t)(bh)), "%r"((uint64_t)(al)), \
+                      "rI"(-(uint64_t)(bl))                                             \
+                    : "cc");                                                            \
+        } else {                                                                        \
+            __asm__("adds\t%1, %x4, %5\n\tadc\t%0, %x2, %x3"                            \
+                    : "=r"(sh), "=&r"(sl)                                               \
+                    : "rZ"((uint64_t)(ah)), "rZ"((uint64_t)(bh)), "%r"((uint64_t)(al)), \
+                      "rI"((uint64_t)(bl))                                              \
+                    : "cc");                                                            \
+        }                                                                               \
     } while (0)
 
-#define USUB_AABB(sh, sl, ah, al, bh, bl)                                                                                                                                                           \
-    do {                                                                                                                                                                                            \
-        if (BUILTIN_CONSTANT(bl) && ~(uint64_t)(bl) <= (uint64_t)(bl)) {                                                                                                                            \
-            __asm__("adds\t%1, %x4, %5\n\tsbc\t%0, %x2, %x3" : "=r,r"(sh), "=&r,&r"(sl) : "rZ,rZ"((uint64_t)(ah)), "rZ,rZ"((uint64_t)(bh)), "r,Z"((uint64_t)(al)), "rI,r"(-(uint64_t)(bl)) : "cc"); \
-        } else {                                                                                                                                                                                    \
-            __asm__("subs\t%1, %x4, %5\n\tsbc\t%0, %x2, %x3" : "=r,r"(sh), "=&r,&r"(sl) : "rZ,rZ"((uint64_t)(ah)), "rZ,rZ"((uint64_t)(bh)), "r,Z"((uint64_t)(al)), "rI,r"((uint64_t)(bl)) : "cc");  \
-        }                                                                                                                                                                                           \
+#define USUB_AABB(sh, sl, ah, al, bh, bl)                                                      \
+    do {                                                                                       \
+        if (BUILTIN_CONSTANT(bl) && ~(uint64_t)(bl) <= (uint64_t)(bl)) {                       \
+            __asm__("adds\t%1, %x4, %5\n\tsbc\t%0, %x2, %x3"                                   \
+                    : "=r,r"(sh), "=&r,&r"(sl)                                                 \
+                    : "rZ,rZ"((uint64_t)(ah)), "rZ,rZ"((uint64_t)(bh)), "r,Z"((uint64_t)(al)), \
+                      "rI,r"(-(uint64_t)(bl))                                                  \
+                    : "cc");                                                                   \
+        } else {                                                                               \
+            __asm__("subs\t%1, %x4, %5\n\tsbc\t%0, %x2, %x3"                                   \
+                    : "=r,r"(sh), "=&r,&r"(sl)                                                 \
+                    : "rZ,rZ"((uint64_t)(ah)), "rZ,rZ"((uint64_t)(bh)), "r,Z"((uint64_t)(al)), \
+                      "rI,r"((uint64_t)(bl))                                                   \
+                    : "cc");                                                                   \
+        }                                                                                      \
     } while (0)
 
 #define UMUL_AB(ph, pl, m0, m1)                                         \
@@ -245,12 +300,19 @@
 /* On x86 and x86_64, every asm implicitly clobbers "flags" and "fpsr",
    so we don't need : "cc".  */
 #if (defined(__i386__) || defined(__i486__)) && MPI_LIMB_BITS == 32
-#define UADD_AABB(sh, sl, ah, al, bh, bl) __asm__("addl %5,%k1\n\tadcl %3,%k0" : "=r"(sh), "=&r"(sl) : "0"((uint32_t)(ah)), "g"((uint32_t)(bh)), "%1"((uint32_t)(al)), "g"((uint32_t)(bl)))
-#define USUB_AABB(sh, sl, ah, al, bh, bl) __asm__("subl %5,%k1\n\tsbbl %3,%k0" : "=r"(sh), "=&r"(sl) : "0"((uint32_t)(ah)), "g"((uint32_t)(bh)), "1"((uint32_t)(al)), "g"((uint32_t)(bl)))
-#define UMUL_AB(w1, w0, u, v)             __asm__("mull %3" : "=a"(w0), "=d"(w1) : "%0"((uint32_t)(u)), "rm"((uint32_t)(v)))
-#define UDIV_NND(q, r, n1, n0, dx)        /* d renamed to dx avoiding "=d" */ \
-    __asm__("divl %4"                     /* stringification in K&R C */      \
-            : "=a"(q), "=d"(r)                                                \
+#define UADD_AABB(sh, sl, ah, al, bh, bl) \
+    __asm__("addl %5,%k1\n\tadcl %3,%k0"  \
+            : "=r"(sh), "=&r"(sl)         \
+            : "0"((uint32_t)(ah)), "g"((uint32_t)(bh)), "%1"((uint32_t)(al)), "g"((uint32_t)(bl)))
+#define USUB_AABB(sh, sl, ah, al, bh, bl) \
+    __asm__("subl %5,%k1\n\tsbbl %3,%k0"  \
+            : "=r"(sh), "=&r"(sl)         \
+            : "0"((uint32_t)(ah)), "g"((uint32_t)(bh)), "1"((uint32_t)(al)), "g"((uint32_t)(bl)))
+#define UMUL_AB(w1, w0, u, v) \
+    __asm__("mull %3" : "=a"(w0), "=d"(w1) : "%0"((uint32_t)(u)), "rm"((uint32_t)(v)))
+#define UDIV_NND(q, r, n1, n0, dx) /* d renamed to dx avoiding "=d" */ \
+    __asm__("divl %4"              /* stringification in K&R C */      \
+            : "=a"(q), "=d"(r)                                         \
             : "0"((uint32_t)(n0)), "1"((uint32_t)(n1)), "rm"((uint32_t)(dx)))
 
 #if defined(HAVE_HOST_CPU_i586) || defined(HAVE_HOST_CPU_pentium) || defined(HAVE_HOST_CPU_pentiummmx)
@@ -323,7 +385,9 @@
    being 1 code byte smaller.  "31-__cbtmp" is a workaround, probably at the
    cost of one extra instruction.  Do this for "i386" too, since that means
    generic x86.  */
-#if !defined(COUNT_LEADING_ZEROS) && __GNUC__ < 3 && (defined(HAVE_HOST_CPU_i386) || defined(HAVE_HOST_CPU_i686) || defined(HAVE_HOST_CPU_pentiumpro) || defined(HAVE_HOST_CPU_pentium2) || defined(HAVE_HOST_CPU_pentium3))
+#if !defined(COUNT_LEADING_ZEROS) && __GNUC__ < 3                                                       \
+    && (defined(HAVE_HOST_CPU_i386) || defined(HAVE_HOST_CPU_i686) || defined(HAVE_HOST_CPU_pentiumpro) \
+        || defined(HAVE_HOST_CPU_pentium2) || defined(HAVE_HOST_CPU_pentium3))
 #define COUNT_LEADING_ZEROS(count, x)                                \
     do {                                                             \
         uint32_t __cbtmp;                                            \
@@ -356,20 +420,32 @@
 #endif /* 80x86 */
 
 #if defined(__amd64__) && MPI_LIMB_BITS == 64
-#define UADD_AABB(sh, sl, ah, al, bh, bl) __asm__("addq %5,%q1\n\tadcq %3,%q0" : "=r"(sh), "=&r"(sl) : "0"((uint64_t)(ah)), "rme"((uint64_t)(bh)), "%1"((uint64_t)(al)), "rme"((uint64_t)(bl)))
-#define USUB_AABB(sh, sl, ah, al, bh, bl) __asm__("subq %5,%q1\n\tsbbq %3,%q0" : "=r"(sh), "=&r"(sl) : "0"((uint64_t)(ah)), "rme"((uint64_t)(bh)), "1"((uint64_t)(al)), "rme"((uint64_t)(bl)))
-#if (defined MPI_ASM_X86_MULX) && (defined(HAVE_HOST_CPU_haswell) || defined(HAVE_HOST_CPU_broadwell) || defined(HAVE_HOST_CPU_skylake) || defined(HAVE_HOST_CPU_bd4) || defined(HAVE_HOST_CPU_zen))
-#define UMUL_AB(w1, w0, u, v) __asm__("mulx\t%3, %q0, %q1" : "=r"(w0), "=r"(w1) : "%d"((uint64_t)(u)), "rm"((uint64_t)(v)))
+#define UADD_AABB(sh, sl, ah, al, bh, bl) \
+    __asm__("addq %5,%q1\n\tadcq %3,%q0"  \
+            : "=r"(sh), "=&r"(sl)         \
+            : "0"((uint64_t)(ah)), "rme"((uint64_t)(bh)), "%1"((uint64_t)(al)), "rme"((uint64_t)(bl)))
+#define USUB_AABB(sh, sl, ah, al, bh, bl) \
+    __asm__("subq %5,%q1\n\tsbbq %3,%q0"  \
+            : "=r"(sh), "=&r"(sl)         \
+            : "0"((uint64_t)(ah)), "rme"((uint64_t)(bh)), "1"((uint64_t)(al)), "rme"((uint64_t)(bl)))
+#if (defined MPI_ASM_X86_MULX)                                             \
+    && (defined(HAVE_HOST_CPU_haswell) || defined(HAVE_HOST_CPU_broadwell) \
+        || defined(HAVE_HOST_CPU_skylake) || defined(HAVE_HOST_CPU_bd4) || defined(HAVE_HOST_CPU_zen))
+#define UMUL_AB(w1, w0, u, v) \
+    __asm__("mulx\t%3, %q0, %q1" : "=r"(w0), "=r"(w1) : "%d"((uint64_t)(u)), "rm"((uint64_t)(v)))
 #else
-#define UMUL_AB(w1, w0, u, v) __asm__("mulq\t%3" : "=a"(w0), "=d"(w1) : "%0"((uint64_t)(u)), "rm"((uint64_t)(v)))
+#define UMUL_AB(w1, w0, u, v) \
+    __asm__("mulq\t%3" : "=a"(w0), "=d"(w1) : "%0"((uint64_t)(u)), "rm"((uint64_t)(v)))
 #endif
 #define UDIV_NND(q, r, n1, n0, dx) /* d renamed to dx avoiding "=d" */ \
     __asm__("divq %4"              /* stringification in K&R C */      \
             : "=a"(q), "=d"(r)                                         \
             : "0"((uint64_t)(n0)), "1"((uint64_t)(n1)), "rm"((uint64_t)(dx)))
 
-#if defined(HAVE_HOST_CPU_haswell) || defined(HAVE_HOST_CPU_broadwell) || defined(HAVE_HOST_CPU_skylake) || defined(HAVE_HOST_CPU_k10) || defined(HAVE_HOST_CPU_bd1) || defined(HAVE_HOST_CPU_bd2) || defined(HAVE_HOST_CPU_bd3) \
-    || defined(HAVE_HOST_CPU_bd4) || defined(HAVE_HOST_CPU_zen) || defined(HAVE_HOST_CPU_bobcat) || defined(HAVE_HOST_CPU_jaguar)
+#if defined(HAVE_HOST_CPU_haswell) || defined(HAVE_HOST_CPU_broadwell) || defined(HAVE_HOST_CPU_skylake) \
+    || defined(HAVE_HOST_CPU_k10) || defined(HAVE_HOST_CPU_bd1) || defined(HAVE_HOST_CPU_bd2)            \
+    || defined(HAVE_HOST_CPU_bd3) || defined(HAVE_HOST_CPU_bd4) || defined(HAVE_HOST_CPU_zen)            \
+    || defined(HAVE_HOST_CPU_bobcat) || defined(HAVE_HOST_CPU_jaguar)
 #define COUNT_LEADING_ZEROS(count, x)                                       \
     do {                                                                    \
         /* This is lzcnt, spelled for older assemblers.  Destination and */ \
@@ -387,7 +463,8 @@
     } while (0)
 #endif
 
-#if defined(HAVE_HOST_CPU_bd2) || defined(HAVE_HOST_CPU_bd3) || defined(HAVE_HOST_CPU_bd4) || defined(HAVE_HOST_CPU_zen) || defined(HAVE_HOST_CPU_jaguar)
+#if defined(HAVE_HOST_CPU_bd2) || defined(HAVE_HOST_CPU_bd3) || defined(HAVE_HOST_CPU_bd4) \
+    || defined(HAVE_HOST_CPU_zen) || defined(HAVE_HOST_CPU_jaguar)
 #define COUNT_TRAILING_ZEROS(count, x)                                      \
     do {                                                                    \
         /* This is tzcnt, spelled for older assemblers.  Destination and */ \
@@ -478,12 +555,13 @@
 
 /* If we lack UMUL_AB but have SMUL_AB, define UMUL_AB in terms of SMUL_AB. */
 #if !defined(UMUL_AB) && defined(SMUL_AB)
-#define UMUL_AB(w1, w0, u, v)                                                                                \
-    do {                                                                                                     \
-        mpi_limb_t __w1;                                                                                     \
-        mpi_limb_t __xm0 = (u), __xm1 = (v);                                                                 \
-        SMUL_AB(__w1, w0, __xm0, __xm1);                                                                     \
-        (w1) = __w1 + (-(__xm0 >> (MPI_LIMB_BITS - 1)) & __xm1) + (-(__xm1 >> (MPI_LIMB_BITS - 1)) & __xm0); \
+#define UMUL_AB(w1, w0, u, v)                                                                             \
+    do {                                                                                                  \
+        mpi_limb_t __w1;                                                                                  \
+        mpi_limb_t __xm0 = (u), __xm1 = (v);                                                              \
+        SMUL_AB(__w1, w0, __xm0, __xm1);                                                                  \
+        (w1) =                                                                                            \
+            __w1 + (-(__xm0 >> (MPI_LIMB_BITS - 1)) & __xm1) + (-(__xm1 >> (MPI_LIMB_BITS - 1)) & __xm0); \
     } while (0)
 #endif
 
@@ -516,12 +594,13 @@
 
 /* If we don't have SMUL_AB, define it using UMUL_AB */
 #if !defined(SMUL_AB)
-#define SMUL_AB(w1, w0, u, v)                                                                                \
-    do {                                                                                                     \
-        mpi_limb_t __w1;                                                                                     \
-        mpi_limb_t __xm0 = (u), __xm1 = (v);                                                                 \
-        UMUL_AB(__w1, w0, __xm0, __xm1);                                                                     \
-        (w1) = __w1 - (-(__xm0 >> (MPI_LIMB_BITS - 1)) & __xm1) - (-(__xm1 >> (MPI_LIMB_BITS - 1)) & __xm0); \
+#define SMUL_AB(w1, w0, u, v)                                                                             \
+    do {                                                                                                  \
+        mpi_limb_t __w1;                                                                                  \
+        mpi_limb_t __xm0 = (u), __xm1 = (v);                                                              \
+        UMUL_AB(__w1, w0, __xm0, __xm1);                                                                  \
+        (w1) =                                                                                            \
+            __w1 - (-(__xm0 >> (MPI_LIMB_BITS - 1)) & __xm1) - (-(__xm1 >> (MPI_LIMB_BITS - 1)) & __xm0); \
     } while (0)
 #endif
 
@@ -551,7 +630,6 @@
             }                                                                     \
         }                                                                         \
         __r1 -= __m;                                                              \
-                                                                                  \
         __q0 = __r1 / __d1;                                                       \
         __r0 = __r1 - __q0 * __d1;                                                \
         __m = __q0 * __d0;                                                        \
@@ -574,21 +652,23 @@
 #endif
 
 #if !defined(COUNT_LEADING_ZEROS)
-#define COUNT_LEADING_ZEROS(count, x)                                                                                                                                                          \
-    do {                                                                                                                                                                                       \
-        mpi_limb_t __xr = (x);                                                                                                                                                                 \
-        mpi_limb_t __a;                                                                                                                                                                        \
-                                                                                                                                                                                               \
-        if (MPI_LIMB_BITS == 32) {                                                                                                                                                             \
-            __a = __xr < ((mpi_limb_t)1 << 2 * BITS_S4) ? (__xr < ((mpi_limb_t)1 << BITS_S4) ? 1 : BITS_S4 + 1) : (__xr < ((mpi_limb_t)1 << 3 * BITS_S4) ? 2 * BITS_S4 + 1 : 3 * BITS_S4 + 1); \
-        } else {                                                                                                                                                                               \
-            for (__a = MPI_LIMB_BITS - 8; __a > 0; __a -= 8) {                                                                                                                                 \
-                if (((__xr >> __a) & 0xff) != 0) { break; }                                                                                                                                    \
-            }                                                                                                                                                                                  \
-            ++__a;                                                                                                                                                                             \
-        }                                                                                                                                                                                      \
-                                                                                                                                                                                               \
-        (count) = MPI_LIMB_BITS + 1 - __a - __mpi_clz_tab[__xr >> __a];                                                                                                                        \
+#define COUNT_LEADING_ZEROS(count, x)                                                                \
+    do {                                                                                             \
+        mpi_limb_t __xr = (x);                                                                       \
+        mpi_limb_t __a;                                                                              \
+                                                                                                     \
+        if (MPI_LIMB_BITS == 32) {                                                                   \
+            __a = __xr < ((mpi_limb_t)1 << 2 * BITS_S4)                                              \
+                      ? (__xr < ((mpi_limb_t)1 << BITS_S4) ? 1 : BITS_S4 + 1)                        \
+                      : (__xr < ((mpi_limb_t)1 << 3 * BITS_S4) ? 2 * BITS_S4 + 1 : 3 * BITS_S4 + 1); \
+        } else {                                                                                     \
+            for (__a = MPI_LIMB_BITS - 8; __a > 0; __a -= 8) {                                       \
+                if (((__xr >> __a) & 0xff) != 0) { break; }                                          \
+            }                                                                                        \
+            ++__a;                                                                                   \
+        }                                                                                            \
+                                                                                                     \
+        (count) = MPI_LIMB_BITS + 1 - __a - __mpi_clz_tab[__xr >> __a];                              \
     } while (0)
 /* This version gives a well-defined value for zero. */
 #define COUNT_LEADING_ZEROS_0 (MPI_LIMB_BITS - 1)

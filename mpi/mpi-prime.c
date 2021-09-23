@@ -153,7 +153,9 @@ static const unsigned int known_primes_size = (unsigned int)(sizeof(known_primes
 STATIC_ASSERT(sizeof(mpi_limb_t) >= sizeof(uint32_t), "under this implementation, sizeof(mpi_limb_t) MUST not smaller than sizeof(uint32_t)");
 // clang-format on
 
-static int random_with_pattern_bin(mpi_limb_t *r, unsigned int bits, unsigned int top, unsigned int bottom, int (*rand_bytes)(void *, unsigned char *, unsigned int), void *rand_state)
+static int random_with_pattern_bin(mpi_limb_t *r, unsigned int bits, unsigned int top, unsigned int bottom,
+                                   int (*rand_bytes)(void *, unsigned char *, unsigned int),
+                                   void *rand_state)
 {
     if (bits == 0) { return 0; }
     if (top > bits || bottom > bits) { return -EINVAL; }
@@ -200,7 +202,9 @@ MPI_INLINE mpi_limb_t mpi_get_limb(const mpi_t *a)
 }
 
 #define square(x) ((mpi_limb_t)(x) * (mpi_limb_t)(x))
-static int generate_probable_prime(mpi_t *rnd, unsigned int bits, unsigned safe, int (*rand_bytes)(void *, unsigned char *, unsigned int), void *rand_state)
+static int generate_probable_prime(mpi_t *rnd, unsigned int bits, unsigned safe,
+                                   int (*rand_bytes)(void *, unsigned char *, unsigned int),
+                                   void *rand_state)
 {
     uint32_t *mods = (uint32_t *)MPI_ZALLOCATE(sizeof(uint32_t), known_primes_size);
     if (mods == NULL) { return -ENOMEM; }
@@ -261,7 +265,10 @@ recheck:
     return 0;
 }
 
-static int generate_probable_prime_dh(mpi_t *r, unsigned int bits, unsigned safe, const mpi_t *add, const mpi_t *rem, mpi_optimizer_t *optimizer, int (*rand_bytes)(void *, unsigned char *, unsigned int), void *rand_state)
+static int generate_probable_prime_dh(mpi_t *r, unsigned int bits, unsigned safe, const mpi_t *add,
+                                      const mpi_t *rem, mpi_optimizer_t *optimizer,
+                                      int (*rand_bytes)(void *, unsigned char *, unsigned int),
+                                      void *rand_state)
 {
     int ret = 0;
     mpi_limb_t delta;
@@ -344,7 +351,8 @@ MPI_INLINE unsigned int prime_checks_for_bits(unsigned int bits)
     return chocies[count - 1].checks;
 }
 
-static int millerrabin_witness(mpi_t *witness, mpi_t *a1, mpi_t *a1_odd, unsigned int k, mpi_montgomery_t *mont)
+static int millerrabin_witness(mpi_t *witness, mpi_t *a1, mpi_t *a1_odd, unsigned int k,
+                               mpi_montgomery_t *mont)
 {
     int err;
     /* witness = witness^a1_odd mod a */
@@ -354,7 +362,9 @@ static int millerrabin_witness(mpi_t *witness, mpi_t *a1, mpi_t *a1_odd, unsigne
     }
 
     if (mpi_bits(witness) == 1) { return 1; /* probably prime */ }
-    if (mpi_ucmp_bin(witness->data, witness->size, a1->data, a1->size) == 0) { return 1; /* witness == -1 (mod a), 'a' is probably prime */ }
+    if (mpi_ucmp_bin(witness->data, witness->size, a1->data, a1->size) == 0) {
+        return 1; /* witness == -1 (mod a), 'a' is probably prime */
+    }
 
     while (--k > 0) {
         /* witness := witness^2 mod a */
@@ -366,7 +376,9 @@ static int millerrabin_witness(mpi_t *witness, mpi_t *a1, mpi_t *a1_odd, unsigne
             return 0; /* 'a' is composite, otherwise a previous 'witness' would have been == -1 (mod 'a') */
         }
 
-        if (mpi_ucmp_bin(witness->data, witness->size, a1->data, a1->size) == 0) { return 1; /* witness == -1 (mod a), 'a' is probably prime */ }
+        if (mpi_ucmp_bin(witness->data, witness->size, a1->data, a1->size) == 0) {
+            return 1; /* witness == -1 (mod a), 'a' is probably prime */
+        }
     }
     /**
      * If we get here, 'w' is the (a-1)/2-th power of the original 'w',
@@ -382,7 +394,9 @@ static int millerrabin_witness(mpi_t *witness, mpi_t *a1, mpi_t *a1_odd, unsigne
  *   1. return 0 if the number is composite
  *      1 if it is prime with an error probability of less than 0.25^checks
  */
-int mpi_is_prime(const mpi_t *a, unsigned int checks, unsigned do_trial_division, mpi_optimizer_t *optimizer, int (*rand_bytes)(void *, unsigned char *, unsigned int), void *rand_state)
+int mpi_is_prime(const mpi_t *a, unsigned int checks, unsigned do_trial_division,
+                 mpi_optimizer_t *optimizer, int (*rand_bytes)(void *, unsigned char *, unsigned int),
+                 void *rand_state)
 {
     if (a == NULL) {
         MPI_RAISE_ERROR(-EINVAL, "Invalid Integer: nullptr");
@@ -474,7 +488,9 @@ int mpi_is_prime(const mpi_t *a, unsigned int checks, unsigned do_trial_division
     for (unsigned int i = 0; i < checks; i++) {
         /* 1 < witness < a-1 */
         mpi_limb_t one = 1;
-        if ((err = mpi_random_range_bin(witness->data, 1000, &one, 1, a1->data, a1->size, rand_bytes, rand_state)) != 0) {
+        if ((err = mpi_random_range_bin(witness->data, 1000, &one, 1, a1->data, a1->size, rand_bytes,
+                                        rand_state))
+            != 0) {
             MPI_RAISE_ERROR(err);
             goto exit_with_error;
         }
@@ -500,15 +516,18 @@ exit_with_error:
  *
  * @note:
  *   1. The returned number is probably prime with a negligible error.
- *   2. If |add| is NULL the returned prime number will have exact bit length |bits| with the top most two bits set.
+ *   2. If |add| is NULL the returned prime number will have exact bit length |bits| with the top most two
+ * bits set.
  *   3. The prime may have to fulfill additional requirements for use in Diffie-Hellman key exchange:
- *      If |add| is not NULL, the prime will fulfill the condition p % |add| == |rem| (p % |add| == 1 if |rem| == NULL) in order to suit a given generator.
+ *      If |add| is not NULL, the prime will fulfill the condition p % |add| == |rem| (p % |add| == 1 if
+ * |rem| == NULL) in order to suit a given generator.
  *
  *      If |safe| is true, it will be a safe prime (i.e. a prime p so hat (p-1)/2 is also prime).
  *      If |safe| is true, and |rem| == NULL the condition will be p % |add| == 3.
  *      It is recommended that |add| is a multiple of 4.
  */
-int mpi_generate_prime(mpi_t *ret, unsigned int bits, unsigned safe, const mpi_t *add, const mpi_t *rem, int (*rand_bytes)(void *, unsigned char *, unsigned int), void *rand_state)
+int mpi_generate_prime(mpi_t *ret, unsigned int bits, unsigned safe, const mpi_t *add, const mpi_t *rem,
+                       int (*rand_bytes)(void *, unsigned char *, unsigned int), void *rand_state)
 {
     if (bits < 2) {
         MPI_RAISE_ERROR(-EINVAL, "No prime numbers for given bits");
@@ -529,8 +548,8 @@ int mpi_generate_prime(mpi_t *ret, unsigned int bits, unsigned safe, const mpi_t
         /* create proper required optimizer once */
         unsigned int optsize = 0;
         optsize += safe ? (MPI_ALIGNED_HEAD_LIMBS + MPI_BITS_TO_LIMBS(bits)) : 0; /* t */
-        optsize += add != NULL ? (MPI_ALIGNED_HEAD_LIMBS + add->size) : 0;        /* generate_probable_prime_dh */
-        optsize += (MPI_ALIGNED_HEAD_LIMBS + MPI_BITS_TO_LIMBS(bits)) * 3;        /* mpi_is_prime */
+        optsize += add != NULL ? (MPI_ALIGNED_HEAD_LIMBS + add->size) : 0; /* generate_probable_prime_dh */
+        optsize += (MPI_ALIGNED_HEAD_LIMBS + MPI_BITS_TO_LIMBS(bits)) * 3; /* mpi_is_prime */
 
         optimizer = mpi_optimizer_create(optsize);
         if (optimizer == NULL) {
@@ -561,7 +580,8 @@ regenerate:
             goto exit_with_error;
         }
     } else {
-        if ((err = generate_probable_prime_dh(ret, bits, safe, add, rem, optimizer, rand_bytes, rand_state)) != 0) {
+        if ((err = generate_probable_prime_dh(ret, bits, safe, add, rem, optimizer, rand_bytes, rand_state))
+            != 0) {
             MPI_RAISE_ERROR(err);
             goto exit_with_error;
         }
@@ -576,7 +596,8 @@ regenerate:
         }
         if (err == 0) { goto regenerate; }
     } else {
-        /* for "safe prime" generation, check that (p - 1) / 2 is prime. prime is odd, so just right-shift */
+        /* for "safe prime" generation, check that (p - 1) / 2 is prime. prime is odd, so just right-shift
+         */
         if ((err = mpi_rshift(t, ret, 1)) != 0) {
             MPI_RAISE_ERROR(err);
             goto exit_with_error;
@@ -609,7 +630,8 @@ exit_with_error:
 /**
  * test if |a| and |b| are coprime
  */
-int mpi_is_coprime_bin(mpi_limb_t *a, unsigned int asize, mpi_limb_t *b, unsigned int bsize, mpi_optimizer_t *optimizer)
+int mpi_is_coprime_bin(mpi_limb_t *a, unsigned int asize, mpi_limb_t *b, unsigned int bsize,
+                       mpi_optimizer_t *optimizer)
 {
     if (asize > bsize) {
         SWAP(mpi_limb_t *, a, b);

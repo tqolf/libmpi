@@ -56,7 +56,8 @@ int main(void)
 
         // openssl
         {
-            BIGNUM *r = BN_new(); // BN_new to make sure no "Segmentation fault" error when generated string is empty
+            BIGNUM *r = BN_new(); // BN_new to make sure no "Segmentation fault" error when generated string
+                                  // is empty
 
             {
                 Benchmark bench("from-string(ossl)", 0);
@@ -529,7 +530,8 @@ int main(void)
                 RAND_bytes(bbuffer.data(), static_cast<int>(size));
             }
 
-            // it's too simple for the division algorithm if abufflen < bbufflen, so swap them to make sure that abufflen >= bbufflen
+            // it's too simple for the division algorithm if abufflen < bbufflen, so swap them to make sure
+            // that abufflen >= bbufflen
             if (abuffer.size() < bbuffer.size()) { abuffer.swap(bbuffer); }
         }
 
@@ -596,7 +598,8 @@ int main(void)
 
     // greatest common divisor
     // conclusion:
-    //   1. perf(mpi_gcd(r, a, b, NULL)) > perf(mpi_gcd_consttime(r, a, b, NULL)), about 30+(even 100+) times faster
+    //   1. perf(mpi_gcd(r, a, b, NULL)) > perf(mpi_gcd_consttime(r, a, b, NULL)), about 30+(even 100+)
+    //   times faster
     {
         std::vector<unsigned char> abuffer, bbuffer;
         {

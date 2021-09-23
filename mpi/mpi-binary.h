@@ -83,7 +83,8 @@ MPI_INLINE mpi_limb_t mpi_is_zero_limb_consttime(mpi_limb_t a)
 }
 
 /* copy under mask: dst[] = (a[] & mask) ^ (b[] & ~mask) */
-MPI_INLINE void mpi_masked_copy_consttime(mpi_limb_t *dst, const mpi_limb_t *a, const mpi_limb_t *b, unsigned int len, mpi_limb_t mask)
+MPI_INLINE void mpi_masked_copy_consttime(mpi_limb_t *dst, const mpi_limb_t *a, const mpi_limb_t *b,
+                                          unsigned int len, mpi_limb_t mask)
 {
     mpi_limb_t rmask = ~mask;
     for (unsigned int i = 0; i < len; i++) { dst[i] = (a[i] & mask) ^ (b[i] & rmask); }
@@ -102,7 +103,8 @@ MPI_INLINE void mpi_masked_swap_consttime(mpi_limb_t *a, mpi_limb_t *b, unsigned
 }
 
 /* conditional move: dst[] = cond ? src[] : dst[] */
-MPI_INLINE void mpi_masked_move_consttime(mpi_limb_t *dst, const mpi_limb_t *src, unsigned int len, unsigned cond)
+MPI_INLINE void mpi_masked_move_consttime(mpi_limb_t *dst, const mpi_limb_t *src, unsigned int len,
+                                          unsigned cond)
 {
     mpi_masked_copy_consttime(dst, src, dst, len, (mpi_limb_t)0 - cond != 0);
 }
@@ -183,7 +185,8 @@ mpi_limb_t mpi_uadd_school_bin(mpi_limb_t *r, const mpi_limb_t *a, const mpi_lim
 /**
  * mpi(binary): carry, r[] = a[] + b[]
  */
-mpi_limb_t mpi_uadd_bin(mpi_limb_t *r, unsigned int rroom, const mpi_limb_t *a, unsigned int asize, const mpi_limb_t *b, unsigned int bsize);
+mpi_limb_t mpi_uadd_bin(mpi_limb_t *r, unsigned int rroom, const mpi_limb_t *a, unsigned int asize,
+                        const mpi_limb_t *b, unsigned int bsize);
 
 /**
  * mpi(binary): carry, r[:n] = a[:n] + w
@@ -193,7 +196,8 @@ mpi_limb_t mpi_uinc_school_bin(mpi_limb_t *r, const mpi_limb_t *a, unsigned int 
 /**
  * mpi(binary): carry, r[] = a[] + w
  */
-mpi_limb_t mpi_uinc_bin(mpi_limb_t *r, unsigned int rroom, const mpi_limb_t *a, unsigned int asize, mpi_limb_t w);
+mpi_limb_t mpi_uinc_bin(mpi_limb_t *r, unsigned int rroom, const mpi_limb_t *a, unsigned int asize,
+                        mpi_limb_t w);
 
 /**
  * mpi(binary) subtraction: borrow, r[:n] = a[:n] - b[:n]
@@ -207,7 +211,8 @@ mpi_limb_t mpi_usub_school_bin(mpi_limb_t *r, const mpi_limb_t *a, const mpi_lim
 /**
  * mpi(binary) subtraction: size, r[] = a[] - b[]
  */
-unsigned int mpi_usub_bin(mpi_limb_t *r, unsigned int rroom, const mpi_limb_t *a, unsigned int asize, const mpi_limb_t *b, unsigned int bsize);
+unsigned int mpi_usub_bin(mpi_limb_t *r, unsigned int rroom, const mpi_limb_t *a, unsigned int asize,
+                          const mpi_limb_t *b, unsigned int bsize);
 
 /**
  * mpi(binary): borrow, r[:n] = a[:n] - w
@@ -217,7 +222,8 @@ mpi_limb_t mpi_udec_school_bin(mpi_limb_t *r, const mpi_limb_t *a, unsigned int 
 /**
  * mpi(binary): size, r[] = a[] - w
  */
-unsigned int mpi_udec_bin(mpi_limb_t *r, unsigned int rroom, const mpi_limb_t *a, unsigned int asize, mpi_limb_t w);
+unsigned int mpi_udec_bin(mpi_limb_t *r, unsigned int rroom, const mpi_limb_t *a, unsigned int asize,
+                          mpi_limb_t w);
 
 /**
  * mpi(binary) multiplication: extension, r[:asize+bsize] = a[:asize] * b[:bsize]
@@ -225,7 +231,8 @@ unsigned int mpi_udec_bin(mpi_limb_t *r, unsigned int rroom, const mpi_limb_t *a
  *   1. (IMPORTANT)make sure size of |r| isn't less than |asize| + |bsize|
  *   2. the return is the highest unit |mpi_limb_t|
  */
-mpi_limb_t mpi_umul_bin(mpi_limb_t *r, const mpi_limb_t *a, unsigned int asize, const mpi_limb_t *b, unsigned int bsize);
+mpi_limb_t mpi_umul_bin(mpi_limb_t *r, const mpi_limb_t *a, unsigned int asize, const mpi_limb_t *b,
+                        unsigned int bsize);
 
 /**
  * mpi(binary) multiply-and-add: extension, r[] += a[] * b
@@ -247,7 +254,8 @@ mpi_limb_t mpi_usqr_bin(mpi_limb_t *r, const mpi_limb_t *a, unsigned int anum);
 /**
  * mpi(binary) division: xsize, q, x(q = x / y, x = x % y)
  */
-unsigned int mpi_udiv_bin(mpi_limb_t *q, unsigned int *qsize, mpi_limb_t *x, unsigned int xsize, mpi_limb_t *y, unsigned int ysize);
+unsigned int mpi_udiv_bin(mpi_limb_t *q, unsigned int *qsize, mpi_limb_t *x, unsigned int xsize,
+                          mpi_limb_t *y, unsigned int ysize);
 
 /**
  * mpi(binary) modular: x[] = x[] % y[]
@@ -260,7 +268,8 @@ unsigned int mpi_umod_bin(mpi_limb_t *x, unsigned int xsize, mpi_limb_t *y, unsi
  * @note:
  *   1. required length of q should be not smaller than size
  */
-unsigned int mpi_udiv_limb_bin(mpi_limb_t q[], const mpi_limb_t x[], unsigned int size, mpi_limb_t *r, mpi_limb_t d);
+unsigned int mpi_udiv_limb_bin(mpi_limb_t q[], const mpi_limb_t x[], unsigned int size, mpi_limb_t *r,
+                               mpi_limb_t d);
 
 /**
  * @brief: multiplicative inversion
@@ -273,7 +282,8 @@ unsigned int mpi_udiv_limb_bin(mpi_limb_t q[], const mpi_limb_t x[], unsigned in
  *   mbuf  : buffer of M
  *   r  : result BigNum
  */
-unsigned int mpi_umod_inv_bin(mpi_limb_t *r, const mpi_limb_t *a, unsigned int asize, const mpi_limb_t *m, unsigned int msize, mpi_optimizer_t *optimizer);
+unsigned int mpi_umod_inv_bin(mpi_limb_t *r, const mpi_limb_t *a, unsigned int asize, const mpi_limb_t *m,
+                              unsigned int msize, mpi_optimizer_t *optimizer);
 
 /**
  *  mpi(binary): create mpi from hex string
@@ -288,12 +298,14 @@ unsigned int mpi_to_string_bin(char *out, unsigned int outsize, const mpi_limb_t
 /**
  *  mpi(binary): create mpi from big-endian octets
  */
-unsigned int mpi_from_octets_bin(mpi_limb_t *r, unsigned int size, const unsigned char *in, unsigned int inlen);
+unsigned int mpi_from_octets_bin(mpi_limb_t *r, unsigned int size, const unsigned char *in,
+                                 unsigned int inlen);
 
 /**
  *  mpi(binary): convert mpi to big-endian octets
  */
-unsigned int mpi_to_octets_bin(unsigned char *out, unsigned int outsize, const mpi_limb_t *a, unsigned int size);
+unsigned int mpi_to_octets_bin(unsigned char *out, unsigned int outsize, const mpi_limb_t *a,
+                               unsigned int size);
 
 /**
  * leading zeros counting(constant-time version)
@@ -316,12 +328,15 @@ mpi_limb_t mpi_gcd_limb(mpi_limb_t a, mpi_limb_t b);
  * @note:
  *   1. length of |r| >= hilen
  */
-int mpi_random_range_bin(mpi_limb_t *r, unsigned int maxtries, const mpi_limb_t *lo, unsigned int lolen, const mpi_limb_t *hi, unsigned int hilen, int (*rand_bytes)(void *, unsigned char *, unsigned int), void *rand_state);
+int mpi_random_range_bin(mpi_limb_t *r, unsigned int maxtries, const mpi_limb_t *lo, unsigned int lolen,
+                         const mpi_limb_t *hi, unsigned int hilen,
+                         int (*rand_bytes)(void *, unsigned char *, unsigned int), void *rand_state);
 
 /**
  * test if |a| and |b| are coprime
  */
-int mpi_is_coprime_bin(mpi_limb_t *a, unsigned int asize, mpi_limb_t *b, unsigned int bsize, mpi_optimizer_t *optimizer);
+int mpi_is_coprime_bin(mpi_limb_t *a, unsigned int asize, mpi_limb_t *b, unsigned int bsize,
+                       mpi_optimizer_t *optimizer);
 
 #if defined(__cplusplus)
 }

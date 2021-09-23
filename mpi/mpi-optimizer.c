@@ -37,7 +37,8 @@ mpi_optimizer_t *mpi_optimizer_create(unsigned int room)
         optimizer->size = 0;
         optimizer->next = NULL;
         optimizer->room = room;
-        optimizer->chunk = mpi_aligned_pointer((unsigned char *)optimizer + sizeof(mpi_optimizer_t), MPI_LIMB_BYTES);
+        optimizer->chunk =
+            mpi_aligned_pointer((unsigned char *)optimizer + sizeof(mpi_optimizer_t), MPI_LIMB_BYTES);
     }
 
     return optimizer;

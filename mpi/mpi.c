@@ -469,7 +469,9 @@ int mpi_from_string(mpi_t **pr, const char *a)
             neg = 1;
             a++;
         }
-        for (nchars = 0; isxdigit(a[nchars]) && nchars < MPI_MAX_BITS / BITS_PER_CHAR; nchars++) { continue; }
+        for (nchars = 0; isxdigit(a[nchars]) && nchars < MPI_MAX_BITS / BITS_PER_CHAR; nchars++) {
+            continue;
+        }
         if (nchars == 0) {
             MPI_RAISE_ERROR(-EINVAL);
             return -EINVAL;
@@ -607,7 +609,8 @@ int mpi_lshift(mpi_t *r, const mpi_t *a, unsigned int n)
     }
 
     if (mpi_bits(a) == 0) { return mpi_zeroize(r); }
-    if (mpi_max_bits(r) < mpi_bits(a) + n) { // @IMPORTANT: addition here will never overflow under the limitations
+    if (mpi_max_bits(r)
+        < mpi_bits(a) + n) { // @IMPORTANT: addition here will never overflow under the limitations
         return -ERANGE;
     }
 
@@ -1086,14 +1089,12 @@ mpi_limb_t mpi_mod_limb(const mpi_t *a, mpi_limb_t w)
 }
 
 /**
+ * mpi exponentiation: r = g ^ e(FIXME)
+ *
  * @addtogroup: mpi/exponentiation
- */
-/**
- * mpi exponentiation: r = g ^ e
  */
 int mpi_exp(mpi_t *r, const mpi_t *g, const mpi_t *e)
 {
-    // FIXME
     if (r == NULL || g == NULL || e == NULL) {
         MPI_RAISE_ERROR(-EINVAL, "Invalid Integer: nullptr");
         return -EINVAL;
@@ -1151,11 +1152,10 @@ int mpi_exp(mpi_t *r, const mpi_t *g, const mpi_t *e)
 }
 
 /**
- * mpi exponentiation(word): r = g ^ e
+ * mpi exponentiation(word): r = g ^ e(FIXME)
  */
 int mpi_exp_limb(mpi_t *r, const mpi_t *g, mpi_limb_t e)
 {
-    // FIXME
     mpi_t v;
     mpi_limb_t dataE = e;
     mpi_make(&v, &dataE, 1);
@@ -1173,7 +1173,8 @@ typedef struct {
 /**
  * mpi(binary): extension, r[] = a[] * x + b[] * y
  */
-static mpi_dlimb_t mpi_uadd_with_multiplier_bin(mpi_limb_t *r, const mpi_limb_t *a, mpi_limb_t x, const mpi_limb_t *b, mpi_limb_t y, unsigned int n)
+static mpi_dlimb_t mpi_uadd_with_multiplier_bin(mpi_limb_t *r, const mpi_limb_t *a, mpi_limb_t x,
+                                                const mpi_limb_t *b, mpi_limb_t y, unsigned int n)
 {
     mpi_limb_t extensionH = 0, extensionL = 0;
     for (unsigned int i = 0; i < n; i++) {
@@ -1197,7 +1198,8 @@ static mpi_dlimb_t mpi_uadd_with_multiplier_bin(mpi_limb_t *r, const mpi_limb_t 
 /**
  * mpi(binary): borrow, r[] = a[] * x - b[] * y
  */
-static mpi_limb_t mpi_usub_with_multiplier_bin(mpi_limb_t *r, const mpi_limb_t *a, mpi_limb_t x, const mpi_limb_t *b, mpi_limb_t y, unsigned int n)
+static mpi_limb_t mpi_usub_with_multiplier_bin(mpi_limb_t *r, const mpi_limb_t *a, mpi_limb_t x,
+                                               const mpi_limb_t *b, mpi_limb_t y, unsigned int n)
 {
     MPI_ASSERT(r != NULL);
     MPI_ASSERT(a != NULL);
@@ -1230,7 +1232,8 @@ static mpi_limb_t mpi_usub_with_multiplier_bin(mpi_limb_t *r, const mpi_limb_t *
     return borrow;
 }
 
-static mpi_limb_t __gcd_lehmer_common_quotient(mpi_limb_t x, mpi_limb_t y, mpi_slimb_t A, mpi_slimb_t B, mpi_slimb_t C, mpi_slimb_t D)
+static mpi_limb_t __gcd_lehmer_common_quotient(mpi_limb_t x, mpi_limb_t y, mpi_slimb_t A, mpi_slimb_t B,
+                                               mpi_slimb_t C, mpi_slimb_t D)
 {
 #define __ADD(n1, n0, uA, sB)                   \
     if (sB >= 0) {                              \
@@ -1364,24 +1367,30 @@ int mpi_gcd(mpi_t *r, const mpi_t *a, const mpi_t *b, mpi_optimizer_t *optimizer
                     /* T = AA * x + BB * y */
                     if ((AA >= 0) && (BB < 0)) {
                         /* T = A * x + B * y = A * x - (-B) * y */
-                        mpi_usub_with_multiplier_bin(T, xtemp, (mpi_limb_t)AA, ytemp, (mpi_limb_t)(-BB), ysize);
+                        mpi_usub_with_multiplier_bin(T, xtemp, (mpi_limb_t)AA, ytemp, (mpi_limb_t)(-BB),
+                                                     ysize);
                     } else if ((AA <= 0) && (BB > 0)) {
                         /* T = A * x + B * y = B * y - (-A) * x */
-                        mpi_usub_with_multiplier_bin(T, ytemp, (mpi_limb_t)BB, xtemp, (mpi_limb_t)(-AA), ysize);
+                        mpi_usub_with_multiplier_bin(T, ytemp, (mpi_limb_t)BB, xtemp, (mpi_limb_t)(-AA),
+                                                     ysize);
                     } else {
                         /* AA * BB >= 0 */
-                        mpi_uadd_with_multiplier_bin(T, xtemp, (mpi_limb_t)AA, ytemp, (mpi_limb_t)BB, ysize);
+                        mpi_uadd_with_multiplier_bin(T, xtemp, (mpi_limb_t)AA, ytemp, (mpi_limb_t)BB,
+                                                     ysize);
                     }
 
                     /* u = CC * x + DD * y */
                     if ((CC <= 0) && (DD >= 0)) {
-                        mpi_usub_with_multiplier_bin(u, ytemp, (mpi_limb_t)DD, xtemp, (mpi_limb_t)(-CC), ysize);
+                        mpi_usub_with_multiplier_bin(u, ytemp, (mpi_limb_t)DD, xtemp, (mpi_limb_t)(-CC),
+                                                     ysize);
                     } else if ((CC >= 0) && (DD <= 0)) {
                         /* u= C * x + D * y = C * x - (-D) * y */
-                        mpi_usub_with_multiplier_bin(u, xtemp, (mpi_limb_t)CC, ytemp, (mpi_limb_t)(-DD), ysize);
+                        mpi_usub_with_multiplier_bin(u, xtemp, (mpi_limb_t)CC, ytemp, (mpi_limb_t)(-DD),
+                                                     ysize);
                     } else {
                         /* CC * DD >= 0 */
-                        mpi_uadd_with_multiplier_bin(u, xtemp, (mpi_limb_t)CC, ytemp, (mpi_limb_t)DD, ysize);
+                        mpi_uadd_with_multiplier_bin(u, xtemp, (mpi_limb_t)CC, ytemp, (mpi_limb_t)DD,
+                                                     ysize);
                     }
 
                     /* x = T; y = u */
@@ -1526,7 +1535,8 @@ int mpi_gcd_consttime(mpi_t *r, const mpi_t *a, const mpi_t *b, mpi_optimizer_t 
 
         /* expand to biggest nword, with room for a possible extra word */
         unsigned top = 1 + ((r->size >= g->size) ? r->size : g->size);
-        MPI_ASSERT(r->room >= top && g->room >= top && t->room >= top); // ensured via `mpi_max_bits(r) < mbits` checking
+        MPI_ASSERT(r->room >= top && g->room >= top
+                   && t->room >= top); // ensured via `mpi_max_bits(r) < mbits` checking
 
         /* re-arrange inputs s.t. r is odd */
         mpi_swap_consttime((~r->data[0]) & 1, r, g, top);
@@ -1534,7 +1544,8 @@ int mpi_gcd_consttime(mpi_t *r, const mpi_t *a, const mpi_t *b, mpi_optimizer_t 
         /* compute the number of iterations */
         unsigned int rlen = mpi_bits(r);
         unsigned int glen = mpi_bits(g);
-        unsigned int m = 4 + 3 * ((rlen >= glen) ? rlen : glen); // will never overflow under the limitations
+        unsigned int m =
+            4 + 3 * ((rlen >= glen) ? rlen : glen); // will never overflow under the limitations
 
         int delta = 1;
         for (unsigned i = 0; i < m; i++) {

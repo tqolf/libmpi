@@ -27,11 +27,15 @@
 class Benchmark {
   public:
     inline static bool output_json_format = 0;
-    Benchmark(const std::string name, unsigned security_bits, size_t chunk_size = 0) : m_name(name), m_security_bits(security_bits), m_chunk_size(chunk_size) {}
+    Benchmark(const std::string name, unsigned security_bits, size_t chunk_size = 0)
+        : m_name(name), m_security_bits(security_bits), m_chunk_size(chunk_size)
+    {
+    }
 
     bool run(std::function<bool()> func, double timeout = 0.5)
     {
-        uint64_t total_us = static_cast<uint64_t>(timeout * 1000000); // total amount of time that we'll aim to measure a function for.
+        uint64_t total_us = static_cast<uint64_t>(
+            timeout * 1000000); // total amount of time that we'll aim to measure a function for.
         unsigned iterations_between_time_checks;
 
         // checking
@@ -92,14 +96,15 @@ class Benchmark {
             if (m_chunk_size != 0) { std::cout << ", \"chunk size\": " << m_chunk_size; }
             std::cout << ", \"throughput\": " << std::fixed << std::setprecision(2) << throughput;
             std::cout << ", \"performance\": " << std::fixed << std::setprecision(2) << performance;
-            // std::cout << ", \"throughput\": \"" << std::fixed << std::setprecision(2) << throughput << " ops/s\"";
-            // std::cout << ", \"performance\": \"" << std::fixed << std::setprecision(2) << performance << "
-            // cycle/op\"";
+            // std::cout << ", \"throughput\": \"" << std::fixed << std::setprecision(2) << throughput << "
+            // ops/s\""; std::cout << ", \"performance\": \"" << std::fixed << std::setprecision(2) <<
+            // performance << " cycle/op\"";
             std::cout << " }" << std::endl;
         } else {
             std::cout << m_name;
             if (m_chunk_size != 0) { std::cout << " (" << m_chunk_size << " bytes)"; }
-            std::cout << " " << static_cast<unsigned>(calls * coeff) << " operations in " << microseconds << " us (";
+            std::cout << " " << static_cast<unsigned>(calls * coeff) << " operations in " << microseconds
+                      << " us (";
             std::cout << std::fixed << std::setprecision(2) << throughput << " ops/s, ";
             std::cout << std::fixed << std::setprecision(2) << performance << " cycle/op)";
             std::cout << std::endl;
@@ -108,8 +113,10 @@ class Benchmark {
 
     void print_bytes(size_t bytes_per_call, double coeff = 1.0) const
     {
-        double throughput = static_cast<double>(bytes_per_call * calls) * coeff / ((1.024 * 1.024) * static_cast<double>(microseconds));
-        double performance = static_cast<double>(cycles) / static_cast<double>(static_cast<double>(bytes_per_call * calls) * coeff);
+        double throughput = static_cast<double>(bytes_per_call * calls) * coeff
+                            / ((1.024 * 1.024) * static_cast<double>(microseconds));
+        double performance = static_cast<double>(cycles)
+                             / static_cast<double>(static_cast<double>(bytes_per_call * calls) * coeff);
 
         if (output_json_format) {
             std::cout << "{ \"name\": \"" << m_name << "\""
@@ -117,15 +124,16 @@ class Benchmark {
             if (m_chunk_size != 0) { std::cout << ", \"chunk size\": " << m_chunk_size; }
             std::cout << ", \"throughput\": " << std::fixed << std::setprecision(2) << throughput;
             std::cout << ", \"performance\": " << std::fixed << std::setprecision(2) << performance;
-            // std::cout << ", \"throughput\": \"" << std::fixed << std::setprecision(2) << throughput << " MB/s\"";
-            // std::cout << ", \"performance\": \"" << std::fixed << std::setprecision(2) << performance << "
-            // cycle/byte\"";
+            // std::cout << ", \"throughput\": \"" << std::fixed << std::setprecision(2) << throughput << "
+            // MB/s\""; std::cout << ", \"performance\": \"" << std::fixed << std::setprecision(2) <<
+            // performance << " cycle/byte\"";
             std::cout << " }" << std::endl;
         } else {
             std::cout << m_name;
             if (m_chunk_size != 0) { std::cout << " (" << m_chunk_size << " bytes)"; }
             std::cout << " ";
-            std::cout << static_cast<unsigned>(calls * coeff) << " operations in " << microseconds << " us (";
+            std::cout << static_cast<unsigned>(calls * coeff) << " operations in " << microseconds
+                      << " us (";
             std::cout << std::fixed << std::setprecision(2) << throughput << " MB/s, ";
             std::cout << std::fixed << std::setprecision(2) << performance << " cycle/byte)";
             std::cout << std::endl;
@@ -213,10 +221,12 @@ class Benchmark {
         usecnow = t.tv_usec;
         secnow = t.tv_sec;
 
-        cycles32diff = (unsigned int)(cycles32now - cycles32prev); /* unsigned change in number of cycles mod 2^32 */
-        usecdiff = usecnow - usecprev;                             /* signed change in number of usec mod 10^9 */
-        secdiff = secnow - secprev;                                /* signed change in number of sec */
-        if ((secdiff == 0 && usecdiff < 20000) || (secdiff == 1 && usecdiff < -980000)) return cycles64prev + cycles32diff;
+        cycles32diff =
+            (unsigned int)(cycles32now - cycles32prev); /* unsigned change in number of cycles mod 2^32 */
+        usecdiff = usecnow - usecprev;                  /* signed change in number of usec mod 10^9 */
+        secdiff = secnow - secprev;                     /* signed change in number of sec */
+        if ((secdiff == 0 && usecdiff < 20000) || (secdiff == 1 && usecdiff < -980000))
+            return cycles64prev + cycles32diff;
 
         cycles32prev = cycles32now;
         usecprev = usecnow;

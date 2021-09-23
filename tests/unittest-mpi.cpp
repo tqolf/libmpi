@@ -69,7 +69,8 @@ std::ostream &printer<mpi_t *>::print(std::ostream &os, mpi_t *const v)
 }
 
 template <>
-std::ostream &printer<std::vector<unsigned char>>::print(std::ostream &os, std::vector<unsigned char> const vec)
+std::ostream &printer<std::vector<unsigned char>>::print(std::ostream &os,
+                                                         std::vector<unsigned char> const vec)
 {
     for (auto ch : vec) {
         const char HEX_CHARS[] = "0123456789ABCDEF";
@@ -106,12 +107,14 @@ class verifier {
         if (m_nodes.find(key) != m_nodes.end()) {
             std::vector<unsigned char> &r = m_nodes[key];
             if (r.size() == buffer.size() && memcmp(r.data(), buffer.data(), r.size()) == 0) {
-                std::cout << testinfo->test_suite_name() << "." << testinfo->name() << ":" << testinfo->line() << ": \033[0;1;32mPassed\033[0m" << std::endl;
+                std::cout << testinfo->test_suite_name() << "." << testinfo->name() << ":"
+                          << testinfo->line() << ": \033[0;1;32mPassed\033[0m" << std::endl;
                 return true;
             } else {
                 hexdump("expected", r);
                 hexdump("computed", buffer);
-                std::cout << testinfo->test_suite_name() << "." << testinfo->name() << ":" << testinfo->line() << ": \033[0;1;31mFailed\033[0m" << std::endl;
+                std::cout << testinfo->test_suite_name() << "." << testinfo->name() << ":"
+                          << testinfo->line() << ": \033[0;1;31mFailed\033[0m" << std::endl;
 
                 return false;
             }
@@ -197,7 +200,8 @@ TEST(MPI, CreateFromString)
 
     // openssl
     {
-        BIGNUM *r = BN_new(); // BN_new to make sure no "Segmentation fault" error when generated string is empty
+        BIGNUM *r =
+            BN_new(); // BN_new to make sure no "Segmentation fault" error when generated string is empty
         BN_hex2bn(&r, val.c_str());
         verifier::get()->trace("* a", r);
         verifier::get()->erase("from_string");
@@ -611,7 +615,8 @@ TEST(MPI, Division)
             verifier::get()->trace("b", bbuffer);
         }
 
-        // it's too simple for the division algorithm if abufflen < bbufflen, so swap them to make sure that abufflen >= bbufflen
+        // it's too simple for the division algorithm if abufflen < bbufflen, so swap them to make sure that
+        // abufflen >= bbufflen
         if (abuffer.size() < bbuffer.size()) { abuffer.swap(bbuffer); }
     }
 
@@ -1486,5 +1491,6 @@ int main(int argc, char **argv)
 
 /**
  * repeat the testing
- * counter=0; while [ $? -eq 0 ]; do counter=$((counter+1)); ./demo; done; echo "Failed during $counter-th test loop"
+ * counter=0; while [ $? -eq 0 ]; do counter=$((counter+1)); ./demo; done; echo "Failed during $counter-th
+ * test loop"
  */

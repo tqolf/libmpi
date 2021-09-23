@@ -22,8 +22,20 @@
  * Number of Miller-Rabin rounds for an error rate of less than 1/2^80 for random 'b'-bit input, b >= 100.
  * (see Table 4.4, Handbook of Applied Cryptography [Menezes, van Oorschot, Vanstone; CRC Press 1996]
  */
-#define MR_rounds_p80(b) ((b) >= 1300 ? 2 : (b) >= 850 ? 3 : (b) >= 650 ? 4 : (b) >= 550 ? 5 : (b) >= 450 ? 6 : (b) >= 400 ? 7 : (b) >= 350 ? 8 : (b) >= 300 ? 9 : (b) >= 250 ? 12 : (b) >= 200 ? 15 : (b) >= 150 ? 18 : /*(b) >=  100*/ 27)
-#define RSA_POOL_SIZE    (2)
+#define MR_rounds_p80(b) \
+    ((b) >= 1300  ? 2    \
+     : (b) >= 850 ? 3    \
+     : (b) >= 650 ? 4    \
+     : (b) >= 550 ? 5    \
+     : (b) >= 450 ? 6    \
+     : (b) >= 400 ? 7    \
+     : (b) >= 350 ? 8    \
+     : (b) >= 300 ? 9    \
+     : (b) >= 250 ? 12   \
+     : (b) >= 200 ? 15   \
+     : (b) >= 150 ? 18   \
+                  : /*(b) >=  100*/ 27)
+#define RSA_POOL_SIZE (2)
 
 rsa_key_t *rsa_new(unsigned int ebits, unsigned int nbits, unsigned int primes)
 {
@@ -91,9 +103,11 @@ void rsa_free(rsa_key_t *key)
     }
 }
 
-int rsa_import(rsa_key_t *key, const mpi_t *n, const mpi_t *e, const mpi_t *d, const mpi_t *dp, const mpi_t *dq, const mpi_t *qinv)
+int rsa_import(rsa_key_t *key, const mpi_t *n, const mpi_t *e, const mpi_t *d, const mpi_t *dp,
+               const mpi_t *dq, const mpi_t *qinv)
 {
-    if (key == NULL || (n == NULL && d == NULL) || (n == NULL || dp == NULL || dq == NULL || qinv == NULL)) {
+    if (key == NULL || (n == NULL && d == NULL)
+        || (n == NULL || dp == NULL || dq == NULL || qinv == NULL)) {
         MPI_RAISE_ERROR(-EINVAL);
         return -EINVAL;
     }
@@ -145,7 +159,8 @@ int rsa_import(rsa_key_t *key, const mpi_t *n, const mpi_t *e, const mpi_t *d, c
     return 0;
 }
 
-rsa_key_t *rsa_generate_key(const mpi_t *pubexp, unsigned int nbits, unsigned int primes, int (*rand_bytes)(void *, unsigned char *, unsigned int), void *rand_state)
+rsa_key_t *rsa_generate_key(const mpi_t *pubexp, unsigned int nbits, unsigned int primes,
+                            int (*rand_bytes)(void *, unsigned char *, unsigned int), void *rand_state)
 {
     rsa_key_t *key = rsa_new(mpi_bits(pubexp), nbits, primes);
     if (key == NULL) {
@@ -219,7 +234,8 @@ rsa_key_t *rsa_generate_key(const mpi_t *pubexp, unsigned int nbits, unsigned in
             mpi_umul_bin(phi, dataP, psize, dataQ, qsize);
 
             /* D = 1 / E mod phi */
-            unsigned int dsize = mpi_umod_inv_bin(exponentD, pubexp->data, pubexp->size, phi, nsize, montN->optimizer);
+            unsigned int dsize =
+                mpi_umod_inv_bin(exponentD, pubexp->data, pubexp->size, phi, nsize, montN->optimizer);
             if (key->d != NULL) {
                 COPY(key->d, exponentD, dsize);
                 key->dbits = mpi_bits_consttime_bin(exponentD, dsize);
@@ -250,7 +266,8 @@ rsa_key_t *rsa_generate_key(const mpi_t *pubexp, unsigned int nbits, unsigned in
             /* qinv = 1 / q mod p */
             {
                 COPY(phiBuff, dataP, psize);
-                unsigned int size = mpi_umod_inv_bin(key->qinv, dataQ, qsize, phiBuff, psize, montP->optimizer);
+                unsigned int size =
+                    mpi_umod_inv_bin(key->qinv, dataQ, qsize, phiBuff, psize, montP->optimizer);
 
                 ZEROIZE(key->qinv, size, psize);
             }
@@ -296,7 +313,10 @@ int rsa_prv_cipher(mpi_t *r, const mpi_t *x, const rsa_key_t *key)
 
 int rsa_prv_cipher_crt(mpi_t *r, const mpi_t *x, const rsa_key_t *key)
 {
-    if (r == NULL || x == NULL || key == NULL || key->montN == NULL || key->montP == NULL || key->montQ == NULL) { return -EINVAL; }
+    if (r == NULL || x == NULL || key == NULL || key->montN == NULL || key->montP == NULL
+        || key->montQ == NULL) {
+        return -EINVAL;
+    }
 
     mpi_limb_t *scratch = (mpi_limb_t *)MPI_ZALLOCATE(1000, sizeof(mpi_limb_t));
     mpi_limb_t *buffer = &scratch[x->size];

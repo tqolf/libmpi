@@ -82,7 +82,8 @@ int mpi_montgomery_exp_consttime(mpi_t *r, const mpi_t *x, const mpi_t *e, mpi_m
  *   1. m0: low word of (1 / modulus) mod b
  *   2. r = T/R mod m
  */
-void mpi_montgomery_reduce_bin(mpi_limb_t *r, mpi_limb_t *product, const mpi_limb_t *m, unsigned int mnum, mpi_limb_t m0);
+void mpi_montgomery_reduce_bin(mpi_limb_t *r, mpi_limb_t *product, const mpi_limb_t *m, unsigned int mnum,
+                               mpi_limb_t m0);
 
 /**
  * mpi montgomery: r[] = to_mont(a[])
@@ -113,7 +114,8 @@ void mpi_montgomery_dec_bin(mpi_limb_t *r, const mpi_limb_t *a, mpi_montgomery_t
  *   3. length of b: modsize
  *   4. memory size from the pool: modsize * sizeof(mpi_limb_t)
  */
-void mpi_montgomery_add_bin(mpi_limb_t *r, const mpi_limb_t *a, const mpi_limb_t *b, mpi_montgomery_t *mont);
+void mpi_montgomery_add_bin(mpi_limb_t *r, const mpi_limb_t *a, const mpi_limb_t *b,
+                            mpi_montgomery_t *mont);
 
 /**
  * mpi montgomery: r = (a - b) mod m
@@ -124,7 +126,8 @@ void mpi_montgomery_add_bin(mpi_limb_t *r, const mpi_limb_t *a, const mpi_limb_t
  *   3. length of b: modsize
  *   4. memory size from the pool: modsize * sizeof(mpi_limb_t)
  */
-void mpi_montgomery_sub_bin(mpi_limb_t *r, const mpi_limb_t *a, const mpi_limb_t *b, mpi_montgomery_t *mont);
+void mpi_montgomery_sub_bin(mpi_limb_t *r, const mpi_limb_t *a, const mpi_limb_t *b,
+                            mpi_montgomery_t *mont);
 
 /**
  * mpi montgomery: r = -b mod m = (m - b) mod m
@@ -185,7 +188,8 @@ void mpi_montgomery_red_bin(mpi_limb_t *r, mpi_limb_t *prod, mpi_montgomery_t *m
  *   3. length of b: modsize
  *   4. memory size from the pool: modsize * sizeof(mpi_limb_t) * 2
  */
-void mpi_montgomery_mul_bin(mpi_limb_t *r, const mpi_limb_t *a, const mpi_limb_t *b, mpi_montgomery_t *mont);
+void mpi_montgomery_mul_bin(mpi_limb_t *r, const mpi_limb_t *a, const mpi_limb_t *b,
+                            mpi_montgomery_t *mont);
 
 /**
  * mpi montgomery: r = (a ^ 2) mod m
@@ -206,13 +210,16 @@ mpi_limb_t mpi_montgomery_factor(mpi_limb_t m0);
  * mpi montgomery: binary exponentiation
  *
  */
-unsigned int mpi_montgomery_exp_bin(mpi_limb_t *y, const mpi_limb_t *x, unsigned int xsize, const mpi_limb_t *e, unsigned int ebits, mpi_montgomery_t *mont);
+unsigned int mpi_montgomery_exp_bin(mpi_limb_t *y, const mpi_limb_t *x, unsigned int xsize,
+                                    const mpi_limb_t *e, unsigned int ebits, mpi_montgomery_t *mont);
 
 /**
  * mpi montgomery: binary exponentiation(consttime)
  *
  */
-unsigned int mpi_montgomery_exp_consttime_bin(mpi_limb_t *y, const mpi_limb_t *x, unsigned int xsize, const mpi_limb_t *e, unsigned int ebits, mpi_montgomery_t *mont);
+unsigned int mpi_montgomery_exp_consttime_bin(mpi_limb_t *y, const mpi_limb_t *x, unsigned int xsize,
+                                              const mpi_limb_t *e, unsigned int ebits,
+                                              mpi_montgomery_t *mont);
 
 #if defined(__cplusplus)
 }

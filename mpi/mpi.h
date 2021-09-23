@@ -311,22 +311,27 @@ int mpi_swap_consttime(unsigned condition, mpi_t *a, mpi_t *b, unsigned int n);
  *   1. return 0 if the number is composite
  *      1 if it is prime with an error probability of less than 0.25^checks
  */
-int mpi_is_prime(const mpi_t *a, unsigned int checks, unsigned do_trial_division, mpi_optimizer_t *optimizer, int (*rand_bytes)(void *, unsigned char *, unsigned int), void *rand_state);
+int mpi_is_prime(const mpi_t *a, unsigned int checks, unsigned do_trial_division,
+                 mpi_optimizer_t *optimizer, int (*rand_bytes)(void *, unsigned char *, unsigned int),
+                 void *rand_state);
 
 /**
  * mpi(prime): enerates a pseudo-random prime number of at least bit length |bits|
  *
  * @note:
  *   1. The returned number is probably prime with a negligible error.
- *   2. If |add| is NULL the returned prime number will have exact bit length |bits| with the top most two bits set.
+ *   2. If |add| is NULL the returned prime number will have exact bit length |bits| with the top most two
+ * bits set.
  *   3. The prime may have to fulfill additional requirements for use in Diffie-Hellman key exchange:
- *      If |add| is not NULL, the prime will fulfill the condition p % |add| == |rem| (p % |add| == 1 if |rem| == NULL) in order to suit a given generator.
+ *      If |add| is not NULL, the prime will fulfill the condition p % |add| == |rem| (p % |add| == 1 if
+ * |rem| == NULL) in order to suit a given generator.
  *
  *      If |safe| is true, it will be a safe prime (i.e. a prime p so hat (p-1)/2 is also prime).
  *      If |safe| is true, and |rem| == NULL the condition will be p % |add| == 3.
  *      It is recommended that |add| is a multiple of 4.
  */
-int mpi_generate_prime(mpi_t *ret, unsigned int bits, unsigned safe, const mpi_t *add, const mpi_t *rem, int (*rand_bytes)(void *, unsigned char *, unsigned int), void *rand_state);
+int mpi_generate_prime(mpi_t *ret, unsigned int bits, unsigned safe, const mpi_t *add, const mpi_t *rem,
+                       int (*rand_bytes)(void *, unsigned char *, unsigned int), void *rand_state);
 
 #if defined(__cplusplus)
 }

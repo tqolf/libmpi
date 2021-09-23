@@ -53,32 +53,36 @@
         free((ptr));                                                  \
         MPI_DEBUG_ALLOCATOR_ON_DEALLOCATE((ptr), __FILE__, __LINE__); \
     } /* de-allocate memory chunk */
-#define MPI_REALLOCATE(ptr, size)                                                    \
-    ({                                                                               \
-        void *__ptr = realloc((ptr), (size));                                        \
-        MPI_DEBUG_ALLOCATOR_ON_REALLOCATE(__ptr, (ptr), (size), __FILE__, __LINE__); \
-        __ptr;                                                                       \
-    }) /* (OPTIONAL) re-allocate memory chunk. NOT use |MPI_REALLOCATE| to expand mpi room if not be defined */
+#define MPI_REALLOCATE(ptr, size)                                                                    \
+    ({                                                                                               \
+        void *__ptr = realloc((ptr), (size));                                                        \
+        MPI_DEBUG_ALLOCATOR_ON_REALLOCATE(__ptr, (ptr), (size), __FILE__, __LINE__);                 \
+        __ptr;                                                                                       \
+    }) /* (OPTIONAL) re-allocate memory chunk. NOT use |MPI_REALLOCATE| to expand mpi room if not be \
+          defined */
 #else
-#define MPI_ALLOCATE(size)        malloc(size)           /* allocate memory chunk */
-#define MPI_ZALLOCATE(n, size)    calloc((n), (size))    /* allocate memory chunk, then zeroize */
-#define MPI_DEALLOCATE(ptr)       free(ptr)              /* de-allocate memory chunk */
-#define MPI_REALLOCATE(ptr, size) realloc((ptr), (size)) /* (OPTIONAL) re-allocate memory chunk. NOT use |MPI_REALLOCATE| to expand mpi room if not be defined */
+#define MPI_ALLOCATE(size)     malloc(size)        /* allocate memory chunk */
+#define MPI_ZALLOCATE(n, size) calloc((n), (size)) /* allocate memory chunk, then zeroize */
+#define MPI_DEALLOCATE(ptr)    free(ptr)           /* de-allocate memory chunk */
+#define MPI_REALLOCATE(ptr, size)                                                                         \
+    realloc((ptr), (size)) /* (OPTIONAL) re-allocate memory chunk. NOT use |MPI_REALLOCATE| to expand mpi \
+                              room if not be defined */
 #endif
 
 // #define MPI_LIMB_BITS                32 /* undefine to detect automatically */
 // #define MPI_CACHE_LINE_BYTES         64 /* size of cache line (in bytes) */
-// #define MPI_NO_INLINE_ASM               /* NOT use inline asm, @see https://gcc.gnu.org/wiki/DontUseInlineAsm */
-// #define MPI_LOW_FOOTPRINT               /* optimize the static memory footprint of the library */
-// #define MPI_USE_SLIDING_WINDOW_EXP      /* sliding-windows exponentiation */
-// #define MPI_USE_C_MONTGOMERY_MUL_BIN    /* use c implementation for mpi_montgomery_mul_bin */
-// #define MPI_USE_C_MONTGOMERY_RED_BIN    /* use c implementation for mpi_montgomery_red_bin */
+// #define MPI_NO_INLINE_ASM            /* NOT use inline asm, @see
+// https://gcc.gnu.org/wiki/DontUseInlineAsm */ #define MPI_LOW_FOOTPRINT            /* optimize the static
+// memory footprint of the library */ #define MPI_USE_SLIDING_WINDOW_EXP   /* sliding-windows exponentiation
+// */ #define MPI_USE_C_MONTGOMERY_MUL_BIN /* use c implementation for mpi_montgomery_mul_bin */ #define
+// MPI_USE_C_MONTGOMERY_RED_BIN /* use c implementation for mpi_montgomery_red_bin */
 
 /** automatically detection for some known platforms */
 #ifndef MPI_LIMB_BITS
 #if defined(__x86_64) || defined(_M_AMD64) || defined(_M_X64) || defined(__aarch64__)
 #define MPI_LIMB_BITS 64
-#elif defined(__x86) || defined(__i386) || defined(__i386__) || defined(_M_IX86) || defined(__arm) || defined(__arm__) || defined(_M_ARM)
+#elif defined(__x86) || defined(__i386) || defined(__i386__) || defined(_M_IX86) || defined(__arm) \
+    || defined(__arm__) || defined(_M_ARM)
 #define MPI_LIMB_BITS 32
 #endif
 #endif
@@ -245,6 +249,7 @@ typedef struct {
     unsigned int room; /**< mpi max size (count of mpi_limb_t) */
     mpi_limb_t *data;  /**< mpi data chunk(most significant limb at the largest) */
 } mpi_t;
-#define MPI_ALIGNED_HEAD_LIMBS ((unsigned int)((sizeof(mpi_t) + sizeof(mpi_limb_t) - 1) / sizeof(mpi_limb_t)))
+#define MPI_ALIGNED_HEAD_LIMBS \
+    ((unsigned int)((sizeof(mpi_t) + sizeof(mpi_limb_t) - 1) / sizeof(mpi_limb_t)))
 
 #endif

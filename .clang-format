@@ -1,3 +1,4 @@
+---
 # configured with https://zed0.co.uk/clang-format-configurator
 
 ---
@@ -22,7 +23,7 @@ AllowShortLoopsOnASingleLine: 'true'
 AlwaysBreakAfterDefinitionReturnType: None
 AlwaysBreakAfterReturnType: None
 AlwaysBreakBeforeMultilineStrings: 'false'
-AlwaysBreakTemplateDeclarations: 'Yes'
+AlwaysBreakTemplateDeclarations: Yes
 BinPackArguments: 'true'
 BinPackParameters: 'true'
 BraceWrapping:
@@ -48,7 +49,7 @@ BreakBeforeTernaryOperators: 'true'
 BreakConstructorInitializers: BeforeColon
 BreakInheritanceList: BeforeColon
 BreakStringLiterals: 'true'
-ColumnLimit: '240'
+ColumnLimit: '108'
 CompactNamespaces: 'false'
 ConstructorInitializerAllOnOneLineOrOnePerLine: 'true'
 ConstructorInitializerIndentWidth: '4'
@@ -58,10 +59,10 @@ DerivePointerAlignment: 'false'
 DisableFormat: 'false'
 ExperimentalAutoDetectBinPacking: 'false'
 FixNamespaceComments: 'true'
-ForEachMacros: ['foreach', 'FOREACH', 'RANGES_FOR', 'hlist_for_each_entry_continue', 'hlist_for_each_entry', 'hlist_for_each_entry_from', 'hlist_for_each_entry_safe', 'hlist_for_each_safe', 'list_for_each_entry', 'list_for_each_entry_continue', 'list_for_each_entry_continue_reverse', 'list_for_each_entry_from', 'list_for_each_entry_reverse', 'list_for_each_entry_safe', 'list_for_each_entry_safe_continue', 'list_for_each_entry_safe_from', 'list_for_each_entry_safe_reverse', 'list_for_each_from', 'list_for_each_prev', 'list_for_each_prev_safe', 'list_for_each_safe']
-TypenameMacros: ['STACK_OF', 'LIST']
+ForEachMacros: [foreach, FOREACH, RANGES_FOR, hlist_for_each_entry_continue, hlist_for_each_entry, hlist_for_each_entry_from, hlist_for_each_entry_safe, hlist_for_each_safe, list_for_each_entry, list_for_each_entry_continue, list_for_each_entry_continue_reverse, list_for_each_entry_from, list_for_each_entry_reverse, list_for_each_entry_safe, list_for_each_entry_safe_continue, list_for_each_entry_safe_from, list_for_each_entry_safe_reverse, list_for_each_from, list_for_each_prev, list_for_each_prev_safe, list_for_each_safe]
+TypenameMacros: [STACK_OF, LIST]
 IncludeBlocks: Regroup
-IncludeIsMainRegex: '([-_](test|unittest))?$'
+IncludeIsMainRegex: ([-_](test|unittest))?$
 IndentCaseLabels: 'true'
 IndentPPDirectives: None
 IndentWidth: '4'
@@ -79,33 +80,33 @@ PenaltyExcessCharacter: '1000000'
 PenaltyReturnTypeOnItsOwnLine: '500'
 PointerAlignment: Right
 RawStringFormats:
-  - Language: Cpp
-    Delimiters:
-      - 'cc'
-      - 'CC'
-      - 'cpp'
-      - 'Cpp'
-      - 'CPP'
-      - 'c++'
-      - 'C++'
-    CanonicalDelimiter: ''
-    BasedOnStyle: google
-  - Language: TextProto
-    Delimiters:
-      - 'pb'
-      - 'PB'
-      - 'proto'
-      - 'PROTO'
-    EnclosingFunctions:
-      - EqualsProto
-      - EquivToProto
-      - PARSE_PARTIAL_TEXT_PROTO
-      - PARSE_TEST_PROTO
-      - PARSE_TEXT_PROTO
-      - ParseTextOrDie
-      - ParseTextProtoOrDie
-    CanonicalDelimiter: ''
-    BasedOnStyle: google
+- Language: Cpp
+  Delimiters:
+  - cc
+  - CC
+  - cpp
+  - Cpp
+  - CPP
+  - c++
+  - C++
+  CanonicalDelimiter: ''
+  BasedOnStyle: google
+- Language: TextProto
+  Delimiters:
+  - pb
+  - PB
+  - proto
+  - PROTO
+  EnclosingFunctions:
+  - EqualsProto
+  - EquivToProto
+  - PARSE_PARTIAL_TEXT_PROTO
+  - PARSE_TEST_PROTO
+  - PARSE_TEXT_PROTO
+  - ParseTextOrDie
+  - ParseTextProtoOrDie
+  CanonicalDelimiter: ''
+  BasedOnStyle: google
 ReflowComments: 'true'
 SortIncludes: 'false'
 SortUsingDeclarations: 'false'
@@ -126,7 +127,6 @@ SpacesInContainerLiterals: 'false'
 SpacesInParentheses: 'false'
 SpacesInSquareBrackets: 'false'
 Standard: Auto
-StatementMacros: ['CRPT_UNUSED', '__maybe_unused']
+StatementMacros: [CRPT_UNUSED, __maybe_unused]
 TabWidth: '4'
 UseTab: Never
-...
