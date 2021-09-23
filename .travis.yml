@@ -48,11 +48,6 @@ matrix:
   allow_failures:
     - os: osx
 
-branches:
-  only:
-    - master
-    - devel
-
 addons:
   apt:
     packages:
@@ -64,12 +59,14 @@ addons:
       - python3-setuptools
       - python3-pip
       - libgtest-dev
+      - curl
     update: true
   homebrew:
     packages:
       - graphviz
       - nasm
       - googletest
+      - curl
     update: true
 
 before_install:
