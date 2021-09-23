@@ -79,7 +79,8 @@
 
 /** automatically detection for some known platforms */
 #ifndef MPI_LIMB_BITS
-#if defined(__x86_64) || defined(_M_AMD64) || defined(_M_X64) || defined(__aarch64__)
+#if defined(__x86_64) || defined(__x86_64__) || defined(_M_AMD64) || defined(_M_X64) \
+    || defined(__aarch64__) || defined(__powerpc64__) || defined(_ARCH_PP64)
 #define MPI_LIMB_BITS 64
 #elif defined(__x86) || defined(__i386) || defined(__i386__) || defined(_M_IX86) || defined(__arm) \
     || defined(__arm__) || defined(_M_ARM)
