@@ -56,7 +56,7 @@ IF (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG)
            -Wall
            -Wextra
            -fno-common
-           # -fvisibility=hidden
+           -fvisibility=default
   )
 
   IF (CMAKE_COMPILER_IS_GNUCC)
