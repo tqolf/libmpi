@@ -28,14 +28,14 @@ jobs:
             build: Debug
             compiler: clang
             codecov: OFF
-          - os: windows-latest
-            target: Windows
-            compiler: cl
+          - os: macos-latest
+            target: Macos
+            compiler: clang
             build: Release
             codecov: OFF
-          - os: windows-latest
-            target: Windows
-            compiler: cl
+          - os: macos-latest
+            target: Macos
+            compiler: clang
             build: Debug
             codedov: OFF
 
