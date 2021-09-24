@@ -4,17 +4,16 @@ on: push
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v2
 
       - name: Install requirements
         run: |
-          brew install nasm
-          brew install googletest
-          brew install openssl
-          brew link openssl --force
+          sudo apt install nasm
+          sudo apt install googletest
+          sudo apt install openssl
 
       - name: Configure
         run: cmake -B ${{github.workspace}}/build -DGCOV=OFF -DCMAKE_BUILD_TYPE=Release
