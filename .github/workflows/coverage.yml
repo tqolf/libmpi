@@ -25,6 +25,8 @@ jobs:
         working-directory: ${{github.workspace}}/build
         run: ./tests/unittest-mpi
 
-      - name: Upload Coverage
+      - name: Upload To CodeCov
         working-directory: ${{github.workspace}}/build
+        env:
+          CODECOV_TOKEN: 860137d0-39de-4de2-85ed-07c0a6768ead
         run: bash <(curl -s https://codecov.io/bash)
