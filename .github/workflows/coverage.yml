@@ -16,7 +16,7 @@ jobs:
           sudo apt install openssl
 
       - name: Configure
-        run: cmake -B ${{github.workspace}}/build -DGCOV=OFF -DCMAKE_BUILD_TYPE=Release
+        run: cmake -B ${{github.workspace}}/build -DGCOV=ON -DCMAKE_BUILD_TYPE=Debug || nm ${{github.workspace}}/build/mpi/libmpi.a
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build
