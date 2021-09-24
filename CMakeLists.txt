@@ -458,7 +458,7 @@ ELSE ()
 
   # On Windows, we use the NASM output, specifically built with Yasm.
   SET(ASM_EXT asm)
-  ENABLE_LANGUAGE(ASM_NASM)
+  # ENABLE_LANGUAGE(ASM_NASM)
 ENDIF ()
 
 FIND_PACKAGE(Perl REQUIRED)
