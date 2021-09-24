@@ -26,6 +26,4 @@ jobs:
         run: make test
 
       - name: Upload To CodeCov
-        if: ${{ matrix.codecov == 'Debug' }}
-        working-directory: ${{github.workspace}}/build
         run: bash <(curl -s https://codecov.io/bash)
