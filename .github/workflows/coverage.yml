@@ -12,7 +12,7 @@ jobs:
       - name: Install requirements
         run: |
           sudo apt install nasm
-          sudo apt install googletest
+          sudo apt install libgtest-dev
           sudo apt install openssl
 
       - name: Configure
