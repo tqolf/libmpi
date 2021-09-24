@@ -1,6 +1,6 @@
 # unit-test
 ADD_EXECUTABLE(unittest-mpi unittest-mpi.cpp)
-TARGET_LINK_LIBRARIES(unittest-mpi mpi crypto dl GTest::gtest pthread)
+TARGET_LINK_LIBRARIES(unittest-mpi mpi crypto dl gtest pthread)
 ADD_TEST(NAME unittest-mpi COMMAND unittest-mpi
          WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 )
