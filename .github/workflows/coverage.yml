@@ -28,6 +28,11 @@ jobs:
             build: Debug
             compiler: clang
             codecov: OFF
+          - os: macos-latest
+            target: Macos
+            build: Release
+            compiler: clang
+            codecov: OFF
 
     steps:
       - uses: actions/checkout@v2
@@ -42,9 +47,11 @@ jobs:
       - name: Install MacOS requirements
         if: ${{ matrix.os == 'macos-latest' }}
         run: |
+          xcode-select --install
           brew install nasm
           brew install googletest
           brew install openssl
+          brew link openssl --force
 
       - name: Configure
         run: cmake -B ${{github.workspace}}/build -DCMAKE_C_COMPILER=$(which ${{ matrix.compiler }}) -DGCOV=${{ matrix.codecov }} -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DMPI_NO_ASM=ON
