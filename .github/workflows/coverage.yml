@@ -28,16 +28,6 @@ jobs:
             build: Debug
             compiler: clang
             codecov: OFF
-          - os: macos-latest
-            target: Macos
-            compiler: clang
-            build: Release
-            codecov: OFF
-          - os: macos-latest
-            target: Macos
-            compiler: clang
-            build: Debug
-            codedov: OFF
 
     steps:
       - uses: actions/checkout@v2
@@ -55,10 +45,6 @@ jobs:
           brew install nasm
           brew install googletest
           brew install openssl
-      
-      - name: Add msbuild to PATH
-        if: ${{ matrix.os == 'windows-latest' }}
-        uses: microsoft/setup-msbuild@v1.0.2
 
       - name: Configure
         run: cmake -B ${{github.workspace}}/build -DCMAKE_C_COMPILER=$(which ${{ matrix.compiler }}) -DGCOV=${{ matrix.codecov }} -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DMPI_NO_ASM=ON
