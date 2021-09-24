@@ -1,0 +1,31 @@
+name: ci
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: [ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install requirements
+        run: |
+          sudo apt install nasm
+          sudo apt install libgtest-dev
+          sudo apt install openssl
+
+      - name: Configure
+        run: cmake -B ${{github.workspace}}/build -DGCOV=ON -DCMAKE_BUILD_TYPE=Debug -DMPI_NO_ASM=ON
+
+      - name: Build
+        run: cmake --build ${{github.workspace}}/build
+
+      - name: Test
+        working-directory: ${{github.workspace}}/build
+        run: make test
+
+      - name: Upload To CodeCov
+        if: ${{ matrix.codecov == 'Debug' }}
+        working-directory: ${{github.workspace}}/build
+        run: bash <(curl -s https://codecov.io/bash)
