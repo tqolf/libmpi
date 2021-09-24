@@ -61,7 +61,7 @@ jobs:
         uses: microsoft/setup-msbuild@v1.0.2
 
       - name: Configure
-        run: cmake -B ${{github.workspace}}/build -DCMAKE_C_COMPILER=$(which ${{ matrix.compiler }}) -DGCOV=ON -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DMPI_NO_ASM=ON
+        run: cmake -B ${{github.workspace}}/build -DCMAKE_C_COMPILER=$(which ${{ matrix.compiler }}) -DGCOV=${{ matrix.codecov }} -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DMPI_NO_ASM=ON
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build
