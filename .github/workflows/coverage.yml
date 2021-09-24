@@ -7,7 +7,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest]
         compiler: [ gcc, clang ]
         build: [Release, Debug]
         include:
@@ -16,6 +16,11 @@ jobs:
           - os: windows-latest
             target: Windows
             compiler: cl
+            build: Release
+          - os: windows-latest
+            target: Windows
+            compiler: cl
+            build: Debug
 
     steps:
       - uses: actions/checkout@v2
