@@ -26,4 +26,5 @@ jobs:
         run: ./tests/unittest-mpi
 
       - name: Upload Coverage
+        working-directory: ${{github.workspace}}/build
         run: bash <(curl -s https://codecov.io/bash)
