@@ -1,10 +1,6 @@
 name: coverage
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+on: push
 
 jobs:
   build:
@@ -19,13 +15,13 @@ jobs:
           sudo apt install libgtest-dev
 
       - name: Configure
-        run: cmake -B ${{github.workspace}}/build -DGCOV=ON -DCMAKE_BUILD_TYPE=Debug
+        run: cmake -B ${{github.workspace}}/build -DGCOV=OFF -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build
 
       - name: Test
         working-directory: ${{github.workspace}}/build
-        run: ctest -C ${{env.BUILD_TYPE}}
+        run: ./tests/unittest-mpi
 
       - uses: codecov/codecov-action@v2
