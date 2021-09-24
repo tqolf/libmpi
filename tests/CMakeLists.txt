@@ -1,6 +1,9 @@
+find_package(GTest REQUIRED)
+
 # unit-test
 ADD_EXECUTABLE(unittest-mpi unittest-mpi.cpp)
-TARGET_LINK_LIBRARIES(unittest-mpi mpi crypto dl gtest pthread)
+TARGET_INCLUDE_DIRECTORIES(unittest-mpi PRIVATE ${GTEST_INCLUDE_DIRS})
+TARGET_LINK_LIBRARIES(unittest-mpi mpi crypto dl GTest::gtest pthread)
 ADD_TEST(NAME unittest-mpi COMMAND unittest-mpi
          WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 )
