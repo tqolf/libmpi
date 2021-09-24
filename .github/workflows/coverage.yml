@@ -4,15 +4,15 @@ on: push
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
 
     steps:
       - uses: actions/checkout@v2
 
       - name: Install requirements
         run: |
-          sudo apt install nasm
-          sudo apt install libgtest-dev
+          brew install nasm
+          brew install googletest
 
       - name: Configure
         run: cmake -B ${{github.workspace}}/build -DGCOV=OFF -DCMAKE_BUILD_TYPE=Release
@@ -24,4 +24,4 @@ jobs:
         working-directory: ${{github.workspace}}/build
         run: ./tests/unittest-mpi
 
-      - uses: codecov/codecov-action@v2
+      # - uses: codecov/codecov-action@v2
