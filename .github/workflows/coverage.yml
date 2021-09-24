@@ -4,19 +4,49 @@ on: push
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        compiler: [ g++-10 ]
+        build: [Release, Debug]
+        include:
+          - os: ubuntu-latest
+            target: Linux
+          - os: macos-latest
+            target: Macos
+          - os: windows-latest
+            compiler: cl
+            target: Windows
+            build: Release
+          - os: windows-latest
+            compiler: cl
+            target: Windows
+            build: Debug
 
     steps:
       - uses: actions/checkout@v2
 
-      - name: Install requirements
+      - name: Install Linux requirements
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           sudo apt install nasm
           sudo apt install libgtest-dev
           sudo apt install openssl
 
+      - name: Install MacOS requirements
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: |
+          brew install nasm
+          brew install googletest
+          brew install openssl
+      
+      - name: Add msbuild to PATH
+        if: ${{ matrix.os == 'windows-latest' }}
+        uses: microsoft/setup-msbuild@v1.0.2
+
       - name: Configure
-        run: cmake -B ${{github.workspace}}/build -DGCOV=ON -DCMAKE_BUILD_TYPE=Debug -DMPI_NO_ASM=ON
+        run: cmake -B ${{github.workspace}}/build -DGCOV=ON -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DMPI_NO_ASM=ON
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build
@@ -26,6 +56,7 @@ jobs:
         run: ./tests/unittest-mpi
 
       - name: Upload To CodeCov
+        if: ${{ matrix.os == 'Ubuntu-latest' }} && ${{ matrix.build == 'Debug' }}
         working-directory: ${{github.workspace}}/build
         env:
           CODECOV_TOKEN: 860137d0-39de-4de2-85ed-07c0a6768ead
