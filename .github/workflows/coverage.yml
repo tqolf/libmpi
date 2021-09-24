@@ -29,11 +29,6 @@ jobs:
             build: Debug
             compiler: clang
             codecov: OFF
-          - os: macos-latest
-            target: Macos
-            build: Release
-            compiler: clang
-            codecov: OFF
 
     steps:
       - uses: actions/checkout@v2
@@ -68,6 +63,4 @@ jobs:
       - name: Upload To CodeCov
         if: ${{ matrix.codecov == 'Debug' }}
         working-directory: ${{github.workspace}}/build
-        env:
-          CODECOV_TOKEN: 860137d0-39de-4de2-85ed-07c0a6768ead
         run: bash <(curl -s https://codecov.io/bash)
