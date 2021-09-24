@@ -52,6 +52,8 @@ jobs:
           brew install googletest
           brew install openssl
           brew link openssl --force
+          export LDFLAGS="-L/usr/local/opt/openssl@1.1/lib"
+          export CPPFLAGS="-I/usr/local/opt/openssl@1.1/include"
 
       - name: Configure
         run: cmake -B ${{github.workspace}}/build -DCMAKE_C_COMPILER=$(which ${{ matrix.compiler }}) -DGCOV=${{ matrix.codecov }} -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DMPI_NO_ASM=ON
