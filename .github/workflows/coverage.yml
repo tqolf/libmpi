@@ -7,22 +7,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest]
         compiler: [ gcc, clang ]
         build: [Release, Debug]
         include:
           - os: ubuntu-latest
             target: Linux
-          #- os: macos-latest
-          #  target: Macos
           - os: windows-latest
-            compiler: cl
             target: Windows
-            build: Release
-          - os: windows-latest
             compiler: cl
-            target: Windows
-            build: Debug
 
     steps:
       - uses: actions/checkout@v2
@@ -46,14 +39,14 @@ jobs:
         uses: microsoft/setup-msbuild@v1.0.2
 
       - name: Configure
-        run: cmake -B ${{github.workspace}}/build -DGCOV=ON -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DMPI_NO_ASM=ON
+        run: cmake -B ${{github.workspace}}/build -DCMAKE_C_COMPILER=$(which ${{ matrix.compiler }}) -DGCOV=ON -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DMPI_NO_ASM=ON
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build
 
       - name: Test
         working-directory: ${{github.workspace}}/build
-        run: ./tests/unittest-mpi
+        run: make test
 
       - name: Upload To CodeCov
         if: ${{ matrix.os == 'Ubuntu-latest' }} && ${{ matrix.build == 'Debug' }}
