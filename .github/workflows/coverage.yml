@@ -13,8 +13,10 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Install Googletest
-        run: sudo apt-get install libgtest-dev
+      - name: Install requirements
+        run: |
+          sudo apt install nasm
+          sudo apt install libgtest-dev
 
       - name: Configure
         run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Debug
@@ -27,5 +29,3 @@ jobs:
         run: ctest -C ${{env.BUILD_TYPE}}
 
       - uses: codecov/codecov-action@v2
-
-      
