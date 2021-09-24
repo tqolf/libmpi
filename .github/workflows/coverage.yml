@@ -7,20 +7,37 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
-        compiler: [ gcc, clang ]
-        build: [Release, Debug]
         include:
           - os: ubuntu-latest
             target: Linux
+            build: Release
+            compiler: gcc
+            codecov: OFF
+          - os: ubuntu-latest
+            target: Linux
+            build: Debug
+            compiler: gcc
+            codecov: ON
+          - os: ubuntu-latest
+            target: Linux
+            build: Release
+            compiler: clang
+            codecov: OFF
+          - os: ubuntu-latest
+            target: Linux
+            build: Debug
+            compiler: clang
+            codecov: OFF
           - os: windows-latest
             target: Windows
             compiler: cl
             build: Release
+            codecov: OFF
           - os: windows-latest
             target: Windows
             compiler: cl
             build: Debug
+            codedov: OFF
 
     steps:
       - uses: actions/checkout@v2
@@ -54,7 +71,7 @@ jobs:
         run: make test
 
       - name: Upload To CodeCov
-        if: ${{ matrix.os == 'Ubuntu-latest' }} && ${{ matrix.build == 'Debug' }}
+        if: ${{ matrix.codecov == 'Debug' }}
         working-directory: ${{github.workspace}}/build
         env:
           CODECOV_TOKEN: 860137d0-39de-4de2-85ed-07c0a6768ead
