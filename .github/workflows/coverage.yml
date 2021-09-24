@@ -25,4 +25,4 @@ jobs:
         working-directory: ${{github.workspace}}/build
         run: ./tests/unittest-mpi
 
-      # - uses: codecov/codecov-action@v2
+      - uses: codecov/codecov-action@v2
