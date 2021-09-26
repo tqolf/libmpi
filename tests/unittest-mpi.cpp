@@ -1124,7 +1124,6 @@ TEST(MPI, GeneratePrime)
 }
 #endif
 
-#if 0 // FIXME
 TEST(MPI, VerifyPrime)
 {
     unsigned int bits;
@@ -1159,7 +1158,6 @@ TEST(MPI, VerifyPrime)
         mpi_destory(r);
     }
 }
-#endif
 
 // multiple-precision modular arithmetic
 //   classical modular multiplication
@@ -1169,7 +1167,6 @@ TEST(MPI, VerifyPrime)
 #include <mpi/mpi-rsa.h>
 #include <openssl/rsa.h>
 
-#if 0 // FIXME
 TEST(RSA, cipher)
 {
     unsigned int bits = 2048;
@@ -1353,9 +1350,9 @@ TEST(RSA, cipher)
     RSA_free(osslkey);
 }
 
+#if 0
 /*
 {
-        // FIXME: test
     if (0) {
         std::vector<unsigned char> prime = {
             0x01, 0xE4, 0xCE, 0x52, 0x9D, 0x78, 0x21, 0x12, 0x18, 0xE5, 0x71, 0x47, 0x73, 0x44, 0x23, 0xB6, 0x2E, 0x72, 0x51, 0xE2, 0xFE, 0x74, 0x7E, 0x15, 0x12, 0xEF, 0x97, 0x53, 0x37, 0x44, 0x6E, 0xC4, 0x8F, 0xFD, 0x3B, 0x7A,
@@ -1467,7 +1464,6 @@ TEST(RSA, cipher)
         exit(1);
     }
 }
-*/
 #endif
 
 #include <stdio.h>
