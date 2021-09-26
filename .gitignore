@@ -33,5 +33,4 @@
 
 # ignore directories
 build/**
-mpi/asm/**
 .vscode/**
