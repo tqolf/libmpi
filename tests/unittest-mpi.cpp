@@ -920,7 +920,6 @@ TEST(MPI, BinaryGCD)
     // TODO: binary extended gcd algorithm
 }
 
-#if 0 // FIXME
 TEST(MPI, GCD)
 {
     std::vector<unsigned char> abuffer, bbuffer;
@@ -978,7 +977,7 @@ TEST(MPI, GCD)
         }
 
         // Lehmer's gcd algorithm
-        if (1) {
+        if (0) { // FIXME
             mpi_gcd(r, a, b, NULL);
             verifier::get()->trace("  r = gcd(a, b)", r);
             EXPECT_TRUE(verifier::get()->probe("r = gcd(a, b)", r));
@@ -989,7 +988,6 @@ TEST(MPI, GCD)
         mpi_destory(r);
     }
 }
-#endif
 
 TEST(MPI, Montgomery)
 {
