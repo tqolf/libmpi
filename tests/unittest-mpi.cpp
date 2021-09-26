@@ -1253,7 +1253,9 @@ TEST(RSA, cipher)
             },
             NULL);
         mpi_destory(pubexp);
-        if (mpikey != NULL) { std::cout << "pbits: " << mpikey->pbits << ", qbits: " << mpikey->qbits << std::endl; }
+        if (mpikey != NULL) {
+            std::cout << "pbits: " << mpikey->pbits << ", qbits: " << mpikey->qbits << std::endl;
+        }
 
         // export N
         N.resize(MPI_BITS_TO_BYTES(mpikey->nbits));
@@ -1312,13 +1314,15 @@ TEST(RSA, cipher)
     // openssl
     {
         // pub cipher
-        RSA_public_encrypt(static_cast<int>(INPUT.size()), INPUT.data(), OUTPUT.data(), osslkey, RSA_NO_PADDING);
+        RSA_public_encrypt(static_cast<int>(INPUT.size()), INPUT.data(), OUTPUT.data(), osslkey,
+                           RSA_NO_PADDING);
         verifier::get()->erase("pub cipher");
         ASSERT_TRUE(verifier::get()->probe("pub cipher", OUTPUT));
         verifier::get()->trace("pub cipher", OUTPUT);
 
         // prv cipher
-        RSA_private_decrypt(static_cast<int>(INPUT.size()), INPUT.data(), OUTPUT.data(), osslkey, RSA_NO_PADDING);
+        RSA_private_decrypt(static_cast<int>(INPUT.size()), INPUT.data(), OUTPUT.data(), osslkey,
+                            RSA_NO_PADDING);
         verifier::get()->erase("prv cipher");
         ASSERT_TRUE(verifier::get()->probe("prv cipher", OUTPUT));
         verifier::get()->trace("prv cipher", OUTPUT);

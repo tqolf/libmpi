@@ -61,21 +61,21 @@
     }) /* (OPTIONAL) re-allocate memory chunk. NOT use |MPI_REALLOCATE| to expand mpi room if not be \
           defined */
 #else
-#define MPI_ALLOCATE(size)     malloc(size)        /* allocate memory chunk */
-#define MPI_ZALLOCATE(n, size) calloc((n), (size)) /* allocate memory chunk, then zeroize */
-#define MPI_DEALLOCATE(ptr)    free(ptr)           /* de-allocate memory chunk */
-#define MPI_REALLOCATE(ptr, size)                                                                         \
-    realloc((ptr), (size)) /* (OPTIONAL) re-allocate memory chunk. NOT use |MPI_REALLOCATE| to expand mpi \
-                              room if not be defined */
+#define MPI_ALLOCATE(size)        malloc(size)           /* allocate memory chunk */
+#define MPI_ZALLOCATE(n, size)    calloc((n), (size))    /* allocate memory chunk, then zeroize */
+#define MPI_DEALLOCATE(ptr)       free(ptr)              /* de-allocate memory chunk */
+#define MPI_REALLOCATE(ptr, size) realloc((ptr), (size)) /* (OPTIONAL) re-allocate memory chunk */
 #endif
 
+// clang-format off
 // #define MPI_LIMB_BITS                32 /* undefine to detect automatically */
 // #define MPI_CACHE_LINE_BYTES         64 /* size of cache line (in bytes) */
-// #define MPI_NO_INLINE_ASM            /* NOT use inline asm, @see
-// https://gcc.gnu.org/wiki/DontUseInlineAsm */ #define MPI_LOW_FOOTPRINT            /* optimize the static
-// memory footprint of the library */ #define MPI_USE_SLIDING_WINDOW_EXP   /* sliding-windows exponentiation
-// */ #define MPI_USE_C_MONTGOMERY_MUL_BIN /* use c implementation for mpi_montgomery_mul_bin */ #define
-// MPI_USE_C_MONTGOMERY_RED_BIN /* use c implementation for mpi_montgomery_red_bin */
+// #define MPI_NO_INLINE_ASM            /* NOT use inline asm, @see https://gcc.gnu.org/wiki/DontUseInlineAsm */
+// #define MPI_LOW_FOOTPRINT            /* optimize the static memory footprint of the library */
+// #define MPI_USE_SLIDING_WINDOW_EXP   /* sliding-windows exponentiation */
+// #define MPI_USE_C_MONTGOMERY_MUL_BIN /* use c implementation for mpi_montgomery_mul_bin */
+// #define MPI_USE_C_MONTGOMERY_RED_BIN /* use c implementation for mpi_montgomery_red_bin */
+// clang-format on
 
 /** automatically detection for some known platforms */
 #ifndef MPI_LIMB_BITS

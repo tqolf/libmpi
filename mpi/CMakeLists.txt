@@ -27,7 +27,7 @@ TARGET_STRIP_PATH_PREFIX(mpi)
 INSTALL(TARGETS mpi ARCHIVE DESTINATION lib LIBRARY DESTINATION lib)
 
 # RSA(Rivest–Shamir–Adleman) Algorithm
-OPTION(MPI_NO_ASM "build without rsa algorithm" OFF)
+OPTION(MPI_NO_RSA "build without rsa algorithm" OFF)
 IF (NOT MPI_NO_RSA)
   CONFIGURE_FILE(mpi-rsa.h ${CMAKE_BINARY_DIR}/include/mpi/mpi-rsa.h COPYONLY)
   INSTALL(FILES ${CMAKE_BINARY_DIR}/include/mpi/mpi-rsa.h

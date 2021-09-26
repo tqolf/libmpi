@@ -117,7 +117,7 @@ int rsa_import(rsa_key_t *key, const mpi_t *n, const mpi_t *e, const mpi_t *d, c
             MPI_RAISE_ERROR(-EINVAL, "Mismatched integers");
             return -EINVAL;
         }
-        key->nbits = mpi_bits(n); // FIXME: room left will be shadowed
+        key->nbits = mpi_bits(n); // XXX: room left will be shadowed
         mpi_montgomery_set_modulus_bin(key->montN, n->data, key->nbits);
     }
 
@@ -126,7 +126,7 @@ int rsa_import(rsa_key_t *key, const mpi_t *n, const mpi_t *e, const mpi_t *d, c
             MPI_RAISE_ERROR(-EINVAL, "Mismatched integers");
             return -EINVAL;
         }
-        key->ebits = mpi_bits(e); // FIXME: room left will be shadowed
+        key->ebits = mpi_bits(e); // XXX: room left will be shadowed
         COPY(key->e, e->data, e->size);
     }
 
@@ -135,7 +135,7 @@ int rsa_import(rsa_key_t *key, const mpi_t *n, const mpi_t *e, const mpi_t *d, c
             MPI_RAISE_ERROR(-EINVAL, "Mismatched integers");
             return -EINVAL;
         }
-        key->dbits = mpi_bits(d); // FIXME: room left will be shadowed
+        key->dbits = mpi_bits(d); // XXX: room left will be shadowed
         COPY(key->d, d->data, d->size);
 
         if (dp == NULL || dq == NULL || qinv == NULL) {
