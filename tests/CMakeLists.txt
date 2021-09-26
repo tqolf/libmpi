@@ -12,4 +12,4 @@ TARGET_LINK_LIBRARIES(benchmark mpi crypto pthread dl)
 TARGET_COMPILE_OPTIONS(benchmark PRIVATE -std=gnu++17)
 TARGET_STRIP_PATH_PREFIX(benchmark)
 
-INSTALL(TARGETS benchmark RUNTIME DESTINATION bin)
+INSTALL(TARGETS benchmark unittest-mpi RUNTIME DESTINATION bin)
