@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 #include "mpi-rsa.h"
-#include "mpi-binary.h"
-#include "mpi-montgomery.h"
+#include <mpn/mpn-binary.h>
+#include <mpn/mpn-montgomery.h>
 
 /**
  * Number of Miller-Rabin rounds for an error rate of less than 1/2^80 for random 'b'-bit input, b >= 100.
@@ -83,9 +83,9 @@ rsa_key_t *rsa_new(unsigned int ebits, unsigned int nbits, unsigned int primes)
         }
 
         {
-            key->montP = mpi_montgomery_create(pbits, MPN_BITS_TO_LIMBS(pbits) * 6);
-            key->montQ = mpi_montgomery_create(qbits, MPN_BITS_TO_LIMBS(qbits) * 6);
-            key->montN = mpi_montgomery_create(nbits, MPN_BITS_TO_LIMBS(nbits) * 6);
+            key->montP = mpn_montgomery_create(pbits, MPN_BITS_TO_LIMBS(pbits) * 6);
+            key->montQ = mpn_montgomery_create(qbits, MPN_BITS_TO_LIMBS(qbits) * 6);
+            key->montN = mpn_montgomery_create(nbits, MPN_BITS_TO_LIMBS(nbits) * 6);
         }
     }
 
@@ -95,9 +95,9 @@ rsa_key_t *rsa_new(unsigned int ebits, unsigned int nbits, unsigned int primes)
 void rsa_free(rsa_key_t *key)
 {
     if (key != NULL) {
-        mpi_montgomery_destory(key->montN);
-        mpi_montgomery_destory(key->montP);
-        mpi_montgomery_destory(key->montQ);
+        mpn_montgomery_destory(key->montN);
+        mpn_montgomery_destory(key->montP);
+        mpn_montgomery_destory(key->montQ);
         MPI_DEALLOCATE(key);
     }
 }
@@ -116,7 +116,7 @@ int rsa_import(rsa_key_t *key, const mpi_t *n, const mpi_t *e, const mpi_t *d, c
             return -EINVAL;
         }
         key->nbits = mpi_bits(n); // XXX: room left will be shadowed
-        mpi_montgomery_set_modulus_bin(key->montN, n->data, key->nbits);
+        mpn_montgomery_set_modulus_bin(key->montN, n->data, key->nbits);
     }
 
     if (e != NULL) {
@@ -137,9 +137,9 @@ int rsa_import(rsa_key_t *key, const mpi_t *n, const mpi_t *e, const mpi_t *d, c
         COPY(key->d, d->data, d->size);
 
         if (dp == NULL || dq == NULL || qinv == NULL) {
-            mpi_montgomery_destory(key->montP);
+            mpn_montgomery_destory(key->montP);
             key->montP = NULL;
-            mpi_montgomery_destory(key->montQ);
+            mpn_montgomery_destory(key->montQ);
             key->montQ = NULL;
         }
     }
@@ -189,7 +189,7 @@ rsa_key_t *rsa_generate_key(const mpi_t *pubexp, unsigned int nbits, unsigned in
                 goto exit_with_error;
             }
 
-            mpi_montgomery_set_modulus_bin(key->montP, p.data, pbits);
+            mpn_montgomery_set_modulus_bin(key->montP, p.data, pbits);
         }
 
         /* gennerate prime: q */
@@ -202,7 +202,7 @@ rsa_key_t *rsa_generate_key(const mpi_t *pubexp, unsigned int nbits, unsigned in
                 goto exit_with_error;
             }
 
-            mpi_montgomery_set_modulus_bin(key->montQ, q.data, qbits);
+            mpn_montgomery_set_modulus_bin(key->montQ, q.data, qbits);
         }
 
         {
@@ -214,9 +214,9 @@ rsa_key_t *rsa_generate_key(const mpi_t *pubexp, unsigned int nbits, unsigned in
                 goto exit_with_error;
             }
 
-            mpi_montgomery_t *montN = key->montN;
-            mpi_montgomery_t *montP = key->montP;
-            mpi_montgomery_t *montQ = key->montQ;
+            mpn_montgomery_t *montN = key->montN;
+            mpn_montgomery_t *montP = key->montP;
+            mpn_montgomery_t *montQ = key->montQ;
             mpn_limb_t *dataN = montN->modulus;
             mpn_limb_t *dataP = montP->modulus;
             mpn_limb_t *dataQ = montQ->modulus;
@@ -227,8 +227,8 @@ rsa_key_t *rsa_generate_key(const mpi_t *pubexp, unsigned int nbits, unsigned in
             mpn_limb_t *phiBuff = phi + nsize + 1;             /* psize */
 
             /* phi = (P - 1) * (Q - 1) */
-            mpn_dec_school(dataP, dataP, psize, 1);
-            mpn_dec_school(dataQ, dataQ, qsize, 1);
+            mpn_dec_vectorized(dataP, dataP, psize, 1);
+            mpn_dec_vectorized(dataQ, dataQ, qsize, 1);
             mpn_mul(phi, dataP, psize, dataQ, qsize);
 
             /* D = 1 / E mod phi */
@@ -253,12 +253,12 @@ rsa_key_t *rsa_generate_key(const mpi_t *pubexp, unsigned int nbits, unsigned in
             }
 
             /* restore P and Q */
-            mpn_inc_school(dataP, dataP, psize, 1);
-            mpn_inc_school(dataQ, dataQ, qsize, 1);
+            mpn_inc_vectorized(dataP, dataP, psize, 1);
+            mpn_inc_vectorized(dataQ, dataQ, qsize, 1);
 
             /* re-initialize montgomery context */
-            mpi_montgomery_set_modulus_bin(montP, dataP, pbits);
-            mpi_montgomery_set_modulus_bin(montQ, dataQ, qbits);
+            mpn_montgomery_set_modulus_bin(montP, dataP, pbits);
+            mpn_montgomery_set_modulus_bin(montQ, dataQ, qbits);
 
             /* qinv = 1 / q mod p */
             {
@@ -270,7 +270,7 @@ rsa_key_t *rsa_generate_key(const mpi_t *pubexp, unsigned int nbits, unsigned in
 
             {
                 mpn_mul(dataN, dataP, psize, dataQ, qsize);
-                mpi_montgomery_set_modulus_bin(montN, dataN, nbits);
+                mpn_montgomery_set_modulus_bin(montN, dataN, nbits);
 
                 key->nbits = nsize * MPN_LIMB_BITS - mpn_limb_ntz_consttime(dataN[nsize - 1]);
             }
@@ -292,7 +292,7 @@ int rsa_pub_cipher(mpi_t *r, const mpi_t *x, const rsa_key_t *key)
     if (r == NULL || x == NULL || key == NULL || key->montN == NULL) { return -EINVAL; }
 
     r->sign = MPI_SIGN_NON_NEGTIVE;
-    r->size = mpi_montgomery_exp_bin(r->data, x->data, x->size, key->e, key->ebits, key->montN);
+    r->size = mpn_montgomery_exp(r->data, x->data, x->size, key->e, key->ebits, key->montN);
 
     return 0;
 }
@@ -302,7 +302,7 @@ int rsa_prv_cipher(mpi_t *r, const mpi_t *x, const rsa_key_t *key)
     if (r == NULL || x == NULL || key == NULL || key->montN == NULL) { return -EINVAL; }
 
     r->sign = MPI_SIGN_NON_NEGTIVE;
-    r->size = mpi_montgomery_exp_consttime_bin(r->data, x->data, x->size, key->d, key->dbits, key->montN);
+    r->size = mpn_montgomery_exp_consttime(r->data, x->data, x->size, key->d, key->dbits, key->montN);
 
     return 0;
 }
@@ -321,8 +321,8 @@ int rsa_prv_cipher_crt(mpi_t *r, const mpi_t *x, const rsa_key_t *key)
     mpn_limb_t *dataXq = scratch;
 
     /* P- and Q- montgometry engines */
-    mpi_montgomery_t *montP = key->montP;
-    mpi_montgomery_t *montQ = key->montQ;
+    mpn_montgomery_t *montP = key->montP;
+    mpn_montgomery_t *montQ = key->montQ;
     unsigned int nsP = montP->modsize;
     unsigned int nsQ = montQ->modsize;
     unsigned int bitSizeP = key->pbits;
@@ -333,26 +333,26 @@ int rsa_prv_cipher_crt(mpi_t *r, const mpi_t *x, const rsa_key_t *key)
     /* compute xq = x^dQ mod Q */
     if (bitSizeP == bitSizeQ) { /* believe it's enough conditions for correct Mont application */
         ZEXPAND(buffer, nsQ + nsQ, x->data, x->size);
-        mpi_montgomery_red_bin(dataXq, buffer, montQ);
-        mpi_montgomery_mul_bin(dataXq, dataXq, montQ->montRR, montQ);
+        mpn_montgomery_reduce(dataXq, buffer, montQ);
+        mpn_montgomery_mul(dataXq, dataXq, montQ->montRR, montQ);
     } else {
         COPY(dataXq, x->data, x->size);
         mpn_div(NULL, NULL, dataXq, x->size, montQ->modulus, nsQ);
     }
 
-    mpi_montgomery_exp_consttime_bin(dataXq, dataXq, nsQ, key->dq, bitSizeDQ, montQ);
+    mpn_montgomery_exp_consttime(dataXq, dataXq, nsQ, key->dq, bitSizeDQ, montQ);
 
     /* compute xp = x^dP mod P */
     if (bitSizeP == bitSizeQ) { /* believe it's enough conditions for correct Mont application */
         ZEXPAND(buffer, nsP + nsP, x->data, x->size);
-        mpi_montgomery_red_bin(dataXp, buffer, montP);
-        mpi_montgomery_mul_bin(dataXp, dataXp, montP->montRR, montP);
+        mpn_montgomery_reduce(dataXp, buffer, montP);
+        mpn_montgomery_mul(dataXp, dataXp, montP->montRR, montP);
     } else {
         COPY(dataXp, x->data, x->size);
         mpn_div(NULL, NULL, dataXp, x->size, montP->modulus, nsP);
     }
 
-    mpi_montgomery_exp_consttime_bin(dataXp, dataXp, nsP, key->dp, bitSizeDP, montP);
+    mpn_montgomery_exp_consttime(dataXp, dataXp, nsP, key->dp, bitSizeDP, montP);
 
     /**
      * recombination
@@ -362,32 +362,32 @@ int rsa_prv_cipher_crt(mpi_t *r, const mpi_t *x, const rsa_key_t *key)
      */
     if (bitSizeP == bitSizeQ) { /* believe it's enough conditions for correct Mont application */
         ZEXPAND(buffer, nsP + nsP, dataXq, nsQ);
-        // mpi_montgomery_red_bin(buffer, buffer, montP);
-        // mpi_montgomery_mul_bin(buffer, buffer, montP->montRR, montP);
-        mpi_montgomery_sub_bin(buffer, buffer, montP->modulus, montP);
+        // mpn_montgomery_reduce(buffer, buffer, montP);
+        // mpn_montgomery_mul(buffer, buffer, montP->montRR, montP);
+        mpn_montgomery_sub(buffer, buffer, montP->modulus, montP);
         /* xp = (xp - xq) mod P */
-        mpi_montgomery_sub_bin(dataXp, dataXp, buffer, montP);
+        mpn_montgomery_sub(dataXp, dataXp, buffer, montP);
     } else {
         COPY(buffer, dataXq, nsQ);
         {
             unsigned int nsQP = mpn_div(NULL, NULL, buffer, nsQ, montP->modulus, nsP);
-            mpn_limb_t cf = mpn_sub_school(dataXp, dataXp, buffer, nsQP);
-            if (nsP - nsQP) cf = mpn_dec_school(dataXp + nsQP, dataXp + nsQP, (nsP - nsQP), cf);
-            if (cf) { mpn_add_school(dataXp, dataXp, montP->modulus, nsP); }
+            mpn_limb_t cf = mpn_sub_vectorized(dataXp, dataXp, buffer, nsQP);
+            if (nsP - nsQP) cf = mpn_dec_vectorized(dataXp + nsQP, dataXp + nsQP, (nsP - nsQP), cf);
+            if (cf) { mpn_add_vectorized(dataXp, dataXp, montP->modulus, nsP); }
         }
     }
 
     /* xp = xp*qInv mod P */
     /* convert invQ into Montgomery domain */
-    mpi_montgomery_enc_bin(buffer, key->qinv, montP);
+    mpn_montgomery_encode(buffer, key->qinv, montP);
     /* and multiply xp *= mont(invQ) mod P */
-    mpi_montgomery_mul_bin(dataXp, dataXp, buffer, montP);
+    mpn_montgomery_mul(dataXp, dataXp, buffer, montP);
 
     /* Y = xq + xp*Q */
     mpn_mul(buffer, dataXp, nsP, montQ->modulus, nsQ);
     {
-        mpn_limb_t cf = mpn_add_school(dataY, buffer, dataXq, nsQ);
-        mpn_inc_school(dataY + nsQ, buffer + nsQ, nsP, cf);
+        mpn_limb_t cf = mpn_add_vectorized(dataY, buffer, dataXq, nsQ);
+        mpn_inc_vectorized(dataY + nsQ, buffer + nsQ, nsP, cf);
     }
 
     r->sign = MPI_SIGN_NON_NEGTIVE;

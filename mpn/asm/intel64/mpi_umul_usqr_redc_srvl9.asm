@@ -22,7 +22,7 @@
 ;      Content:
 ;         mpn_mul()
 ;         mpn_sqr()
-;         mpi_montgomery_reduce_bin()
+;         mpn_montgomery_reduce_bin()
 ;
 ;  Implementation is using mulx and adcx/adox instruvtions
 ;
@@ -199,13 +199,13 @@ ENDFUNC mpn_sqr
 
 ;*************************************************************
 ;*
-;* uint64_t  mpi_montgomery_reduce_bin(uint64_t* pR;
+;* uint64_t  mpn_montgomery_reduce_bin(uint64_t* pR;
 ;*                          uint64_t* pProduct,
 ;*                    const uint64_t* pModulus, int  mSize,
 ;*                          uint64_t  m)
 ;*************************************************************
 align ARCH_ALIGN_FACTOR
-IPPASM mpi_montgomery_reduce_bin,PUBLIC
+IPPASM mpn_montgomery_reduce_bin,PUBLIC
 %assign LOCAL_FRAME (0)
         USES_GPR rbx,rbp,rsi,rdi,r12,r13,r14,r15
         USES_XMM
@@ -299,7 +299,7 @@ IPPASM mpi_montgomery_reduce_bin,PUBLIC
    REST_XMM
    REST_GPR
    ret
-ENDFUNC mpi_montgomery_reduce_bin
+ENDFUNC mpn_montgomery_reduce_bin
 
 %endif
 

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 #include <mpi/mpi.h>
-#include <mpi/mpi-binary.h>
-#include <mpi/mpi-montgomery.h>
+#include <mpn/mpn-binary.h>
+#include <mpn/mpn-montgomery.h>
 
 #include "benchmark.hpp"
 #include <openssl/bn.h>
@@ -745,7 +745,7 @@ int main(void)
             mpi_from_octets(&g, gbuffer.data(), gbuffer.size());
             mpi_from_octets(&e, ebuffer.data(), ebuffer.size());
 
-            mpi_montgomery_t *mont = mpi_montgomery_create(mpi_bits(n), 6 * n->size);
+            mpn_montgomery_t *mont = mpn_montgomery_create(mpi_bits(n), 6 * n->size);
             mpi_montgomery_set_modulus(mont, n);
 
             mpi_t *r = mpi_create(mpi_bits(n));
@@ -768,7 +768,7 @@ int main(void)
                 }
             }
 
-            mpi_montgomery_destory(mont);
+            mpn_montgomery_destory(mont);
             mpi_destory(n);
             mpi_destory(g);
             mpi_destory(e);
@@ -827,7 +827,7 @@ int main(void)
         unsigned int bits = 2048;
         std::vector<unsigned char> prime;
         {
-            prime.resize(MPI_BITS_TO_BYTES(bits));
+            prime.resize(MPN_BITS_TO_BYTES(bits));
         }
 
         // generate prime using openssl

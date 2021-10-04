@@ -13,19 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "mpi.h"
-#include "mpi-binary.h"
-#include "mpi-montgomery.h"
+#include "mpn-binary.h"
+#include "mpn-montgomery.h"
 
-#if !(defined MPI_MONT_REDC_ASM)
+#if !(defined MPN_MONT_REDC_ASM)
 /**
- * mpi montgomery: montgomery reduction
+ * mpn montgomery: montgomery reduction
  *
  * @note:
  *   1. m0: low word of (1 / modulus) mod b
  *   2. r = T/R mod m
  */
-void mpi_montgomery_reduce_bin(mpn_limb_t *r, mpn_limb_t *product, const mpn_limb_t *m, unsigned int msize,
+void mpn_montgomery_reduce_bin(mpn_limb_t *r, mpn_limb_t *product, const mpn_limb_t *m, unsigned int msize,
                                mpn_limb_t m0)
 {
     MPN_ASSERT(msize > 0);
@@ -48,24 +47,24 @@ void mpi_montgomery_reduce_bin(mpn_limb_t *r, mpn_limb_t *product, const mpn_lim
     UADD_AB(extension, product[2 * msize - 1], product[2 * msize - 1], extension);
 
     carry |= extension;
-    carry -= mpn_sub_school(r, product + msize, m, msize);
+    carry -= mpn_sub_vectorized(r, product + msize, m, msize);
     /* condition copy: R = carry ? Product + mSize : R */
     mpn_masked_copy_consttime(r, product + msize, r, msize, carry);
 }
 #endif
 
 /**
- * mpi montgomery: r[] = to_mont(a[])
+ * mpn montgomery: r[] = to_mont(a[])
  *
  * @requirements:
  *   1. length of r: modsize
  *   2. length of a: modsize
  *   3. memory size from the pool: modsize * sizeof(mpn_limb_t)
  */
-void mpi_montgomery_enc_bin(mpn_limb_t *r, const mpn_limb_t *a, mpi_montgomery_t *mont)
+void mpn_montgomery_encode(mpn_limb_t *r, const mpn_limb_t *a, mpn_montgomery_t *mont)
 {
 #ifdef MPI_LOW_FOOTPRINT
-    mpi_montgomery_mul_bin(r, a, mont->montRR, mont);
+    mpn_montgomery_mul(r, a, mont->montRR, mont);
 #else
     MPN_ASSERT(r != NULL && a != NULL && mont != NULL);
 
@@ -79,7 +78,7 @@ void mpi_montgomery_enc_bin(mpn_limb_t *r, const mpn_limb_t *a, mpi_montgomery_t
          *   For __ARCH32E >= __ARCH32E_L9, ADX instruction would be the better choose
          */
         mpn_mul(product, a, msize, mont->montRR, msize);
-        mpi_montgomery_reduce_bin(r, product, mont->modulus, msize, mont->k0);
+        mpn_montgomery_reduce_bin(r, product, mont->modulus, msize, mont->k0);
     }
 
     mpn_optimizer_put_limbs(mont->optimizer, 2 * msize);
@@ -87,14 +86,14 @@ void mpi_montgomery_enc_bin(mpn_limb_t *r, const mpn_limb_t *a, mpi_montgomery_t
 }
 
 /**
- * mpi montgomery: r[] = from_mont(a)
+ * mpn montgomery: r[] = from_mont(a)
  *
  * @requirements:
  *   1. length of r: modsize
  *   2. length of a: modsize
  *   3. memory size from the pool: modsize * sizeof(mpn_limb_t)
  */
-void mpi_montgomery_dec_bin(mpn_limb_t *r, const mpn_limb_t *a, mpi_montgomery_t *mont)
+void mpn_montgomery_decode(mpn_limb_t *r, const mpn_limb_t *a, mpn_montgomery_t *mont)
 {
     MPN_ASSERT(r != NULL && a != NULL && mont != NULL);
 
@@ -104,14 +103,14 @@ void mpi_montgomery_dec_bin(mpn_limb_t *r, const mpn_limb_t *a, mpi_montgomery_t
 
     {
         ZEXPAND(product, 2 * msize, a, msize);
-        mpi_montgomery_reduce_bin(r, product, mont->modulus, msize, mont->k0);
+        mpn_montgomery_reduce_bin(r, product, mont->modulus, msize, mont->k0);
     }
 
     mpn_optimizer_put_limbs(mont->optimizer, 2 * msize);
 }
 
 /**
- * mpi montgomery: r = (a + b) mod m
+ * mpn montgomery: r = (a + b) mod m
  *
  * @requirements:
  *   1. length of r: modsize
@@ -119,7 +118,7 @@ void mpi_montgomery_dec_bin(mpn_limb_t *r, const mpn_limb_t *a, mpi_montgomery_t
  *   3. length of b: modsize
  *   4. memory size from the pool: modsize * sizeof(mpn_limb_t)
  */
-void mpi_montgomery_add_bin(mpn_limb_t *r, const mpn_limb_t *a, const mpn_limb_t *b, mpi_montgomery_t *mont)
+void mpn_montgomery_add(mpn_limb_t *r, const mpn_limb_t *a, const mpn_limb_t *b, mpn_montgomery_t *mont)
 {
     MPN_ASSERT(r != NULL && a != NULL && b != NULL && mont != NULL);
 
@@ -128,8 +127,8 @@ void mpi_montgomery_add_bin(mpn_limb_t *r, const mpn_limb_t *a, const mpn_limb_t
     MPN_ASSERT(NULL != buffer);
 
     {
-        mpn_limb_t extension = mpn_add_school(r, a, b, msize);
-        extension -= mpn_sub_school(buffer, r, mont->modulus, msize);
+        mpn_limb_t extension = mpn_add_vectorized(r, a, b, msize);
+        extension -= mpn_sub_vectorized(buffer, r, mont->modulus, msize);
         mpn_masked_move_consttime(r, buffer, msize, extension == 0);
     }
 
@@ -137,7 +136,7 @@ void mpi_montgomery_add_bin(mpn_limb_t *r, const mpn_limb_t *a, const mpn_limb_t
 }
 
 /**
- * mpi montgomery: r = (a - b) mod m
+ * mpn montgomery: r = (a - b) mod m
  *
  * @requirements:
  *   1. length of r: modsize
@@ -145,7 +144,7 @@ void mpi_montgomery_add_bin(mpn_limb_t *r, const mpn_limb_t *a, const mpn_limb_t
  *   3. length of b: modsize
  *   4. memory size from the pool: modsize * sizeof(mpn_limb_t)
  */
-void mpi_montgomery_sub_bin(mpn_limb_t *r, const mpn_limb_t *a, const mpn_limb_t *b, mpi_montgomery_t *mont)
+void mpn_montgomery_sub(mpn_limb_t *r, const mpn_limb_t *a, const mpn_limb_t *b, mpn_montgomery_t *mont)
 {
     MPN_ASSERT(r != NULL && a != NULL && b != NULL && mont != NULL);
 
@@ -154,8 +153,8 @@ void mpi_montgomery_sub_bin(mpn_limb_t *r, const mpn_limb_t *a, const mpn_limb_t
     MPN_ASSERT(NULL != buffer);
 
     {
-        mpn_limb_t extension = mpn_sub_school(r, a, b, msize);
-        mpn_add_school(buffer, r, mont->modulus, msize);
+        mpn_limb_t extension = mpn_sub_vectorized(r, a, b, msize);
+        mpn_add_vectorized(buffer, r, mont->modulus, msize);
         mpn_masked_move_consttime(r, buffer, msize, extension != 0);
     }
 
@@ -163,14 +162,14 @@ void mpi_montgomery_sub_bin(mpn_limb_t *r, const mpn_limb_t *a, const mpn_limb_t
 }
 
 /**
- * mpi montgomery: r = -b mod m = (m - b) mod m
+ * mpn montgomery: r = -b mod m = (m - b) mod m
  *
  * @requirements:
  *   1. length of r: modsize
  *   2. length of a: modsize
  *   4. memory size from the pool: modsize * sizeof(mpn_limb_t)
  */
-void mpi_montgomery_neg_bin(mpn_limb_t *r, const mpn_limb_t *a, mpi_montgomery_t *mont)
+void mpn_montgomery_negative(mpn_limb_t *r, const mpn_limb_t *a, mpn_montgomery_t *mont)
 {
     MPN_ASSERT(r != NULL && a != NULL && mont != NULL);
 
@@ -180,8 +179,8 @@ void mpi_montgomery_neg_bin(mpn_limb_t *r, const mpn_limb_t *a, mpi_montgomery_t
 
     {
         const mpn_limb_t *m = mont->modulus;
-        mpn_limb_t extension = mpn_sub_school(r, m, a, msize);
-        extension -= mpn_sub_school(buffer, r, m, msize);
+        mpn_limb_t extension = mpn_sub_vectorized(r, m, a, msize);
+        extension -= mpn_sub_vectorized(buffer, r, m, msize);
         mpn_masked_move_consttime(r, buffer, msize, extension == 0);
     }
 
@@ -189,14 +188,14 @@ void mpi_montgomery_neg_bin(mpn_limb_t *r, const mpn_limb_t *a, mpi_montgomery_t
 }
 
 /**
- * mpi montgomery: r = (a / 2) mod m
+ * mpn montgomery: r = (a / 2) mod m
  *
  * @requirements:
  *   1. length of r: modsize
  *   2. length of a: modsize
  *   3. memory size from the pool: modsize * sizeof(mpn_limb_t)
  */
-void mpi_montgomery_div2_bin(mpn_limb_t *r, const mpn_limb_t *a, mpi_montgomery_t *mont)
+void mpn_montgomery_halve(mpn_limb_t *r, const mpn_limb_t *a, mpn_montgomery_t *mont)
 {
     MPN_ASSERT(r != NULL && a != NULL && mont != NULL);
 
@@ -209,7 +208,7 @@ void mpi_montgomery_div2_bin(mpn_limb_t *r, const mpn_limb_t *a, mpi_montgomery_
         const mpn_limb_t *m = mont->modulus;
         for (unsigned int i = 0; i < msize; i++) { buffer[i] = m[i] & mask; }
 
-        buffer[msize] = mpn_add_school(buffer, buffer, a, msize);
+        buffer[msize] = mpn_add_vectorized(buffer, buffer, a, msize);
         mpn_rshift(buffer, buffer, msize + 1, 1);
 
         COPY(r, buffer, msize);
@@ -219,27 +218,27 @@ void mpi_montgomery_div2_bin(mpn_limb_t *r, const mpn_limb_t *a, mpi_montgomery_
 }
 
 /**
- * mpi montgomery: r = (a * 2) mod m
+ * mpn montgomery: r = (a * 2) mod m
  *
  * @requirements:
  *   1. length of r: modsize
  *   2. length of a: modsize
  *   4. memory size from the pool: modsize * sizeof(mpn_limb_t)
  */
-void mpi_montgomery_mul2_bin(mpn_limb_t *r, const mpn_limb_t *a, mpi_montgomery_t *mont)
+void mpn_montgomery_double(mpn_limb_t *r, const mpn_limb_t *a, mpn_montgomery_t *mont)
 {
-    mpi_montgomery_add_bin(r, a, a, mont);
+    mpn_montgomery_add(r, a, a, mont);
 }
 
 /**
- * mpi montgomery: r = (a * 3) mod m
+ * mpn montgomery: r = (a * 3) mod m
  *
  * @requirements:
  *   1. length of r: modsize
  *   2. length of a: modsize
  *   4. memory size from the pool: modsize * sizeof(mpn_limb_t)
  */
-void mpi_montgomery_mul3_bin(mpn_limb_t *r, const mpn_limb_t *a, mpi_montgomery_t *mont)
+void mpn_montgomery_triple(mpn_limb_t *r, const mpn_limb_t *a, mpn_montgomery_t *mont)
 {
     MPN_ASSERT(r != NULL && a != NULL && mont != NULL);
 
@@ -248,22 +247,22 @@ void mpi_montgomery_mul3_bin(mpn_limb_t *r, const mpn_limb_t *a, mpi_montgomery_
     MPN_ASSERT(NULL != buffer);
 
     {
-        mpi_montgomery_add_bin(buffer, a, a, mont);
-        mpi_montgomery_add_bin(r, a, buffer, mont);
+        mpn_montgomery_add(buffer, a, a, mont);
+        mpn_montgomery_add(r, a, buffer, mont);
     }
 
     mpn_optimizer_put_limbs(mont->optimizer, msize);
 }
 
 /**
- * mpi montgomery: r = prod mod m
+ * mpn montgomery: r = prod mod m
  *
  * @requirements:
  *   1. length of r: modsize
  *   2. length of rod: modsize
  *   4. memory size from the pool: N/A
  */
-void mpi_montgomery_red_bin(mpn_limb_t *r, mpn_limb_t *prod, mpi_montgomery_t *mont)
+void mpn_montgomery_reduce(mpn_limb_t *r, mpn_limb_t *prod, mpn_montgomery_t *mont)
 {
     MPN_ASSERT(r != NULL && prod != NULL && mont != NULL);
 
@@ -299,16 +298,16 @@ void mpi_montgomery_red_bin(mpn_limb_t *r, mpn_limb_t *prod, mpi_montgomery_t *m
     }
 
     {
-        carry -= mpn_sub_school(r, prod, pm, msize);
+        carry -= mpn_sub_vectorized(r, prod, pm, msize);
         mpn_masked_move_consttime(r, prod, msize, carry != 0);
     }
 #else
-    mpi_montgomery_reduce_bin(r, prod, mont->modulus, mont->modsize, mont->k0);
+    mpn_montgomery_reduce_bin(r, prod, mont->modulus, mont->modsize, mont->k0);
 #endif
 }
 
 /**
- * mpi montgomery: r = (a * b) mod m
+ * mpn montgomery: r = (a * b) mod m
  *
  * @requirements:
  *   1. length of r: modsize
@@ -316,7 +315,7 @@ void mpi_montgomery_red_bin(mpn_limb_t *r, mpn_limb_t *prod, mpi_montgomery_t *m
  *   3. length of b: modsize
  *   4. memory size from the pool: modsize * sizeof(mpn_limb_t) * 2
  */
-void mpi_montgomery_mul_bin(mpn_limb_t *r, const mpn_limb_t *a, const mpn_limb_t *b, mpi_montgomery_t *mont)
+void mpn_montgomery_mul(mpn_limb_t *r, const mpn_limb_t *a, const mpn_limb_t *b, mpn_montgomery_t *mont)
 {
     MPN_ASSERT(r != NULL && a != NULL && b != NULL && mont != NULL);
 
@@ -371,7 +370,7 @@ void mpi_montgomery_mul_bin(mpn_limb_t *r, const mpn_limb_t *a, const mpn_limb_t
             UADD_ABC(carry, buffer[msize - 1], extAB, extMU, carry);
         }
 
-        carry -= mpn_sub_school(r, buffer, pm, msize);
+        carry -= mpn_sub_vectorized(r, buffer, pm, msize);
         mpn_masked_move_consttime(r, buffer, msize, carry != 0);
     }
 
@@ -387,7 +386,7 @@ void mpi_montgomery_mul_bin(mpn_limb_t *r, const mpn_limb_t *a, const mpn_limb_t
          *   For __ARCH32E >= __ARCH32E_L9, ADX instruction would be the better choose
          */
         mpn_mul(product, a, msize, b, msize);
-        mpi_montgomery_reduce_bin(r, product, mont->modulus, msize, mont->k0);
+        mpn_montgomery_reduce_bin(r, product, mont->modulus, msize, mont->k0);
     }
 
     mpn_optimizer_put_limbs(mont->optimizer, 2 * msize);
@@ -395,17 +394,17 @@ void mpi_montgomery_mul_bin(mpn_limb_t *r, const mpn_limb_t *a, const mpn_limb_t
 }
 
 /**
- * mpi montgomery: r = (a ^ 2) mod m
+ * mpn montgomery: r = (a ^ 2) mod m
  *
  * @requirements:
  *   1. length of r: modsize
  *   2. length of a: modsize
  *   4. memory size from the pool: modsize * sizeof(mpn_limb_t) * 2
  */
-void mpi_montgomery_sqr_bin(mpn_limb_t *r, const mpn_limb_t *a, mpi_montgomery_t *mont)
+void mpn_montgomery_square(mpn_limb_t *r, const mpn_limb_t *a, mpn_montgomery_t *mont)
 {
 #ifdef MPI_LOW_FOOTPRINT
-    return mpi_montgomery_mul_bin(r, a, a, mont);
+    return mpn_montgomery_mul(r, a, a, mont);
 #else
     MPN_ASSERT(r != NULL && a != NULL && mont != NULL);
 
@@ -419,7 +418,7 @@ void mpi_montgomery_sqr_bin(mpn_limb_t *r, const mpn_limb_t *a, mpi_montgomery_t
          *   For __ARCH32E >= __ARCH32E_L9, ADX instruction would be the better choose
          */
         mpn_sqr(product, a, msize);
-        mpi_montgomery_reduce_bin(r, product, mont->modulus, msize, mont->k0);
+        mpn_montgomery_reduce_bin(r, product, mont->modulus, msize, mont->k0);
     }
 
     mpn_optimizer_put_limbs(mont->optimizer, 2 * msize);
@@ -429,7 +428,7 @@ void mpi_montgomery_sqr_bin(mpn_limb_t *r, const mpn_limb_t *a, mpi_montgomery_t
 /**
  * montfomery factor k0 = -((modulus^-1 mod B) %B)
  */
-mpn_limb_t mpi_montgomery_factor(mpn_limb_t m0)
+mpn_limb_t mpn_montgomery_factor(mpn_limb_t m0)
 {
     mpn_limb_t x = 2, y = 1;
     mpn_limb_t mask = 2 * x - 1;
@@ -447,15 +446,15 @@ mpn_limb_t mpi_montgomery_factor(mpn_limb_t m0)
 
 #ifndef MPI_USE_SLIDING_WINDOW_EXP
 /**
- * mpi montgomery: binary montgomery exponentiation
+ * mpn montgomery: binary montgomery exponentiation
  *
  * @note:
  *   1. inputs and outputs are in montgomery domain
  *   2. possible inplace mode
  *   3. minimal size temporary memory chunk: modsize
  */
-unsigned int mpi_montgomery_exp_bin(mpn_limb_t *y, const mpn_limb_t *x, unsigned int xsize, const mpn_limb_t *e,
-                                    unsigned int ebits, mpi_montgomery_t *mont)
+unsigned int mpn_montgomery_exp(mpn_limb_t *y, const mpn_limb_t *x, unsigned int xsize, const mpn_limb_t *e,
+                                unsigned int ebits, mpn_montgomery_t *mont)
 {
     unsigned int msize = mont->modsize;
     unsigned int esize = MPN_BITS_TO_LIMBS(ebits);
@@ -484,9 +483,9 @@ unsigned int mpi_montgomery_exp_bin(mpn_limb_t *y, const mpn_limb_t *x, unsigned
             ee <<= n;
             for (; n < MPN_LIMB_BITS; ee <<= 1, n++) {
                 /* squaring R = R*R mod Modulus */
-                mpi_montgomery_sqr_bin(y, y, mont);
+                mpn_montgomery_square(y, y, mont);
                 /* and multiply R = R*X mod Modulus */
-                if (ee & ((mpn_limb_t)1 << (MPN_LIMB_BITS - 1))) { mpi_montgomery_mul_bin(y, y, dataT, mont); }
+                if (ee & ((mpn_limb_t)1 << (MPN_LIMB_BITS - 1))) { mpn_montgomery_mul(y, y, dataT, mont); }
             }
 
             /* execute rest bits of E */
@@ -495,9 +494,9 @@ unsigned int mpi_montgomery_exp_bin(mpn_limb_t *y, const mpn_limb_t *x, unsigned
 
                 for (n = 0; n < MPN_LIMB_BITS; ee <<= 1, n++) {
                     /* squaring: R = R*R mod Modulus */
-                    mpi_montgomery_sqr_bin(y, y, mont);
+                    mpn_montgomery_square(y, y, mont);
 
-                    if (ee & ((mpn_limb_t)1 << (MPN_LIMB_BITS - 1))) { mpi_montgomery_mul_bin(y, y, dataT, mont); }
+                    if (ee & ((mpn_limb_t)1 << (MPN_LIMB_BITS - 1))) { mpn_montgomery_mul(y, y, dataT, mont); }
                 }
             }
         }
@@ -509,15 +508,15 @@ unsigned int mpi_montgomery_exp_bin(mpn_limb_t *y, const mpn_limb_t *x, unsigned
 }
 
 /**
- * mpi montgomery: binary montgomery exponentiation(constant-time version)
+ * mpn montgomery: binary montgomery exponentiation(constant-time version)
  *
  * @note:
  *   1. inputs and outputs are in montgomery domain
  *   2. possible inplace mode
  *   3. minimal size temporary memory chunk: modsize * 2
  */
-unsigned int mpi_montgomery_exp_consttime_bin(mpn_limb_t *y, const mpn_limb_t *x, unsigned int xsize,
-                                              const mpn_limb_t *e, unsigned int ebits, mpi_montgomery_t *mont)
+unsigned int mpn_montgomery_exp_consttime(mpn_limb_t *y, const mpn_limb_t *x, unsigned int xsize, const mpn_limb_t *e,
+                                          unsigned int ebits, mpn_montgomery_t *mont)
 {
     unsigned int msize = mont->modsize;
     unsigned int esize = MPN_BITS_TO_LIMBS(ebits);
@@ -549,9 +548,9 @@ unsigned int mpi_montgomery_exp_consttime_bin(mpn_limb_t *y, const mpn_limb_t *x
                 mpn_masked_copy_consttime(sscmB, dataT, montR, msize, mask);
 
                 /* squaring Y = Y^2 */
-                mpi_montgomery_sqr_bin(y, y, mont);
+                mpn_montgomery_square(y, y, mont);
                 /* and multiplication: Y = Y * sscmB */
-                mpi_montgomery_mul_bin(y, y, sscmB, mont);
+                mpn_montgomery_mul(y, y, sscmB, mont);
             }
         }
 
@@ -625,7 +624,7 @@ MPN_INLINE unsigned int mont_exp_win_size(unsigned int bits)
 }
 
 /**
- * mpi montgomery: fixed-size window montgomery exponentiation
+ * mpn montgomery: fixed-size window montgomery exponentiation
  *
  * @note:
  *   1. inputs and outputs are in montgomery domain
@@ -633,8 +632,8 @@ MPN_INLINE unsigned int mont_exp_win_size(unsigned int bits)
  *   3. size of buffer: precomuted table of multipliers[(2 ^ w) * msize] + temp result if inplace
  * operation[msize] + power expasin[msize + 1]
  */
-unsigned int mpi_montgomery_exp_bin(mpn_limb_t *y, const mpn_limb_t *x, unsigned int xsize, const mpn_limb_t *e,
-                                    unsigned int ebits, mpi_montgomery_t *mont)
+unsigned int mpn_montgomery_exp(mpn_limb_t *y, const mpn_limb_t *x, unsigned int xsize, const mpn_limb_t *e,
+                                unsigned int ebits, mpn_montgomery_t *mont)
 {
     unsigned int msize = mont->modsize;
     unsigned int esize = MPN_BITS_TO_LIMBS(ebits);
@@ -660,7 +659,7 @@ unsigned int mpi_montgomery_exp_bin(mpn_limb_t *y, const mpn_limb_t *x, unsigned
         COPY(table, mont->montR, msize);
         COPY(table + msize, dataTT, msize);
         for (unsigned int n = 2; n < nprecomute; n++) {
-            mpi_montgomery_mul_bin(table + n * msize, table + (n - 1) * msize, dataTT, mont);
+            mpn_montgomery_mul(table + n * msize, table + (n - 1) * msize, dataTT, mont);
         }
 
         /* expand exponent*/
@@ -689,7 +688,7 @@ unsigned int mpi_montgomery_exp_bin(mpn_limb_t *y, const mpn_limb_t *x, unsigned
 
             for (ebit -= winsize; ebit >= 0; ebit -= winsize) {
                 /* do square window times */
-                for (unsigned int n = 0; n < winsize; n++) { mpi_montgomery_sqr_bin(y, y, mont); }
+                for (unsigned int n = 0; n < winsize; n++) { mpn_montgomery_square(y, y, mont); }
 
                 /* extract next window value */
                 echunk = *((uint32_t *)((uint16_t *)dataEE + ebit / 16));
@@ -697,7 +696,7 @@ unsigned int mpi_montgomery_exp_bin(mpn_limb_t *y, const mpn_limb_t *x, unsigned
                 winVal = (echunk >> shift) & mask;
 
                 /* muptiply precomputed value  */
-                mpi_montgomery_mul_bin(y, y, table + winVal * (uint32_t)msize, mont);
+                mpn_montgomery_mul(y, y, table + winVal * (uint32_t)msize, mont);
             }
         }
 
@@ -709,7 +708,7 @@ unsigned int mpi_montgomery_exp_bin(mpn_limb_t *y, const mpn_limb_t *x, unsigned
 }
 
 /**
- * mpi montgomery: fixed-size window montgomery exponentiation(constant-time version)
+ * mpn montgomery: fixed-size window montgomery exponentiation(constant-time version)
  *
  * @note:
  *   1. inputs and outputs are in montgomery domain
@@ -717,8 +716,8 @@ unsigned int mpi_montgomery_exp_bin(mpn_limb_t *y, const mpn_limb_t *x, unsigned
  *   3. size of buffer: precomuted table of multipliers[(2 ^ w) * msize] + temp result if inplace
  * operation[msize] + unscrmbled table entry[msize] + power expasin[msize + 1]
  */
-unsigned int mpi_montgomery_exp_consttime_bin(mpn_limb_t *y, const mpn_limb_t *x, unsigned int xsize,
-                                              const mpn_limb_t *e, unsigned int ebits, mpi_montgomery_t *mont)
+unsigned int mpn_montgomery_exp_consttime(mpn_limb_t *y, const mpn_limb_t *x, unsigned int xsize, const mpn_limb_t *e,
+                                          unsigned int ebits, mpn_montgomery_t *mont)
 {
     unsigned int msize = mont->modsize;
     unsigned int esize = MPN_BITS_TO_LIMBS(ebits);
@@ -747,7 +746,7 @@ unsigned int mpi_montgomery_exp_consttime_bin(mpn_limb_t *y, const mpn_limb_t *x
         COPY(dataRR, dataTT, msize);
         mpi_scramble_put(table, 1, dataTT, msize, winsize);
         for (unsigned int n = 2; n < nprecomute; n++) {
-            mpi_montgomery_mul_bin(dataTT, dataTT, dataRR, mont);
+            mpn_montgomery_mul(dataTT, dataTT, dataRR, mont);
             mpi_scramble_put(table, n, dataTT, msize, winsize);
         }
 
@@ -770,7 +769,7 @@ unsigned int mpi_montgomery_exp_consttime_bin(mpn_limb_t *y, const mpn_limb_t *x
 
             for (ebit -= winsize; ebit >= 0; ebit -= winsize) {
                 /* do square window times */
-                for (unsigned int n = 0; n < winsize; n++) { mpi_montgomery_sqr_bin(y, y, mont); }
+                for (unsigned int n = 0; n < winsize; n++) { mpn_montgomery_square(y, y, mont); }
 
                 /* extract next window value */
                 echunk = *((uint32_t *)((uint16_t *)dataEE + ebit / 16));
@@ -780,7 +779,7 @@ unsigned int mpi_montgomery_exp_consttime_bin(mpn_limb_t *y, const mpn_limb_t *x
                 /* exptact precomputed value and muptiply */
                 mpi_scramble_get_sscm(dataTT, msize, table, (unsigned int)winVal, winsize);
 
-                mpi_montgomery_mul_bin(y, y, dataTT, mont);
+                mpn_montgomery_mul(y, y, dataTT, mont);
             }
         }
 
@@ -795,17 +794,17 @@ unsigned int mpi_montgomery_exp_consttime_bin(mpn_limb_t *y, const mpn_limb_t *x
 
 MPN_INLINE size_t montgomery_size(unsigned int mbits)
 {
-    size_t size = sizeof(mpi_montgomery_t) + MPN_LIMB_BYTES;
+    size_t size = sizeof(mpn_montgomery_t) + MPN_LIMB_BYTES;
     size += MPN_BITS_TO_LIMBS(mbits) * sizeof(mpn_limb_t) * 4 /* modulus[msize], montR[msize], montR^2[2 * msize] */;
 
     return size;
 }
 
 /**
- * mpi montgomery: create montgomery context
+ * mpn montgomery: create montgomery context
  *
  */
-mpi_montgomery_t *mpi_montgomery_create(unsigned int mbits, unsigned int psize)
+mpn_montgomery_t *mpn_montgomery_create(unsigned int mbits, unsigned int psize)
 {
     if (mbits == 0) {
         MPI_RAISE_ERROR(-EINVAL, "modbits MUST bigger than 0.");
@@ -816,10 +815,10 @@ mpi_montgomery_t *mpi_montgomery_create(unsigned int mbits, unsigned int psize)
         return NULL;
     }
 
-    mpi_montgomery_t *mont = NULL;
-    if ((mont = (mpi_montgomery_t *)MPI_ALLOCATE(montgomery_size(mbits))) != NULL) {
+    mpn_montgomery_t *mont = NULL;
+    if ((mont = (mpn_montgomery_t *)MPI_ALLOCATE(montgomery_size(mbits))) != NULL) {
         unsigned int msize = MPN_BITS_TO_LIMBS(mbits);
-        mpn_limb_t *chunk = mpi_aligned_pointer((unsigned char *)mont + sizeof(mpi_montgomery_t), MPN_LIMB_BYTES);
+        mpn_limb_t *chunk = mpi_aligned_pointer((unsigned char *)mont + sizeof(mpn_montgomery_t), MPN_LIMB_BYTES);
 
         mont->modbits = mbits;
         mont->modsize = msize;
@@ -834,10 +833,10 @@ mpi_montgomery_t *mpi_montgomery_create(unsigned int mbits, unsigned int psize)
 }
 
 /**
- * mpi montgomery: destory montgomery context
+ * mpn montgomery: destory montgomery context
  *
  */
-void mpi_montgomery_destory(mpi_montgomery_t *mont)
+void mpn_montgomery_destory(mpn_montgomery_t *mont)
 {
     if (mont != NULL) {
         mpn_optimizer_destory(mont->optimizer);
@@ -848,10 +847,10 @@ void mpi_montgomery_destory(mpi_montgomery_t *mont)
 }
 
 /**
- * mpi montgomery: intialize montgomery context with modulus
+ * mpn montgomery: intialize montgomery context with modulus
  *
  */
-int mpi_montgomery_set_modulus_bin(mpi_montgomery_t *mont, const mpn_limb_t *modulus, unsigned int mbits)
+int mpn_montgomery_set_modulus_bin(mpn_montgomery_t *mont, const mpn_limb_t *modulus, unsigned int mbits)
 {
     if (mont == NULL || modulus == NULL) {
         MPI_RAISE_ERROR(-EINVAL);
@@ -866,7 +865,7 @@ int mpi_montgomery_set_modulus_bin(mpi_montgomery_t *mont, const mpn_limb_t *mod
         if (mont->modulus != modulus) { ZEXPAND(mont->modulus, msize, modulus, msize); }
 
         /* montgomery factor */
-        mont->k0 = mpi_montgomery_factor(modulus[0]);
+        mont->k0 = mpn_montgomery_factor(modulus[0]);
 
         /* montgomery identity (R) */
         ZEROIZE(mont->montR, 0, msize);
@@ -880,117 +879,6 @@ int mpi_montgomery_set_modulus_bin(mpi_montgomery_t *mont, const mpn_limb_t *mod
 
         mpn_mod(mont->montRR, 2 * msize, mont->modulus, msize);
     }
-
-    return 0;
-}
-
-/**
- * mpi montgomery: intialize montgomery context with modulus
- *
- */
-int mpi_montgomery_set_modulus(mpi_montgomery_t *mont, const mpi_t *modulus)
-{
-    if (mont == NULL || modulus == NULL) {
-        MPI_RAISE_ERROR(-EINVAL);
-        return -EINVAL;
-    }
-
-    {
-        unsigned int msize = modulus->size;
-        /* store modulus */
-        ZEXPAND(mont->modulus, msize, modulus->data, msize);
-
-        /* montgomery factor */
-        mont->k0 = mpi_montgomery_factor(modulus->data[0]);
-
-        /* montgomery identity (R) */
-        ZEROIZE(mont->montR, 0, msize);
-        mont->montR[msize] = 1;
-        mpn_mod(mont->montR, msize + 1, modulus->data, msize);
-
-        /* montgomery domain converter (RR) */
-        ZEROIZE(mont->montRR, 0, msize);
-        COPY(mont->montRR + msize, mont->montR, msize);
-        mpn_mod(mont->montRR, 2 * msize, modulus->data, msize);
-    }
-
-    return 0;
-}
-
-/**
- * mpi montgomery: exponentiation
- *
- */
-int mpi_montgomery_exp(mpi_t *r, const mpi_t *x, const mpi_t *e, mpi_montgomery_t *mont)
-{
-    if (r == NULL || x == NULL || e == NULL || mont == NULL) {
-        MPI_RAISE_ERROR(-EINVAL);
-        return -EINVAL;
-    }
-
-    unsigned int msize = mont->modsize;
-    if (r->room < msize || x->size > msize) {
-        MPI_RAISE_ERROR(-EINVAL);
-        return -EINVAL;
-    }
-    if (mpi_bits(x) == 0) { return mpi_zeroize(r); }
-    if (mpi_bits(e) == 0) { return mpi_set_limb(r, 1); }
-
-    {
-        /* copy and expand base to the modulus length */
-        ZEXPAND(r->data, msize, x->data, x->size);
-
-        /* convert base to Montgomery domain */
-        mpi_montgomery_enc_bin(r->data, r->data, mont);
-
-        /* exponentiation */
-        mpi_montgomery_exp_bin(r->data, r->data, msize, e->data, mpi_bits(e), mont);
-
-        /* convert result back to regular domain */
-        mpi_montgomery_dec_bin(r->data, r->data, mont);
-    }
-
-    r->sign = MPI_SIGN_NON_NEGTIVE;
-    r->size = mpn_limbs(r->data, msize);
-
-    return 0;
-}
-
-/**
- * mpi montgomery: exponentiation(constant-time version)
- *
- */
-int mpi_montgomery_exp_consttime(mpi_t *r, const mpi_t *x, const mpi_t *e, mpi_montgomery_t *mont)
-{
-    if (r == NULL || x == NULL || e == NULL || mont == NULL) {
-        MPI_RAISE_ERROR(-EINVAL);
-        return -EINVAL;
-    }
-
-    unsigned int msize = mont->modsize;
-    if (r->room < msize) {
-        MPI_RAISE_ERROR(-EINVAL);
-        return -EINVAL;
-    }
-    if (mpi_bits(x) == 0) { return mpi_zeroize(r); }
-    if (mpi_bits(e) == 0) { return mpi_set_limb(r, 1); }
-
-    {
-        /* copy and expand base to the modulus length */
-        ZEXPAND(r->data, msize, x->data, x->size);
-
-        /* convert base to Montgomery domain */
-        mpi_montgomery_enc_bin(r->data, r->data, mont);
-
-        /* exponentiation */
-        mpi_montgomery_exp_consttime_bin(r->data, r->data, msize, e->data, mpi_bits(e), mont);
-
-        /* convert result back to regular domain */
-        mpi_montgomery_dec_bin(r->data, r->data, mont);
-    }
-
-    r->sign = MPI_SIGN_NON_NEGTIVE;
-    r->size = mpn_limbs(r->data, msize);
 
     return 0;
 }

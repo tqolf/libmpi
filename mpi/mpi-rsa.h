@@ -17,7 +17,7 @@
 #define MULTIPLE_PRECISION_RSA_H
 
 #include <mpi/mpi.h>
-#include <mpi/mpi-montgomery.h>
+#include <mpn/mpn-montgomery.h>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -36,9 +36,9 @@ typedef struct {
     mpn_limb_t *dq;   /* the second factor's CRT exponent, d mod (q - 1), bitsize(dq) <= qbits */
     mpn_limb_t *qinv; /* the (first) CRT coefficient, q^(-1) mode p, bitsize(qinv) <= pbits */
 
-    mpi_montgomery_t *montN; /* montgomery context for (N, the modulus, bitsize(n) = nbits) */
-    mpi_montgomery_t *montP; /* montgomery context for (P, the first factor) */
-    mpi_montgomery_t *montQ; /* montgomery context for (Q, the second factor) */
+    mpn_montgomery_t *montN; /* montgomery context for (N, the modulus, bitsize(n) = nbits) */
+    mpn_montgomery_t *montP; /* montgomery context for (P, the first factor) */
+    mpn_montgomery_t *montQ; /* montgomery context for (Q, the second factor) */
 
     /* TODO: multiple-primes support */
     unsigned int primes;

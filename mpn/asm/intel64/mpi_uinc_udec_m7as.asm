@@ -7,10 +7,10 @@ segment .text align=ARCH_ALIGN_FACTOR
 
 ;
 ; carry, r[:size] = a[:size] + w
-; uint64_t mpn_inc_school(uint64_t *r, const uint64_t *a, unsigned int size, uint64_t w)
+; uint64_t mpn_inc_vectorized(uint64_t *r, const uint64_t *a, unsigned int size, uint64_t w)
 ;
 align ARCH_ALIGN_FACTOR
-IPPASM mpn_inc_school,PUBLIC
+IPPASM mpn_inc_vectorized,PUBLIC
 %assign LOCAL_FRAME 0
         USES_GPR rsi,rdi
         USES_XMM
@@ -65,16 +65,16 @@ align ARCH_ALIGN_FACTOR
    REST_XMM
    REST_GPR
    ret
-ENDFUNC mpn_inc_school
+ENDFUNC mpn_inc_vectorized
 
 
 ;
 ; borrow, r[:size] = a[:size] - w
-; uint64_t mpn_dec_school(uint64_t *r, const uint64_t *a, unsigned int size, uint64_t w)
+; uint64_t mpn_dec_vectorized(uint64_t *r, const uint64_t *a, unsigned int size, uint64_t w)
 ;
 
 align ARCH_ALIGN_FACTOR
-IPPASM mpn_dec_school,PUBLIC
+IPPASM mpn_dec_vectorized,PUBLIC
 %assign LOCAL_FRAME 0
         USES_GPR rsi,rdi
         USES_XMM
@@ -129,6 +129,6 @@ align ARCH_ALIGN_FACTOR
    REST_XMM
    REST_GPR
    ret
-ENDFUNC mpn_dec_school
+ENDFUNC mpn_dec_vectorized
 
 %endif

@@ -28,11 +28,6 @@
 #include <string.h>
 #include <inttypes.h>
 
-/**
- * @addtogroup: mpi/configuration
- *
- * @description: mpi implementation configurations
- */
 /* memory allocator */
 #ifdef MPI_DEBUG_MEMORY
 #include <devkit/memleak.h>
@@ -58,7 +53,7 @@
         void *__ptr = realloc((ptr), (size));                                                        \
         MPI_DEBUG_ALLOCATOR_ON_REALLOCATE(__ptr, (ptr), (size), __FILE__, __LINE__);                 \
         __ptr;                                                                                       \
-    }) /* (OPTIONAL) re-allocate memory chunk. NOT use |MPI_REALLOCATE| to expand mpi room if not be \
+    }) /* (OPTIONAL) re-allocate memory chunk. NOT use |MPI_REALLOCATE| to expand mpn room if not be \
           defined */
 #else
 #define MPI_ALLOCATE(size)        malloc(size)           /* allocate memory chunk */
@@ -73,8 +68,8 @@
 // #define MPI_CACHE_LINE_BYTES         64 /* size of cache line (in bytes) */
 // #define MPI_LOW_FOOTPRINT            /* optimize the static memory footprint of the library */
 // #define MPI_USE_SLIDING_WINDOW_EXP   /* sliding-windows exponentiation */
-// #define MPI_USE_C_MONTGOMERY_MUL_BIN /* use c implementation for mpi_montgomery_mul_bin */
-// #define MPI_USE_C_MONTGOMERY_RED_BIN /* use c implementation for mpi_montgomery_red_bin */
+// #define MPI_USE_C_MONTGOMERY_MUL_BIN /* use c implementation for mpn_montgomery_mul */
+// #define MPI_USE_C_MONTGOMERY_RED_BIN /* use c implementation for mpn_montgomery_reduce */
 // clang-format on
 
 /** automatically detection for some known platforms */
@@ -88,8 +83,8 @@
 #endif
 #endif
 
-#ifndef MPI_NAIL_BITS
-#define MPI_NAIL_BITS 0
+#ifndef MPN_NAIL_BITS
+#define MPN_NAIL_BITS 0
 #endif
 
 /** inline */
@@ -108,10 +103,37 @@
     }
 #endif
 
+#ifndef MPN_ASSERT_ALWAYS
+#define MPN_ASSERT_ALWAYS(cond)                                               \
+    if (!(cond)) {                                                            \
+        printf("Assertion Failed: " #cond ", @ %s:%d\n", __FILE__, __LINE__); \
+        MPI_RAISE_EXCEPTION();                                                \
+    }
+#endif
+
+/* Check that the nail parts are zero. */
+#define ASSERT_ALWAYS_LIMB(limb)                  \
+    do {                                          \
+        mpn_limb_t __nail = (limb)&MPN_NAIL_MASK; \
+        MPN_ASSERT_ALWAYS(__nail == 0);           \
+    } while (0)
+
+#define ASSERT_ALWAYS_MPN(ptr, size)                                                          \
+    do {                                                                                      \
+        /* let whole loop go dead when no nails */                                            \
+        if (MPN_NAIL_BITS != 0) {                                                             \
+            for (mpn_size_t __i = 0; __i < (size); __i++) { ASSERT_ALWAYS_LIMB((ptr)[__i]); } \
+        }                                                                                     \
+    } while (0)
+
+#define MPN_OVERLAP_P(xp, xsize, yp, ysize) ((xp) + (xsize) > (yp) && (yp) + (ysize) > (xp))
+
+#define ASSERT_MPN ASSERT_ALWAYS_MPN
+
 #if defined(__cplusplus) || (defined(_MSC_VER) && !defined(__clang__))
-#define STATIC_ASSERT(cond, msg) static_assert(cond, msg)
+#define MPN_STATIC_ASSERT(cond, msg) static_assert(cond, msg)
 #else
-#define STATIC_ASSERT(cond, msg) _Static_assert(cond, msg)
+#define MPN_STATIC_ASSERT(cond, msg) _Static_assert(cond, msg)
 #endif
 
 /* branch prediction */
@@ -125,13 +147,13 @@
 #define BUILTIN_CONSTANT(c) (c)
 #endif
 
-#define ABOVE_THRESHOLD(size, thresh)            \
+#define MPN_ABOVE_THRESHOLD(size, thresh)        \
     ((BUILTIN_CONSTANT(thresh) && (thresh) == 0) \
      || (!(BUILTIN_CONSTANT(thresh) && (thresh) == ~((size_t)0)) && (size) >= (thresh)))
-#define BELOW_THRESHOLD(size, thresh) (!ABOVE_THRESHOLD(size, thresh))
+#define MPN_BELOW_THRESHOLD(size, thresh) (!MPN_ABOVE_THRESHOLD(size, thresh))
 
 
-/** mpi: debug macros */
+/** debug macros */
 // clang-format off
 #define MPI_NARG(...)  MPI_NARG_(, ##__VA_ARGS__, MPI_RSEQ_N())
 #define MPI_NARG_(...) MPI_ARG_N(__VA_ARGS__)
@@ -223,11 +245,19 @@ MPN_INLINE void MPN_LIMB_TO_OCTETS(unsigned char *p, mpn_limb_t v)
 #error MPN_LIMB_BITS MUST bed defined first.
 #endif
 
+typedef unsigned int mpn_size_t;
+
+#define MPN_NUMB_BITS    (MPN_LIMB_BITS - MPN_NAIL_BITS)
+#define MPN_NUMB_MASK    ((~CNST_LIMB(0)) >> MPN_NAIL_BITS)
+#define MPN_NAIL_MASK    (~MPN_NUMB_MASK)
+#define MPN_LIMB_HIGHBIT (CNST_LIMB(1) << (MPN_LIMB_BITS - 1))
+#define MPN_NUMB_HIGHBIT (CNST_LIMB(1) << (MPN_NUMB_BITS - 1))
+
 /**
  * Configuration checks: NEVER modify this
  */
-STATIC_ASSERT(sizeof(mpn_limb_t) == MPN_LIMB_BYTES, "mpn_limb_t MUST be MPN_LIMB_BYTES bytes");
-STATIC_ASSERT(~(mpn_limb_t)0 == MPN_LIMB_MASK, "~(mpn_limb_t)0 MUST equals to MPN_LIMB_MASK");
+MPN_STATIC_ASSERT(sizeof(mpn_limb_t) == MPN_LIMB_BYTES, "mpn_limb_t MUST be MPN_LIMB_BYTES bytes");
+MPN_STATIC_ASSERT(~(mpn_limb_t)0 == MPN_LIMB_MASK, "~(mpn_limb_t)0 MUST equals to MPN_LIMB_MASK");
 
 
 MPN_INLINE unsigned int MPN_BITS_TO_LIMBS(unsigned int bits)
@@ -254,23 +284,5 @@ MPN_INLINE mpn_limb_t MPN_MASK_LIMB_LO(unsigned int nbits)
 {
     return MPN_LIMB_MASK >> (MPN_LIMB_BITS - (nbits & (MPN_LIMB_BITS - 1)));
 }
-
-/**
- * mpi implementation
- */
-#define MPI_SIGN_NEGTIVE     1    /* a < 0, negtive */
-#define MPI_SIGN_NON_NEGTIVE 0    /* a >= 0, non-negtive */
-#define MPI_ATTR_NOTOWNED    0x01 /* TODO: data field not owned by */
-#define MPI_ATTR_DETACHED    0x02 /* TODO: detached data field */
-#define MPI_ATTR_AUTOSIZE    0x04 /* TODO: resize data field automatically */
-
-typedef struct {
-    unsigned int attr; /**< mpi attributes */
-    unsigned int sign; /**< mpi sign: negtive or not */
-    unsigned int size; /**< mpi size (count of mpn_limb_t) */
-    unsigned int room; /**< mpi max size (count of mpn_limb_t) */
-    mpn_limb_t *data;  /**< mpi data chunk(most significant limb at the largest) */
-} mpi_t;
-#define MPI_ALIGNED_HEAD_LIMBS ((unsigned int)((sizeof(mpi_t) + sizeof(mpn_limb_t) - 1) / sizeof(mpn_limb_t)))
 
 #endif

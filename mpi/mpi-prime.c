@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 #include "mpi.h"
-#include "mpi-asm.h"
-#include "mpi-binary.h"
-#include "mpi-montgomery.h"
+#include <mpn/mpn-asm.h>
+#include <mpn/mpn-binary.h>
+#include <mpn/mpn-montgomery.h>
 
 // clang-format off
 static const uint32_t known_primes[] = {
@@ -150,7 +150,7 @@ static const uint32_t known_primes[] = {
     17707, 17713, 17729, 17737, 17747, 17749, 17761, 17783, 17789, 17791, 17807, 17827, 17837, 17839, 17851, 17863,
 };
 static const unsigned int known_primes_size = (unsigned int)(sizeof(known_primes) / sizeof(known_primes[0]));
-STATIC_ASSERT(sizeof(mpn_limb_t) >= sizeof(uint32_t), "under this implementation, sizeof(mpn_limb_t) MUST not smaller than sizeof(uint32_t)");
+MPN_STATIC_ASSERT(sizeof(mpn_limb_t) >= sizeof(uint32_t), "under this implementation, sizeof(mpn_limb_t) MUST not smaller than sizeof(uint32_t)");
 // clang-format on
 
 static int random_with_pattern_bin(mpn_limb_t *r, unsigned int bits, unsigned int top, unsigned int bottom,
@@ -348,7 +348,7 @@ MPN_INLINE unsigned int prime_checks_for_bits(unsigned int bits)
     return chocies[count - 1].checks;
 }
 
-static int millerrabin_witness(mpi_t *witness, mpi_t *a1, mpi_t *a1_odd, unsigned int k, mpi_montgomery_t *mont)
+static int millerrabin_witness(mpi_t *witness, mpi_t *a1, mpi_t *a1_odd, unsigned int k, mpn_montgomery_t *mont)
 {
     int err;
     /* witness = witness^a1_odd mod a */
@@ -364,7 +364,7 @@ static int millerrabin_witness(mpi_t *witness, mpi_t *a1, mpi_t *a1_odd, unsigne
 
     while (--k > 0) {
         /* witness := witness^2 mod a */
-        mpi_montgomery_sqr_bin(witness->data, witness->data, mont);
+        mpn_montgomery_square(witness->data, witness->data, mont);
         witness->size = mpn_limbs(witness->data, witness->size);
 
         if (mpi_bits(witness) == 1) {
@@ -445,7 +445,7 @@ int mpi_is_prime(const mpi_t *a, unsigned int checks, unsigned do_trial_division
     }
 
     int err;
-    mpi_montgomery_t *mont = NULL;
+    mpn_montgomery_t *mont = NULL;
     mpi_t *a1 = mpn_optimizer_get(opt, a->size);
     mpi_t *a1_odd = mpn_optimizer_get(opt, a->size);
     mpi_t *witness = mpn_optimizer_get(opt, a->size);
@@ -469,7 +469,7 @@ int mpi_is_prime(const mpi_t *a, unsigned int checks, unsigned do_trial_division
     }
 
     /* Montgomery setup for computations mod a */
-    mont = mpi_montgomery_create(mpi_bits(a), 6 * a->size);
+    mont = mpn_montgomery_create(mpi_bits(a), 6 * a->size);
     if (mont == NULL) {
         MPI_RAISE_ERROR(-ENOMEM);
         goto exit_with_error;
@@ -499,7 +499,7 @@ exit_with_error:
     if (a1_odd != NULL) { mpn_optimizer_put(opt, a->size); }
     if (a1 != NULL) { mpn_optimizer_put(opt, a->size); }
     if (optimizer == NULL && opt != NULL) { mpn_optimizer_destory(opt); }
-    mpi_montgomery_destory(mont);
+    mpn_montgomery_destory(mont);
 
     return err;
 }

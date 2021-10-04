@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 #include "mpi.h"
-#include "mpi-binary.h"
+#include <mpn/mpn-binary.h>
 
 /**
  * @addtogroup: mpi/construction-destruction
@@ -26,7 +26,7 @@
  */
 mpi_t *mpi_create(unsigned int bits)
 {
-    if (bits > MPI_MAX_BITS) {
+    if (bits > MPN_MAX_BITS) {
         MPI_RAISE_ERROR(-ERANGE);
         return NULL;
     }
@@ -51,7 +51,7 @@ mpi_t *mpi_create(unsigned int bits)
  */
 mpi_t *mpi_create_detached(unsigned int bits)
 {
-    if (bits > MPI_MAX_BITS) {
+    if (bits > MPN_MAX_BITS) {
         MPI_RAISE_ERROR(-ERANGE);
         return NULL;
     }
@@ -116,7 +116,7 @@ mpi_t *mpi_expand(mpi_t *a, unsigned int bits)
         MPI_RAISE_ERROR(-EINVAL, "Invalid Integer: nullptr");
         return NULL;
     }
-    if (bits > MPI_MAX_BITS) {
+    if (bits > MPN_MAX_BITS) {
         MPI_RAISE_ERROR(-ERANGE, "Required bits of mpi too large");
         return NULL;
     }
@@ -165,7 +165,7 @@ mpi_t *mpi_resize(mpi_t *a, unsigned int bits)
         MPI_RAISE_ERROR(-EINVAL, "Invalid Integer: nullptr");
         return NULL;
     }
-    if (bits > MPI_MAX_BITS) {
+    if (bits > MPN_MAX_BITS) {
         MPI_RAISE_ERROR(-ERANGE, "Required bits of mpi too large");
         return NULL;
     }
@@ -394,7 +394,7 @@ int mpi_from_octets(mpi_t **pr, const unsigned char *buff, unsigned int bufflen)
         MPI_RAISE_ERROR(-EINVAL, "Invalid input buffer");
         return -EINVAL;
     }
-    if (bufflen > MPI_MAX_BITS / BITS_PER_BYTE) {
+    if (bufflen > MPN_MAX_BITS / BITS_PER_BYTE) {
         MPI_RAISE_ERROR(-ERANGE, "bit-size exceed the limitation");
         return -ERANGE;
     }
@@ -469,12 +469,12 @@ int mpi_from_string(mpi_t **pr, const char *a)
             neg = 1;
             a++;
         }
-        for (nchars = 0; isxdigit(a[nchars]) && nchars < MPI_MAX_BITS / BITS_PER_CHAR; nchars++) { continue; }
+        for (nchars = 0; isxdigit(a[nchars]) && nchars < MPN_MAX_BITS / BITS_PER_CHAR; nchars++) { continue; }
         if (nchars == 0) {
             MPI_RAISE_ERROR(-EINVAL);
             return -EINVAL;
         }
-        if (nchars == MPI_MAX_BITS / BITS_PER_CHAR) {
+        if (nchars == MPN_MAX_BITS / BITS_PER_CHAR) {
             MPI_RAISE_ERROR(-ERANGE, "exceed the limit, number of input characters is %u", nchars);
             return -ERANGE;
         }
@@ -1566,4 +1566,144 @@ int mpi_gcd_consttime(mpi_t *r, const mpi_t *a, const mpi_t *b, mpn_optimizer_t 
 
         return err;
     }
+}
+
+
+/**
+ * mpn optimizer: get mpi with specified room from optimizer
+ *
+ * @note:
+ *   1. size: size of chunk, in unit of 'mpn_limb_t'
+ */
+mpi_t *mpn_optimizer_get(mpn_optimizer_t *optimizer, unsigned int size)
+{
+    mpn_limb_t *chunk = mpn_optimizer_get_limbs(optimizer, MPI_ALIGNED_HEAD_LIMBS + size);
+    if (chunk != NULL) {
+        mpi_t *r = (mpi_t *)chunk;
+        ZEROIZE(&chunk[MPI_ALIGNED_HEAD_LIMBS], 0, size);
+        mpi_make(r, &chunk[MPI_ALIGNED_HEAD_LIMBS], size);
+
+        return r;
+    }
+
+    return NULL;
+}
+
+/**
+ * mpn optimizer: put back mpi of specified room
+ */
+void mpn_optimizer_put(mpn_optimizer_t *optimizer, unsigned int size)
+{
+    mpn_optimizer_put_limbs(optimizer, MPI_ALIGNED_HEAD_LIMBS + size);
+}
+
+/**
+ * mpn montgomery: intialize montgomery context with modulus
+ *
+ */
+int mpi_montgomery_set_modulus(mpn_montgomery_t *mont, const mpi_t *modulus)
+{
+    if (mont == NULL || modulus == NULL) {
+        MPI_RAISE_ERROR(-EINVAL);
+        return -EINVAL;
+    }
+
+    {
+        unsigned int msize = modulus->size;
+        /* store modulus */
+        ZEXPAND(mont->modulus, msize, modulus->data, msize);
+
+        /* montgomery factor */
+        mont->k0 = mpn_montgomery_factor(modulus->data[0]);
+
+        /* montgomery identity (R) */
+        ZEROIZE(mont->montR, 0, msize);
+        mont->montR[msize] = 1;
+        mpn_mod(mont->montR, msize + 1, modulus->data, msize);
+
+        /* montgomery domain converter (RR) */
+        ZEROIZE(mont->montRR, 0, msize);
+        COPY(mont->montRR + msize, mont->montR, msize);
+        mpn_mod(mont->montRR, 2 * msize, modulus->data, msize);
+    }
+
+    return 0;
+}
+
+/**
+ * mpn montgomery: exponentiation
+ *
+ */
+int mpi_montgomery_exp(mpi_t *r, const mpi_t *x, const mpi_t *e, mpn_montgomery_t *mont)
+{
+    if (r == NULL || x == NULL || e == NULL || mont == NULL) {
+        MPI_RAISE_ERROR(-EINVAL);
+        return -EINVAL;
+    }
+
+    unsigned int msize = mont->modsize;
+    if (r->room < msize || x->size > msize) {
+        MPI_RAISE_ERROR(-EINVAL);
+        return -EINVAL;
+    }
+    if (mpi_bits(x) == 0) { return mpi_zeroize(r); }
+    if (mpi_bits(e) == 0) { return mpi_set_limb(r, 1); }
+
+    {
+        /* copy and expand base to the modulus length */
+        ZEXPAND(r->data, msize, x->data, x->size);
+
+        /* convert base to Montgomery domain */
+        mpn_montgomery_encode(r->data, r->data, mont);
+
+        /* exponentiation */
+        mpn_montgomery_exp(r->data, r->data, msize, e->data, mpi_bits(e), mont);
+
+        /* convert result back to regular domain */
+        mpn_montgomery_decode(r->data, r->data, mont);
+    }
+
+    r->sign = MPI_SIGN_NON_NEGTIVE;
+    r->size = mpn_limbs(r->data, msize);
+
+    return 0;
+}
+
+/**
+ * mpn montgomery: exponentiation(constant-time version)
+ *
+ */
+int mpi_montgomery_exp_consttime(mpi_t *r, const mpi_t *x, const mpi_t *e, mpn_montgomery_t *mont)
+{
+    if (r == NULL || x == NULL || e == NULL || mont == NULL) {
+        MPI_RAISE_ERROR(-EINVAL);
+        return -EINVAL;
+    }
+
+    unsigned int msize = mont->modsize;
+    if (r->room < msize) {
+        MPI_RAISE_ERROR(-EINVAL);
+        return -EINVAL;
+    }
+    if (mpi_bits(x) == 0) { return mpi_zeroize(r); }
+    if (mpi_bits(e) == 0) { return mpi_set_limb(r, 1); }
+
+    {
+        /* copy and expand base to the modulus length */
+        ZEXPAND(r->data, msize, x->data, x->size);
+
+        /* convert base to Montgomery domain */
+        mpn_montgomery_encode(r->data, r->data, mont);
+
+        /* exponentiation */
+        mpn_montgomery_exp_consttime(r->data, r->data, msize, e->data, mpi_bits(e), mont);
+
+        /* convert result back to regular domain */
+        mpn_montgomery_decode(r->data, r->data, mont);
+    }
+
+    r->sign = MPI_SIGN_NON_NEGTIVE;
+    r->size = mpn_limbs(r->data, msize);
+
+    return 0;
 }

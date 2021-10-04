@@ -20,7 +20,7 @@
 ;               Big Number Operations
 ;
 ;     Content:
-;        mpi_montgomery_reduce_bin()
+;        mpn_montgomery_reduce_bin()
 ;
 ;
 ;     History:
@@ -1255,7 +1255,7 @@ segment .text align=ARCH_ALIGN_FACTOR
 
 
 ;*************************************************************
-;* void mpi_montgomery_reduce_bin(uint64_t* pR,
+;* void mpn_montgomery_reduce_bin(uint64_t* pR,
 ;*                       uint64_t* pBuffer,
 ;*                 const uint64_t* pModulo, int mSize, uint64_t m0)
 ;*
@@ -1267,7 +1267,7 @@ segment .text align=ARCH_ALIGN_FACTOR
 ;; Caller = ippsMontMul
 ;;
 align ARCH_ALIGN_FACTOR
-IPPASM mpi_montgomery_reduce_bin,PUBLIC
+IPPASM mpn_montgomery_reduce_bin,PUBLIC
 %assign LOCAL_FRAME (1+1+1+1)*sizeof(qword)
         USES_GPR rbx,rbp,rsi,rdi,r12,r13,r14,r15
         USES_XMM
@@ -1540,7 +1540,7 @@ align ARCH_ALIGN_FACTOR
    REST_XMM
    REST_GPR
    ret
-ENDFUNC mpi_montgomery_reduce_bin
+ENDFUNC mpn_montgomery_reduce_bin
 
 %endif
 

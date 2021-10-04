@@ -1,8 +1,8 @@
 // target cpu: > __ARCH32E_L9
 #include <assert.h>
 
-#include "mpi-binary.h"
-#include "mpi-montgomery.h"
+#include "mpn-binary.h"
+#include "mpn-montgomery.h"
 
 #define RSA_AVX2_MIN_BITSIZE (1024)
 #define RSA_AVX2_MAX_BITSIZE (13 * 1024)

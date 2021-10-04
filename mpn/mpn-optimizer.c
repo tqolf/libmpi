@@ -13,14 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "mpi.h"
-#include "mpi-binary.h"
+#include "mpn-binary.h"
 
 /**
- * @addtogroup: mpi/optimizer
- */
-/**
- * mpi(optimizer): create optimizer for mpi operation
+ * mpn optimizer: create optimizer for mpn operation
  *
  * @note:
  *   1. room: room size of optimizer chunk, in unit of 'mpn_limb_t'
@@ -44,7 +40,7 @@ mpn_optimizer_t *mpn_optimizer_create(unsigned int room)
 }
 
 /**
- * mpi(optimizer): reset optimizer, mark all as unused
+ * mpn optimizer: reset optimizer, mark all as unused
  */
 void mpn_optimizer_reset(mpn_optimizer_t *optimizer)
 {
@@ -56,7 +52,7 @@ void mpn_optimizer_reset(mpn_optimizer_t *optimizer)
 }
 
 /**
- * mpi(optimizer): destory optimizer
+ * mpn optimizer: destory optimizer
  */
 void mpn_optimizer_destory(mpn_optimizer_t *optimizer)
 {
@@ -69,7 +65,7 @@ void mpn_optimizer_destory(mpn_optimizer_t *optimizer)
 }
 
 /**
- * mpi(optimizer): get memory chunk for mpi operation
+ * mpn optimizer: get memory chunk for mpn operation
  *
  * @note:
  *   1. size: size of chunk, in unit of 'mpn_limb_t'
@@ -110,7 +106,7 @@ mpn_limb_t *mpn_optimizer_get_limbs(mpn_optimizer_t *optimizer, unsigned int siz
 }
 
 /**
- * mpi(optimizer): put back memory chunk
+ * mpn optimizer: put back memory chunk
  */
 void mpn_optimizer_put_limbs(mpn_optimizer_t *optimizer, unsigned int size)
 {
@@ -123,32 +119,4 @@ void mpn_optimizer_put_limbs(mpn_optimizer_t *optimizer, unsigned int size)
     }
 
     if (prev->size >= size) { prev->size -= size; }
-}
-
-/**
- * mpi(optimizer): get mpi with specified room from optimizer
- *
- * @note:
- *   1. size: size of chunk, in unit of 'mpn_limb_t'
- */
-mpi_t *mpn_optimizer_get(mpn_optimizer_t *optimizer, unsigned int size)
-{
-    mpn_limb_t *chunk = mpn_optimizer_get_limbs(optimizer, MPI_ALIGNED_HEAD_LIMBS + size);
-    if (chunk != NULL) {
-        mpi_t *r = (mpi_t *)chunk;
-        ZEROIZE(&chunk[MPI_ALIGNED_HEAD_LIMBS], 0, size);
-        mpi_make(r, &chunk[MPI_ALIGNED_HEAD_LIMBS], size);
-
-        return r;
-    }
-
-    return NULL;
-}
-
-/**
- * mpi(optimizer): put back mpi of specified room
- */
-void mpn_optimizer_put(mpn_optimizer_t *optimizer, unsigned int size)
-{
-    mpn_optimizer_put_limbs(optimizer, MPI_ALIGNED_HEAD_LIMBS + size);
 }

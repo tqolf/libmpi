@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "mpi-asm.h"
+#include "mpn-asm.h"
 
 #ifdef COUNT_LEADING_ZEROS_NEED_CLZ_TAB
 // clang-format off

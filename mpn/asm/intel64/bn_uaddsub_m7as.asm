@@ -20,7 +20,7 @@
 ;               Big Number Operations
 ;
 ;     Content:
-;        cpAddSub_BNU_school()
+;        cpAddSub_BNU_vectorized()
 ;
 ;
 

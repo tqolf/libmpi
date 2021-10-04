@@ -16,7 +16,7 @@
 #ifndef MULTIPLE_PRECISION_OPTIMIZER_H
 #define MULTIPLE_PRECISION_OPTIMIZER_H
 
-#include <mpi/mpi-conf.h>
+#include <mpn/mpn-conf.h>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -25,12 +25,12 @@ extern "C" {
 typedef struct mpn_optimizer_t {
     unsigned int size;            /**< offset of used chunk */
     unsigned int room;            /**< max size of chunk */
-    mpn_limb_t *chunk;            /**< mpi chunk */
+    mpn_limb_t *chunk;            /**< mpn chunk */
     struct mpn_optimizer_t *next; /**< next optimizer node */
 } mpn_optimizer_t;
 
 /**
- * mpi(optimizer): create optimizer for mpi operation
+ * mpn optimizer: create optimizer for mpn operation
  *
  * @note:
  *   1. room: room size of optimizer chunk, in unit of 'mpn_limb_t'
@@ -38,12 +38,12 @@ typedef struct mpn_optimizer_t {
 mpn_optimizer_t *mpn_optimizer_create(unsigned int room);
 
 /**
- * mpi(optimizer): destory optimizer
+ * mpn optimizer: destory optimizer
  */
 void mpn_optimizer_destory(mpn_optimizer_t *opt);
 
 /**
- * mpi(optimizer): get memory chunk for mpi operation
+ * mpn optimizer: get memory chunk for mpn operation
  *
  * @note:
  *   1. size: size of chunk, in unit of 'mpn_limb_t'
@@ -51,25 +51,12 @@ void mpn_optimizer_destory(mpn_optimizer_t *opt);
 mpn_limb_t *mpn_optimizer_get_limbs(mpn_optimizer_t *opt, unsigned int size);
 
 /**
- * mpi(optimizer): put back memory chunk
+ * mpn optimizer: put back memory chunk
  */
 void mpn_optimizer_put_limbs(mpn_optimizer_t *optimizer, unsigned int size);
 
 /**
- * mpi(optimizer): get mpi with specified room from optimizer
- *
- * @note:
- *   1. size: size of chunk, in unit of 'mpn_limb_t'
- */
-mpi_t *mpn_optimizer_get(mpn_optimizer_t *optimizer, unsigned int size);
-
-/**
- * mpi(optimizer): put back mpi of specified room
- */
-void mpn_optimizer_put(mpn_optimizer_t *optimizer, unsigned int size);
-
-/**
- * mpi(optimizer): reset optimizer, mark all as unused
+ * mpn optimizer: reset optimizer, mark all as unused
  */
 void mpn_optimizer_reset(mpn_optimizer_t *opt);
 

@@ -1,7 +1,7 @@
 #include <assert.h>
 
-#include "mpi-binary.h"
-#include "mpi-montgomery.h"
+#include "mpn-binary.h"
+#include "mpn-montgomery.h"
 
 #if (__ARCH32E >= __ARCH32E_K0)
 

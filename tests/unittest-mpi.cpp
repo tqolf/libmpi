@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 #include <mpi/mpi.h>
-#include <mpi/mpi-binary.h>
-#include <mpi/mpi-montgomery.h>
+#include <mpn/mpn-binary.h>
+#include <mpn/mpn-montgomery.h>
 
 #if defined(__GNUC__)
 #pragma GCC diagnostic ignored "-Wundef"
@@ -162,8 +162,8 @@ class verifier {
 
 const unsigned int MIN_BITS = 512;
 const unsigned int MAX_BITS = 4096;
-const unsigned int MIN_BYTES = MPI_BITS_TO_BYTES(MIN_BITS); // min bytes of input MPIs
-const unsigned int MAX_BYTES = MPI_BITS_TO_BYTES(MAX_BITS); // max bytes of input MPIs
+const unsigned int MIN_BYTES = MPN_BITS_TO_BYTES(MIN_BITS); // min bytes of input MPIs
+const unsigned int MAX_BYTES = MPN_BITS_TO_BYTES(MAX_BITS); // max bytes of input MPIs
 
 static std::string random_hex_string(size_t len)
 {
@@ -1060,7 +1060,7 @@ TEST(MPI, Montgomery)
         mpi_from_octets(&g, gbuffer.data(), gbuffer.size());
         mpi_from_octets(&e, ebuffer.data(), ebuffer.size());
 
-        mpi_montgomery_t *mont = mpi_montgomery_create(mpi_bits(n), 6 * n->size);
+        mpn_montgomery_t *mont = mpn_montgomery_create(mpi_bits(n), 6 * n->size);
         ASSERT_TRUE(mont != NULL);
         mpi_montgomery_set_modulus(mont, n);
 
@@ -1081,7 +1081,7 @@ TEST(MPI, Montgomery)
             EXPECT_TRUE(verifier::get()->probe("r = g ^ e mod n", r));
         }
 
-        mpi_montgomery_destory(mont);
+        mpn_montgomery_destory(mont);
         mpi_destory(n);
         mpi_destory(g);
         mpi_destory(e);
@@ -1096,7 +1096,7 @@ TEST(MPI, GeneratePrime)
     std::vector<unsigned char> prime;
     {
         bits = random_size(MIN_BITS, MAX_BITS);
-        prime.resize(MPI_BITS_TO_BYTES(bits));
+        prime.resize(MPN_BITS_TO_BYTES(bits));
         verifier::get()->trace("bits", bits);
     }
 
@@ -1130,7 +1130,7 @@ TEST(MPI, VerifyPrime)
     std::vector<unsigned char> prime;
     {
         bits = random_size(MIN_BITS, MAX_BITS);
-        prime.resize(MPI_BITS_TO_BYTES(bits));
+        prime.resize(MPN_BITS_TO_BYTES(bits));
         verifier::get()->trace("bits", bits);
     }
 
@@ -1258,31 +1258,31 @@ TEST(RSA, cipher)
         }
 
         // export N
-        N.resize(MPI_BITS_TO_BYTES(mpikey->nbits));
+        N.resize(MPN_BITS_TO_BYTES(mpikey->nbits));
         mpn_to_octets(N.data(), N.size(), mpikey->montN->modulus, MPN_BITS_TO_LIMBS(mpikey->nbits));
 
         // export D
-        D.resize(MPI_BITS_TO_BYTES(mpikey->dbits));
+        D.resize(MPN_BITS_TO_BYTES(mpikey->dbits));
         mpn_to_octets(D.data(), D.size(), mpikey->d, MPN_BITS_TO_LIMBS(mpikey->dbits));
 
         // export P
-        P.resize(MPI_BITS_TO_BYTES(mpikey->pbits));
+        P.resize(MPN_BITS_TO_BYTES(mpikey->pbits));
         mpn_to_octets(P.data(), P.size(), mpikey->montP->modulus, MPN_BITS_TO_LIMBS(mpikey->pbits));
 
         // export Q
-        Q.resize(MPI_BITS_TO_BYTES(mpikey->qbits));
+        Q.resize(MPN_BITS_TO_BYTES(mpikey->qbits));
         mpn_to_octets(Q.data(), Q.size(), mpikey->montQ->modulus, MPN_BITS_TO_LIMBS(mpikey->qbits));
 
         // export DP
-        DP.resize(MPI_BITS_TO_BYTES(mpikey->pbits));
+        DP.resize(MPN_BITS_TO_BYTES(mpikey->pbits));
         mpn_to_octets(DP.data(), DP.size(), mpikey->dp, MPN_BITS_TO_LIMBS(mpikey->pbits));
 
         // export DQ
-        DQ.resize(MPI_BITS_TO_BYTES(mpikey->qbits));
+        DQ.resize(MPN_BITS_TO_BYTES(mpikey->qbits));
         mpn_to_octets(DQ.data(), DQ.size(), mpikey->dq, MPN_BITS_TO_LIMBS(mpikey->qbits));
 
         // export QINV
-        QINV.resize(MPI_BITS_TO_BYTES(mpikey->pbits));
+        QINV.resize(MPN_BITS_TO_BYTES(mpikey->pbits));
         mpn_to_octets(QINV.data(), QINV.size(), mpikey->qinv, MPN_BITS_TO_LIMBS(mpikey->pbits));
 
         // import to osslkey
@@ -1303,7 +1303,7 @@ TEST(RSA, cipher)
     verifier::get()->trace("qinv", QINV);
 
     // keypair is ready, we can do the computations now
-    std::vector<unsigned char> INPUT(MPI_BITS_TO_BYTES(bits)), OUTPUT(MPI_BITS_TO_BYTES(bits));
+    std::vector<unsigned char> INPUT(MPN_BITS_TO_BYTES(bits)), OUTPUT(MPN_BITS_TO_BYTES(bits));
 
     // generate input
     {

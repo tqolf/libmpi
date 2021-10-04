@@ -23,12 +23,30 @@
 #ifndef MULTIPLE_PRECISION_H
 #define MULTIPLE_PRECISION_H
 
-#include <mpi/mpi-conf.h>
-#include <mpi/mpi-optimizer.h>
+#include <mpn/mpn-optimizer.h>
+#include <mpn/mpn-montgomery.h>
 
 #if defined(__cplusplus)
 extern "C" {
 #endif
+
+/**
+ * mpi implementation
+ */
+#define MPI_SIGN_NEGTIVE     1    /* a < 0, negtive */
+#define MPI_SIGN_NON_NEGTIVE 0    /* a >= 0, non-negtive */
+#define MPI_ATTR_NOTOWNED    0x01 /* TODO: data field not owned by */
+#define MPI_ATTR_DETACHED    0x02 /* TODO: detached data field */
+#define MPI_ATTR_AUTOSIZE    0x04 /* TODO: resize data field automatically */
+
+typedef struct {
+    unsigned int attr; /**< mpi attributes */
+    unsigned int sign; /**< mpi sign: negtive or not */
+    unsigned int size; /**< mpi size (count of mpn_limb_t) */
+    unsigned int room; /**< mpi max size (count of mpn_limb_t) */
+    mpn_limb_t *data;  /**< mpi data chunk(most significant limb at the largest) */
+} mpi_t;
+#define MPI_ALIGNED_HEAD_LIMBS ((unsigned int)((sizeof(mpi_t) + sizeof(mpn_limb_t) - 1) / sizeof(mpn_limb_t)))
 
 /** High-Level APIs */
 /**
@@ -331,6 +349,39 @@ int mpi_is_prime(const mpi_t *a, unsigned int checks, unsigned do_trial_division
  */
 int mpi_generate_prime(mpi_t *ret, unsigned int bits, unsigned safe, const mpi_t *add, const mpi_t *rem,
                        int (*rand_bytes)(void *, unsigned char *, unsigned int), void *rand_state);
+
+
+/**
+ * mpn optimizer: get mpi with specified room from optimizer
+ *
+ * @note:
+ *   1. size: size of chunk, in unit of 'mpn_limb_t'
+ */
+mpi_t *mpn_optimizer_get(mpn_optimizer_t *optimizer, unsigned int size);
+
+/**
+ * mpn optimizer: put back mpi of specified room
+ */
+void mpn_optimizer_put(mpn_optimizer_t *optimizer, unsigned int size);
+
+
+/**
+ * mpn montgomery: intialize montgomery context with modulus
+ *
+ */
+int mpi_montgomery_set_modulus(mpn_montgomery_t *mont, const mpi_t *modulus);
+
+/**
+ * mpn montgomery: exponentiation
+ *
+ */
+int mpi_montgomery_exp(mpi_t *r, const mpi_t *x, const mpi_t *e, mpn_montgomery_t *mont);
+
+/**
+ * mpn montgomery: exponentiation(constant-time version)
+ *
+ */
+int mpi_montgomery_exp_consttime(mpi_t *r, const mpi_t *x, const mpi_t *e, mpn_montgomery_t *mont);
 
 #if defined(__cplusplus)
 }

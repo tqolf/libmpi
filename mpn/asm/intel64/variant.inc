@@ -68,7 +68,7 @@
 %endif
 
 %ifndef _USE_C_bn_sqr_words_
-  %assign _USE_C_cpMulSqr_BNU_school_ _FEATURE_OFF_
+  %assign _USE_C_cpMulSqr_BNU_vectorized_ _FEATURE_OFF_
 %endif
 
 %ifndef _USE_C_bn_mont_red_words_

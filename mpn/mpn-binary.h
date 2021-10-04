@@ -16,13 +16,13 @@
 #ifndef MULTIPLE_PRECISION_BINARY_H
 #define MULTIPLE_PRECISION_BINARY_H
 
-#include <mpi/mpi.h>
-#include <mpi/mpi-asm.h>
+#include <mpn/mpn-asm.h>
+#include <mpn/mpn-optimizer.h>
 
 #define BITS_PER_BYTE        8                          /* @constant: bits per byte */
 #define BITS_PER_CHAR        4                          /* @constant: bits per character */
-#define MPI_MAX_BITS         (UINT_MAX / BITS_PER_BYTE) /* @note: mpi bits limitation */
-#define MPI_BITS_TO_BYTES(n) (((n) + BITS_PER_BYTE - 1) / BITS_PER_BYTE)
+#define MPN_MAX_BITS         (UINT_MAX / BITS_PER_BYTE) /* @note: mpn width limitation */
+#define MPN_BITS_TO_BYTES(n) (((n) + BITS_PER_BYTE - 1) / BITS_PER_BYTE)
 
 /* swap variable */
 #define SWAP(type, a, b) \
@@ -49,7 +49,7 @@
     }
 
 /**
- * mpi alignment
+ * mpn alignment
  */
 MPN_INLINE unsigned int mpi_aligned_diff(void *ptr, uintptr_t alignment)
 {
@@ -113,11 +113,6 @@ extern "C" {
 #endif
 
 /**
- * @addtogroup: mpi/low-level-api
- *
- * @berif: Low-Level-APIs for multiple-precision-computation
- */
-/**
  * mpn: ALL-ones if buff[::] is zero, otherwise ALL-zeros
  */
 mpn_limb_t mpn_is_zero(const mpn_limb_t *buff, unsigned int bufflen);
@@ -128,22 +123,22 @@ mpn_limb_t mpn_is_zero(const mpn_limb_t *buff, unsigned int bufflen);
 mpn_limb_t mpn_is_zero_consttime(const mpn_limb_t *buff, unsigned int bufflen);
 
 /**
- * mpn: get bit size of mpi
+ * mpn: get most significant bit
  */
 unsigned int mpn_bits(const mpn_limb_t *data, unsigned int size);
 
 /**
- * mpn: get bit size of mpi(constant-time version)
+ * mpn: get most significant bit(constant-time version)
  */
 unsigned int mpn_bits_consttime(const mpn_limb_t *data, unsigned int size);
 
 /**
- * mpn: get actual size of mpi chunk
+ * mpn: get most significant limb
  */
 unsigned int mpn_limbs(const mpn_limb_t *data, unsigned int size);
 
 /**
- * mpn: get actual size of mpi chunk(constant-time version)
+ * mpn: get most significant limb(constant-time version)
  */
 unsigned int mpn_limbs_consttime(const mpn_limb_t *data, unsigned int size);
 
@@ -179,7 +174,7 @@ unsigned int mpn_rshift(mpn_limb_t *r, const mpn_limb_t *a, unsigned int asize, 
 /**
  * mpn addition: carry, r = a[:n] + b[:n]
  */
-mpn_limb_t mpn_add_school(mpn_limb_t *r, const mpn_limb_t *a, const mpn_limb_t *b, unsigned int n);
+mpn_limb_t mpn_add_vectorized(mpn_limb_t *r, const mpn_limb_t *a, const mpn_limb_t *b, unsigned int n);
 
 /**
  * mpn: carry, r[] = a[] + b[]
@@ -190,7 +185,7 @@ mpn_limb_t mpn_add(mpn_limb_t *r, unsigned int rroom, const mpn_limb_t *a, unsig
 /**
  * mpn: carry, r[:n] = a[:n] + w
  */
-mpn_limb_t mpn_inc_school(mpn_limb_t *r, const mpn_limb_t *a, unsigned int size, mpn_limb_t w);
+mpn_limb_t mpn_inc_vectorized(mpn_limb_t *r, const mpn_limb_t *a, unsigned int size, mpn_limb_t w);
 
 /**
  * mpn: carry, r[] = a[] + w
@@ -204,7 +199,7 @@ mpn_limb_t mpn_inc(mpn_limb_t *r, unsigned int rroom, const mpn_limb_t *a, unsig
  *   1. make sure r->room is enough to store the result
  *      minimal advise size: MAX(bit_size(a), bit_size(b)) + 1
  */
-mpn_limb_t mpn_sub_school(mpn_limb_t *r, const mpn_limb_t *a, const mpn_limb_t *b, unsigned int n);
+mpn_limb_t mpn_sub_vectorized(mpn_limb_t *r, const mpn_limb_t *a, const mpn_limb_t *b, unsigned int n);
 
 /**
  * mpn subtraction: size, r[] = a[] - b[]
@@ -215,7 +210,7 @@ unsigned int mpn_sub(mpn_limb_t *r, unsigned int rroom, const mpn_limb_t *a, uns
 /**
  * mpn: borrow, r[:n] = a[:n] - w
  */
-mpn_limb_t mpn_dec_school(mpn_limb_t *r, const mpn_limb_t *a, unsigned int asize, mpn_limb_t w);
+mpn_limb_t mpn_dec_vectorized(mpn_limb_t *r, const mpn_limb_t *a, unsigned int asize, mpn_limb_t w);
 
 /**
  * mpn: size, r[] = a[] - w
@@ -281,22 +276,22 @@ unsigned int mpn_mod_invert(mpn_limb_t *r, const mpn_limb_t *a, unsigned int asi
                             unsigned int msize, mpn_optimizer_t *optimizer);
 
 /**
- *  mpn: create mpi from hex string
+ *  mpn: create mpn from hex string
  */
 unsigned int mpn_from_string(mpn_limb_t *r, unsigned int size, const char *in, unsigned int inlen);
 
 /**
- *  mpn: convert mpi to hex string
+ *  mpn: convert mpn to hex string
  */
 unsigned int mpn_to_string(char *out, unsigned int outsize, const mpn_limb_t *a, unsigned int size);
 
 /**
- *  mpn: create mpi from big-endian octets
+ *  mpn: create mpn from big-endian octets
  */
 unsigned int mpn_from_octets(mpn_limb_t *r, unsigned int size, const unsigned char *in, unsigned int inlen);
 
 /**
- *  mpn: convert mpi to big-endian octets
+ *  mpn: convert mpn to big-endian octets
  */
 unsigned int mpn_to_octets(unsigned char *out, unsigned int outsize, const mpn_limb_t *a, unsigned int size);
 

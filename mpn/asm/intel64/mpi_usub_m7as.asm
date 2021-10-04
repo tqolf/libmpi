@@ -20,7 +20,7 @@
 ;               Big Number Operations
 ;
 ;     Content:
-;        mpn_sub_school()
+;        mpn_sub_vectorized()
 ;
 ;
 
@@ -33,7 +33,7 @@ segment .text align=ARCH_ALIGN_FACTOR
 
 
 ;*************************************************************
-;* uint64_t mpn_sub_school(uint64_t* pDst,
+;* uint64_t mpn_sub_vectorized(uint64_t* pDst,
 ;*            const uint64_t* pSrc1,
 ;*            const uint64_t* pSrc2,
 ;*                  int len)
@@ -41,7 +41,7 @@ segment .text align=ARCH_ALIGN_FACTOR
 ;* returns borrow >= 0
 ;*************************************************************
 align ARCH_ALIGN_FACTOR
-IPPASM mpn_sub_school,PUBLIC
+IPPASM mpn_sub_vectorized,PUBLIC
 %assign LOCAL_FRAME 0
         USES_GPR rsi,rdi
         USES_XMM
@@ -322,7 +322,7 @@ align ARCH_ALIGN_FACTOR
     REST_XMM
     REST_GPR
     ret
-ENDFUNC mpn_sub_school
+ENDFUNC mpn_sub_vectorized
 
 
 %endif

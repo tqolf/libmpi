@@ -16,8 +16,7 @@
 #ifndef MULTIPLE_PRECISION_ASM_H
 #define MULTIPLE_PRECISION_ASM_H
 
-#include <stdint.h>
-#include <mpi/mpi.h>
+#include <mpn/mpn-conf.h>
 
 /**
  * Define auxiliary asm macros.
@@ -772,7 +771,7 @@ extern const unsigned char __mpi_clz_tab[129];
             _qh += _mask;                                               \
             _r += _mask & (d);                                          \
         } else {                                                        \
-            UADD_AB(_qh, _ql, _qh, _ql, (nh) + 1, (nl));                \
+            UADD_AABB(_qh, _ql, _qh, _ql, (nh) + 1, (nl));              \
             _r = (nl)-_qh * (d);                                        \
             _mask = -(mpn_limb_t)(_r > _ql); /* both > and >= are OK */ \
             _qh += _mask;                                               \
