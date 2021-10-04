@@ -209,7 +209,7 @@ MPN_INLINE void mpi_raise_exception(void)
 typedef int64_t mpn_slimb_t;
 typedef uint64_t mpn_limb_t;
 #define MPN_LIMB_BYTES   8 // sizeof(mpn_limb_t)
-#define MPN_LIMB_FORMAT  PRIu64
+#define MPN_LIMB_FORMAT  PRIX64
 #define MPN_LIMB_MASK    0xFFFFFFFFFFFFFFFF
 #define MPN_LIMB_MASK_LO 0x00000000FFFFFFFF
 #define MPN_LIMB_MASK_HI 0xFFFFFFFF00000000
@@ -229,7 +229,7 @@ MPN_INLINE void MPN_LIMB_TO_OCTETS(unsigned char *p, mpn_limb_t v)
 typedef int32_t mpn_slimb_t;
 typedef uint32_t mpn_limb_t;
 #define MPN_LIMB_BYTES   4 // sizeof(mpn_limb_t)
-#define MPN_LIMB_FORMAT  PRIu32
+#define MPN_LIMB_FORMAT  PRIX32
 #define MPN_LIMB_MASK    0xFFFFFFFF
 #define MPN_LIMB_MASK_LO 0x0000FFFF
 #define MPN_LIMB_MASK_HI 0xFFFF0000

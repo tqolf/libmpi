@@ -42,11 +42,11 @@ extern "C" {
 typedef struct {
     unsigned int attr; /**< mpi attributes */
     unsigned int sign; /**< mpi sign: negtive or not */
-    unsigned int size; /**< mpi size (count of mpn_limb_t) */
-    unsigned int room; /**< mpi max size (count of mpn_limb_t) */
+    mpn_size_t size;   /**< mpi size (count of mpn_limb_t) */
+    mpn_size_t room;   /**< mpi max size (count of mpn_limb_t) */
     mpn_limb_t *data;  /**< mpi data chunk(most significant limb at the largest) */
 } mpi_t;
-#define MPI_ALIGNED_HEAD_LIMBS ((unsigned int)((sizeof(mpi_t) + sizeof(mpn_limb_t) - 1) / sizeof(mpn_limb_t)))
+#define MPI_ALIGNED_HEAD_LIMBS ((mpn_size_t)((sizeof(mpi_t) + sizeof(mpn_limb_t) - 1) / sizeof(mpn_limb_t)))
 
 /** High-Level APIs */
 /**
@@ -57,14 +57,14 @@ typedef struct {
  * @performance: Locality of reference and Cacheline alignment
  *   mpi_t and this->data will be allocated as a continuous memory chunk
  */
-mpi_t *mpi_create(unsigned int bits);
+mpi_t *mpi_create(mpn_size_t bits);
 
 /**
  * create mpi(detached) with expected bits |bits| to reserve
  *
  * |bits| == 0, to create empty room
  */
-mpi_t *mpi_create_detached(unsigned int bits);
+mpi_t *mpi_create_detached(mpn_size_t bits);
 
 /**
  *  duplicate big-numer |a|
@@ -79,7 +79,7 @@ void mpi_destory(mpi_t *v);
 /**
  * make mpi with given chunk
  */
-void mpi_make(mpi_t *r, mpn_limb_t *data, unsigned int size);
+void mpi_make(mpi_t *r, mpn_limb_t *data, mpn_size_t size);
 
 /**
  *  copy big-numer |a| to |r|
@@ -104,7 +104,7 @@ int mpi_cmp(const mpi_t *a, const mpi_t *b);
  * @note:
  *   1. 0, if a is NULL
  */
-unsigned int mpi_bits(const mpi_t *a);
+mpn_size_t mpi_bits(const mpi_t *a);
 
 /**
  * get byte size of mpi |a|(constant-time version)
@@ -112,7 +112,7 @@ unsigned int mpi_bits(const mpi_t *a);
  * @note:
  *   1. 0, if a is NULL
  */
-unsigned int mpi_bytes(const mpi_t *a);
+mpn_size_t mpi_bytes(const mpi_t *a);
 
 /**
  * get max bit size of mpi |a|(constant-time version)
@@ -120,7 +120,7 @@ unsigned int mpi_bytes(const mpi_t *a);
  * @note:
  *   1. 0, if a is NULL
  */
-unsigned int mpi_max_bits(const mpi_t *a);
+mpn_size_t mpi_max_bits(const mpi_t *a);
 
 /**
  * get max byte size of mpi |a|(constant-time version)
@@ -128,7 +128,7 @@ unsigned int mpi_max_bits(const mpi_t *a);
  * @note:
  *   1. 0, if a is NULL
  */
-unsigned int mpi_max_bytes(const mpi_t *a);
+mpn_size_t mpi_max_bytes(const mpi_t *a);
 
 /**
  * mpi: expand mpi to expected bits |bits|
@@ -136,7 +136,7 @@ unsigned int mpi_max_bytes(const mpi_t *a);
  * @note:
  *   1. maybe fail when no enough memory or invalid size given
  */
-mpi_t *mpi_expand(mpi_t *v, unsigned int bits);
+mpi_t *mpi_expand(mpi_t *v, mpn_size_t bits);
 
 /**
  * resize mpi to expected bits |bits|
@@ -145,7 +145,7 @@ mpi_t *mpi_expand(mpi_t *v, unsigned int bits);
  *   1. maybe fail when no enough memory or invalid size given
  *
  */
-mpi_t *mpi_resize(mpi_t *v, unsigned int bits);
+mpi_t *mpi_resize(mpi_t *v, mpn_size_t bits);
 
 /**
  * zeroize mpi |v|
@@ -164,12 +164,12 @@ int mpi_set_limb(mpi_t *r, mpn_limb_t v);
  *   1. if *|v| is NULL, mpi will be created with proper size
  *   2. if *|v| isn't NULL, mpi-number will be resized, and maybe *|v| will be set to a new memory chunk
  */
-int mpi_from_octets(mpi_t **v, const unsigned char *buff, unsigned int bufflen);
+int mpi_from_octets(mpi_t **v, const unsigned char *buff, mpn_size_t bufflen);
 
 /**
  *  convert mpi to big-endian octets
  */
-int mpi_to_octets(const mpi_t *a, unsigned char *out, unsigned int outsize, unsigned int *outlen);
+int mpi_to_octets(const mpi_t *a, unsigned char *out, mpn_size_t outsize, mpn_size_t *outlen);
 
 /**
  *  initialize mpi |v| from hex-string |a|
@@ -295,32 +295,32 @@ int mpi_exp_limb(mpi_t *r, const mpi_t *g, mpn_limb_t e);
 /**
  * get bit
  */
-int mpi_get_bit(const mpi_t *a, unsigned int n);
+int mpi_get_bit(const mpi_t *a, mpn_size_t n);
 
 /**
  * set bit
  */
-int mpi_set_bit(const mpi_t *a, unsigned int n);
+int mpi_set_bit(const mpi_t *a, mpn_size_t n);
 
 /**
  * clr bit
  */
-int mpi_clr_bit(const mpi_t *a, unsigned int n);
+int mpi_clr_bit(const mpi_t *a, mpn_size_t n);
 
 /**
  * left-shift: |r| = |a| << n
  */
-int mpi_lshift(mpi_t *r, const mpi_t *a, unsigned int n);
+int mpi_lshift(mpi_t *r, const mpi_t *a, mpn_size_t n);
 
 /**
  * right-shift: |r| = |a| >> n
  */
-int mpi_rshift(mpi_t *r, const mpi_t *a, unsigned int n);
+int mpi_rshift(mpi_t *r, const mpi_t *a, mpn_size_t n);
 
 /**
  * conditional swap(constant-time version)
  */
-int mpi_swap_consttime(unsigned condition, mpi_t *a, mpi_t *b, unsigned int n);
+int mpi_swap_consttime(unsigned condition, mpi_t *a, mpi_t *b, mpn_size_t n);
 
 /**
  * mpi(prime): test if a is a prime
@@ -329,8 +329,8 @@ int mpi_swap_consttime(unsigned condition, mpi_t *a, mpi_t *b, unsigned int n);
  *   1. return 0 if the number is composite
  *      1 if it is prime with an error probability of less than 0.25^checks
  */
-int mpi_is_prime(const mpi_t *a, unsigned int checks, unsigned do_trial_division, mpn_optimizer_t *optimizer,
-                 int (*rand_bytes)(void *, unsigned char *, unsigned int), void *rand_state);
+int mpi_is_prime(const mpi_t *a, mpn_size_t checks, unsigned do_trial_division, mpn_optimizer_t *optimizer,
+                 int (*rand_bytes)(void *, unsigned char *, mpn_size_t), void *rand_state);
 
 /**
  * mpi(prime): enerates a pseudo-random prime number of at least bit length |bits|
@@ -347,8 +347,8 @@ int mpi_is_prime(const mpi_t *a, unsigned int checks, unsigned do_trial_division
  *      If |safe| is true, and |rem| == NULL the condition will be p % |add| == 3.
  *      It is recommended that |add| is a multiple of 4.
  */
-int mpi_generate_prime(mpi_t *ret, unsigned int bits, unsigned safe, const mpi_t *add, const mpi_t *rem,
-                       int (*rand_bytes)(void *, unsigned char *, unsigned int), void *rand_state);
+int mpi_generate_prime(mpi_t *ret, mpn_size_t bits, unsigned safe, const mpi_t *add, const mpi_t *rem,
+                       int (*rand_bytes)(void *, unsigned char *, mpn_size_t), void *rand_state);
 
 
 /**
@@ -357,12 +357,12 @@ int mpi_generate_prime(mpi_t *ret, unsigned int bits, unsigned safe, const mpi_t
  * @note:
  *   1. size: size of chunk, in unit of 'mpn_limb_t'
  */
-mpi_t *mpn_optimizer_get(mpn_optimizer_t *optimizer, unsigned int size);
+mpi_t *mpi_optimizer_get(mpn_optimizer_t *optimizer, mpn_size_t size);
 
 /**
  * mpn optimizer: put back mpi of specified room
  */
-void mpn_optimizer_put(mpn_optimizer_t *optimizer, unsigned int size);
+void mpi_optimizer_put(mpn_optimizer_t *optimizer, mpn_size_t size);
 
 
 /**

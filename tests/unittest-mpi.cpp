@@ -69,8 +69,7 @@ std::ostream &printer<mpi_t *>::print(std::ostream &os, mpi_t *const v)
 }
 
 template <>
-std::ostream &printer<std::vector<unsigned char>>::print(std::ostream &os,
-                                                         std::vector<unsigned char> const vec)
+std::ostream &printer<std::vector<unsigned char>>::print(std::ostream &os, std::vector<unsigned char> const vec)
 {
     for (auto ch : vec) {
         const char HEX_CHARS[] = "0123456789ABCDEF";
@@ -107,14 +106,14 @@ class verifier {
         if (m_nodes.find(key) != m_nodes.end()) {
             std::vector<unsigned char> &r = m_nodes[key];
             if (r.size() == buffer.size() && memcmp(r.data(), buffer.data(), r.size()) == 0) {
-                std::cout << testinfo->test_suite_name() << "." << testinfo->name() << ":"
-                          << testinfo->line() << ": \033[0;1;32mPassed\033[0m" << std::endl;
+                std::cout << testinfo->test_suite_name() << "." << testinfo->name() << ":" << testinfo->line()
+                          << ": \033[0;1;32mPassed\033[0m" << std::endl;
                 return true;
             } else {
                 hexdump("expected", r);
                 hexdump("computed", buffer);
-                std::cout << testinfo->test_suite_name() << "." << testinfo->name() << ":"
-                          << testinfo->line() << ": \033[0;1;31mFailed\033[0m" << std::endl;
+                std::cout << testinfo->test_suite_name() << "." << testinfo->name() << ":" << testinfo->line()
+                          << ": \033[0;1;31mFailed\033[0m" << std::endl;
 
                 return false;
             }
@@ -200,8 +199,7 @@ TEST(MPI, CreateFromString)
 
     // openssl
     {
-        BIGNUM *r =
-            BN_new(); // BN_new to make sure no "Segmentation fault" error when generated string is empty
+        BIGNUM *r = BN_new(); // BN_new to make sure no "Segmentation fault" error when generated string is empty
         BN_hex2bn(&r, val.c_str());
         verifier::get()->trace("* a", r);
         verifier::get()->erase("from_string");
@@ -603,21 +601,20 @@ TEST(MPI, Division)
             size = random_size(0, MAX_BYTES);
             abuffer.resize(size);
             RAND_bytes(abuffer.data(), static_cast<int>(size));
-
-            verifier::get()->trace("a", abuffer);
         }
 
         {
             size = random_size(0, MAX_BYTES);
             bbuffer.resize(size);
             RAND_bytes(bbuffer.data(), static_cast<int>(size));
-
-            verifier::get()->trace("b", bbuffer);
         }
 
         // it's too simple for the division algorithm if abufflen < bbufflen, so swap them to make sure that
         // abufflen >= bbufflen
         if (abuffer.size() < bbuffer.size()) { abuffer.swap(bbuffer); }
+
+        verifier::get()->trace("a", abuffer);
+        verifier::get()->trace("b", bbuffer);
     }
 
     // openssl
@@ -648,16 +645,20 @@ TEST(MPI, Division)
         mpi_t *b = mpi_create(bbuffer.size() * BITS_PER_BYTE);
         mpi_from_octets(&a, abuffer.data(), abuffer.size());
         mpi_from_octets(&b, bbuffer.data(), bbuffer.size());
-        a = mpi_expand(a, mpi_bits(a) + MPN_LIMB_BITS); // @IMPORTANT: one additional word required
 
         size_t qsize = 0, rsize = mpi_bits(b);
         if (mpi_bits(a) >= mpi_bits(b)) {
-            rsize = mpi_bits(a);
+            rsize = mpi_bits(b) + MPN_LIMB_BITS;
             qsize = mpi_bits(a) - mpi_bits(b) + MPN_LIMB_BITS;
         }
 
         mpi_t *q = mpi_create(qsize);
         mpi_t *r = mpi_create(rsize);
+
+        verifier::get()->trace("bits(a)", mpi_bits(a));
+        verifier::get()->trace("bits(b)", mpi_bits(b));
+        verifier::get()->trace("max_bits(q)", mpi_max_bits(q));
+        verifier::get()->trace("max_bits(r)", mpi_max_bits(r));
 
         mpi_div(q, r, a, b);
         verifier::get()->trace("  q = a // b", q);
@@ -1253,9 +1254,7 @@ TEST(RSA, cipher)
             },
             NULL);
         mpi_destory(pubexp);
-        if (mpikey != NULL) {
-            std::cout << "pbits: " << mpikey->pbits << ", qbits: " << mpikey->qbits << std::endl;
-        }
+        if (mpikey != NULL) { std::cout << "pbits: " << mpikey->pbits << ", qbits: " << mpikey->qbits << std::endl; }
 
         // export N
         N.resize(MPN_BITS_TO_BYTES(mpikey->nbits));
@@ -1314,15 +1313,13 @@ TEST(RSA, cipher)
     // openssl
     {
         // pub cipher
-        RSA_public_encrypt(static_cast<int>(INPUT.size()), INPUT.data(), OUTPUT.data(), osslkey,
-                           RSA_NO_PADDING);
+        RSA_public_encrypt(static_cast<int>(INPUT.size()), INPUT.data(), OUTPUT.data(), osslkey, RSA_NO_PADDING);
         verifier::get()->erase("pub cipher");
         ASSERT_TRUE(verifier::get()->probe("pub cipher", OUTPUT));
         verifier::get()->trace("pub cipher", OUTPUT);
 
         // prv cipher
-        RSA_private_decrypt(static_cast<int>(INPUT.size()), INPUT.data(), OUTPUT.data(), osslkey,
-                            RSA_NO_PADDING);
+        RSA_private_decrypt(static_cast<int>(INPUT.size()), INPUT.data(), OUTPUT.data(), osslkey, RSA_NO_PADDING);
         verifier::get()->erase("prv cipher");
         ASSERT_TRUE(verifier::get()->probe("prv cipher", OUTPUT));
         verifier::get()->trace("prv cipher", OUTPUT);
@@ -1480,6 +1477,83 @@ TEST(RSA, cipher)
 int main(int argc, char **argv)
 {
     verifier::get()->set_verbose(true);
+
+    if (1) {
+        std::vector<unsigned char> abuffer{
+            0x07, 0x68, 0x05, 0xF1, 0x1A, 0xBB, 0x1A, 0x76, 0x39, 0x79, 0x02, 0x58, 0x8E, 0x18, 0x08, 0x39,
+            0x90, 0xFC, 0x2C, 0x02, 0x79, 0x4F, 0xE3, 0x6C, 0xD5, 0xA4, 0xD3, 0xA0, 0xDB, 0xE4, 0xE2, 0x1A,
+            0x06, 0x94, 0x72, 0xEE, 0xE5, 0xEB, 0xB7, 0x63, 0x30, 0xD8, 0xBB, 0x8C, 0x12, 0xDC, 0xEF, 0xD6,
+            0xBE, 0x1C, 0xD7, 0xEE, 0xCE, 0xD6, 0x9C, 0x00, 0x17, 0x9D, 0xF0, 0x38, 0x78, 0x2A, 0xCD, 0xB9,
+            0x53, 0x96, 0xF3, 0x54, 0x9A, 0x6A, 0x1A, 0xDF, 0x43, 0x8D, 0xBF, 0xBC, 0x97, 0x5D, 0xBA, 0xB9,
+            0x86, 0x80, 0x49, 0xCB, 0x8B, 0x9E, 0xF8, 0x0F, 0xA8, 0xDF, 0x26, 0x4D, 0x88, 0x5D, 0x77, 0x5F,
+        };
+        std::vector<unsigned char> bbuffer{
+            0xCB, 0x3E, 0x64, 0x13, 0x7D, 0xC7, 0xA5, 0x25, 0x40, 0xD2, 0x79, 0x1C, 0x1B, 0x0C, 0x24, 0xB1, 0xA0, 0xBA,
+            0xC9, 0x82, 0x5C, 0xB4, 0xE1, 0xF6, 0x2C, 0x2E, 0xF4, 0x10, 0x47, 0x6A, 0xF1, 0x87, 0x5B, 0xAE, 0x20, 0x13,
+            0x64, 0xA9, 0x5D, 0xF0, 0x10, 0xFE, 0xB4, 0xCC, 0xBB, 0xE0, 0x0B, 0x3C, 0x0A, 0x49, 0xF5, 0x87, 0xED, 0x86,
+            0x85, 0xA0, 0x33, 0xBF, 0x13, 0xBA, 0xBA, 0xDF, 0x6D, 0x6E, 0xA9, 0x1C, 0x60, 0x53, 0xD0, 0xF4, 0x39, 0x04,
+            0xFF, 0xE2, 0xCC, 0xF6, 0xBD, 0x5A, 0x9A, 0x38, 0x9F, 0xAA, 0xB3, 0x7F, 0x08, 0xCB, 0xE2, 0x5B, 0xA5,
+        };
+
+        {
+            verifier::get()->trace("a", abuffer);
+            verifier::get()->trace("b", bbuffer);
+        }
+
+        // openssl
+        {
+            BIGNUM *q = BN_new(), *r = BN_new(), *a = BN_new(), *b = BN_new();
+            BN_bin2bn(abuffer.data(), static_cast<int>(abuffer.size()), a);
+            BN_bin2bn(bbuffer.data(), static_cast<int>(bbuffer.size()), b);
+
+            BN_CTX *ctx = BN_CTX_new();
+            BN_div(q, r, a, b, ctx);
+            BN_CTX_free(ctx);
+            verifier::get()->trace("* q = a // b", q);
+            verifier::get()->trace("* r = a % b", r);
+            verifier::get()->erase("q = a // b");
+            verifier::get()->erase("r = a % b");
+
+            BN_free(a);
+            BN_free(b);
+            BN_free(q);
+            BN_free(r);
+        }
+
+        // this implementation
+        {
+            mpi_t *a = mpi_create(abuffer.size() * BITS_PER_BYTE);
+            mpi_t *b = mpi_create(bbuffer.size() * BITS_PER_BYTE);
+            mpi_from_octets(&a, abuffer.data(), abuffer.size());
+            mpi_from_octets(&b, bbuffer.data(), bbuffer.size());
+
+            size_t qsize = 0, rsize = mpi_bits(b);
+            if (mpi_bits(a) >= mpi_bits(b)) {
+                rsize = mpi_bits(b) + MPN_LIMB_BITS;
+                qsize = mpi_bits(a) - mpi_bits(b) + MPN_LIMB_BITS;
+            }
+
+            mpi_t *q = mpi_create(qsize);
+            mpi_t *r = mpi_create(rsize);
+
+            verifier::get()->trace("bits(a)", mpi_bits(a));
+            verifier::get()->trace("bits(b)", mpi_bits(b));
+            verifier::get()->trace("max_bits(q)", mpi_max_bits(q));
+            verifier::get()->trace("max_bits(r)", mpi_max_bits(r));
+
+            mpi_div(q, r, a, b);
+            verifier::get()->trace("  q = a // b", q);
+            verifier::get()->trace("  r = a % b", r);
+            EXPECT_TRUE(verifier::get()->probe("q = a // b", q));
+            EXPECT_TRUE(verifier::get()->probe("r = a % b", r));
+
+            mpi_destory(a);
+            mpi_destory(b);
+            mpi_destory(q);
+            mpi_destory(r);
+        }
+        exit(0);
+    }
 
     CRYPTO_mem_ctrl(CRYPTO_MEM_CHECK_ON);
     testing::InitGoogleTest(&argc, argv);

@@ -23,8 +23,8 @@ extern "C" {
 #endif
 
 typedef struct mpn_optimizer_t {
-    unsigned int size;            /**< offset of used chunk */
-    unsigned int room;            /**< max size of chunk */
+    mpn_size_t size;              /**< offset of used chunk */
+    mpn_size_t room;              /**< max size of chunk */
     mpn_limb_t *chunk;            /**< mpn chunk */
     struct mpn_optimizer_t *next; /**< next optimizer node */
 } mpn_optimizer_t;
@@ -35,7 +35,7 @@ typedef struct mpn_optimizer_t {
  * @note:
  *   1. room: room size of optimizer chunk, in unit of 'mpn_limb_t'
  */
-mpn_optimizer_t *mpn_optimizer_create(unsigned int room);
+mpn_optimizer_t *mpn_optimizer_create(mpn_size_t room);
 
 /**
  * mpn optimizer: destory optimizer
@@ -48,12 +48,12 @@ void mpn_optimizer_destory(mpn_optimizer_t *opt);
  * @note:
  *   1. size: size of chunk, in unit of 'mpn_limb_t'
  */
-mpn_limb_t *mpn_optimizer_get_limbs(mpn_optimizer_t *opt, unsigned int size);
+mpn_limb_t *mpn_optimizer_get_limbs(mpn_optimizer_t *opt, mpn_size_t size);
 
 /**
  * mpn optimizer: put back memory chunk
  */
-void mpn_optimizer_put_limbs(mpn_optimizer_t *optimizer, unsigned int size);
+void mpn_optimizer_put_limbs(mpn_optimizer_t *optimizer, mpn_size_t size);
 
 /**
  * mpn optimizer: reset optimizer, mark all as unused

@@ -21,7 +21,7 @@
  * @note:
  *   1. room: room size of optimizer chunk, in unit of 'mpn_limb_t'
  */
-mpn_optimizer_t *mpn_optimizer_create(unsigned int room)
+mpn_optimizer_t *mpn_optimizer_create(mpn_size_t room)
 {
     if (room == 0) {
         /* it's meaningless to create 0-length optimizer */
@@ -70,7 +70,7 @@ void mpn_optimizer_destory(mpn_optimizer_t *optimizer)
  * @note:
  *   1. size: size of chunk, in unit of 'mpn_limb_t'
  */
-mpn_limb_t *mpn_optimizer_get_limbs(mpn_optimizer_t *optimizer, unsigned int size)
+mpn_limb_t *mpn_optimizer_get_limbs(mpn_optimizer_t *optimizer, mpn_size_t size)
 {
     if (optimizer == NULL) {
         MPI_RAISE_ERROR(-EINVAL);
@@ -78,7 +78,7 @@ mpn_limb_t *mpn_optimizer_get_limbs(mpn_optimizer_t *optimizer, unsigned int siz
     }
     if (size == 0) { return NULL; }
 
-    unsigned int total = 0;
+    mpn_size_t total = 0;
     mpn_optimizer_t *curr = optimizer, *prev = NULL;
     while (curr != NULL) {
         total += curr->size;
@@ -89,7 +89,7 @@ mpn_limb_t *mpn_optimizer_get_limbs(mpn_optimizer_t *optimizer, unsigned int siz
     if (prev->room - prev->size >= size) {
         curr = prev;
     } else {
-        unsigned int room = size + total / 2; // XXX: optimize growth rule
+        mpn_size_t room = size + total / 2; // XXX: optimize growth rule
         prev->next = curr = mpn_optimizer_create(room);
     }
 
@@ -108,7 +108,7 @@ mpn_limb_t *mpn_optimizer_get_limbs(mpn_optimizer_t *optimizer, unsigned int siz
 /**
  * mpn optimizer: put back memory chunk
  */
-void mpn_optimizer_put_limbs(mpn_optimizer_t *optimizer, unsigned int size)
+void mpn_optimizer_put_limbs(mpn_optimizer_t *optimizer, mpn_size_t size)
 {
     if (optimizer == NULL) { return; }
 

@@ -274,7 +274,7 @@ static int generate_probable_prime_dh(mpi_t *r, unsigned int bits, unsigned safe
     uint32_t *mods = (uint32_t *)MPI_ZALLOCATE(sizeof(uint32_t), known_primes_size);
     if (mods == NULL) { goto exit_with_error; }
 
-    mpi_t *t1 = mpn_optimizer_get(optimizer, add->size);
+    mpi_t *t1 = mpi_optimizer_get(optimizer, add->size);
     if (t1 == NULL) { return -ENOMEM; }
 
     delta = MPN_LIMB_MASK - mpi_get_limb(add);
@@ -446,9 +446,9 @@ int mpi_is_prime(const mpi_t *a, unsigned int checks, unsigned do_trial_division
 
     int err;
     mpn_montgomery_t *mont = NULL;
-    mpi_t *a1 = mpn_optimizer_get(opt, a->size);
-    mpi_t *a1_odd = mpn_optimizer_get(opt, a->size);
-    mpi_t *witness = mpn_optimizer_get(opt, a->size);
+    mpi_t *a1 = mpi_optimizer_get(opt, a->size);
+    mpi_t *a1_odd = mpi_optimizer_get(opt, a->size);
+    mpi_t *witness = mpi_optimizer_get(opt, a->size);
     if (a1 == NULL || a1_odd == NULL || witness == NULL) {
         MPI_RAISE_ERROR(-ENOMEM);
         err = -ENOMEM;
@@ -495,9 +495,9 @@ int mpi_is_prime(const mpi_t *a, unsigned int checks, unsigned do_trial_division
     }
 
 exit_with_error:
-    if (witness != NULL) { mpn_optimizer_put(opt, a->size); }
-    if (a1_odd != NULL) { mpn_optimizer_put(opt, a->size); }
-    if (a1 != NULL) { mpn_optimizer_put(opt, a->size); }
+    if (witness != NULL) { mpi_optimizer_put(opt, a->size); }
+    if (a1_odd != NULL) { mpi_optimizer_put(opt, a->size); }
+    if (a1 != NULL) { mpi_optimizer_put(opt, a->size); }
     if (optimizer == NULL && opt != NULL) { mpn_optimizer_destory(opt); }
     mpn_montgomery_destory(mont);
 
@@ -555,7 +555,7 @@ int mpi_generate_prime(mpi_t *ret, unsigned int bits, unsigned safe, const mpi_t
 
     mpi_t *t = NULL;
     if (safe) {
-        t = mpn_optimizer_get(optimizer, MPN_BITS_TO_LIMBS(bits));
+        t = mpi_optimizer_get(optimizer, MPN_BITS_TO_LIMBS(bits));
         if (t == NULL) {
             MPI_RAISE_ERROR(-ENOMEM);
             err = -ENOMEM;
@@ -629,7 +629,7 @@ int mpn_is_coprime(mpn_limb_t *a, unsigned int asize, mpn_limb_t *b, unsigned in
         SWAP(unsigned int, asize, bsize);
     }
 
-    mpi_t *r = mpn_optimizer_get(optimizer, 64);
+    mpi_t *r = mpi_optimizer_get(optimizer, 64);
     MPN_ASSERT(r != NULL);
 
     mpi_t ta, tb;
@@ -638,7 +638,7 @@ int mpn_is_coprime(mpn_limb_t *a, unsigned int asize, mpn_limb_t *b, unsigned in
 
     mpi_gcd_consttime(r, &ta, &tb, optimizer);
     int ret = r->size == 1 && r->data[0] == 1;
-    mpn_optimizer_put(optimizer, 64);
+    mpi_optimizer_put(optimizer, 64);
 
     return ret;
 }
