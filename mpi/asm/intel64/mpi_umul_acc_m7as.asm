@@ -21,9 +21,9 @@
 ;
 ;     Content:
 ;        cpMulDgt_BNU()
-;        mpi_umul_acc_bin()
+;        mpn_mul_acc()
 ;        cpSubMulDgt_BNU()
-;        mpi_umul_acc_bin()
+;        mpn_mul_acc()
 ;
 ;
 
@@ -38,13 +38,13 @@ segment .text align=ARCH_ALIGN_FACTOR
 
 
 ;*************************************************************
-; uint64_t mpi_umul_acc_bin(uint64_t* pDst,
+; uint64_t mpn_mul_acc(uint64_t* pDst,
 ;                  const uint64_t* pSrcA,
 ;                        int    len,
 ;                        uint64_t B )
 ;*************************************************************
 align ARCH_ALIGN_FACTOR
-IPPASM mpi_umul_acc_bin,PUBLIC
+IPPASM mpn_mul_acc,PUBLIC
 %assign LOCAL_FRAME 0
         USES_GPR rbx,rsi,rdi,r11,r12
         USES_XMM
@@ -206,6 +206,6 @@ align ARCH_ALIGN_FACTOR
     REST_XMM
     REST_GPR
     ret
-ENDFUNC mpi_umul_acc_bin
+ENDFUNC mpn_mul_acc
 
 %endif

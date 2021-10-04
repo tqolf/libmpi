@@ -20,8 +20,8 @@
 ;               Big Number Multiplicative Operations
 ;
 ;      Content:
-;         mpi_umul_bin()
-;         mpi_usqr_bin()
+;         mpn_mul()
+;         mpn_sqr()
 ;         mpi_montgomery_reduce_bin()
 ;
 ;  Implementation is using mulx and adcx/adox instruvtions
@@ -45,13 +45,13 @@ segment .text align=ARCH_ALIGN_FACTOR
 %include "mred.inc"
 
 ;*************************************************************
-;* uint64_t  mpi_umul_bin(uint64_t* pR;
+;* uint64_t  mpn_mul(uint64_t* pR;
 ;*                       const uint64_t* pA, int  aSize,
 ;*                       const uint64_t* pB, int  bSize)
 ;*
 ;*************************************************************
 align ARCH_ALIGN_FACTOR
-IPPASM mpi_umul_bin,PUBLIC
+IPPASM mpn_mul,PUBLIC
 %assign LOCAL_FRAME 0
         USES_GPR rbx,rbp,rsi,rdi,r12,r13,r14,r15
         USES_XMM
@@ -139,16 +139,16 @@ IPPASM mpi_umul_bin,PUBLIC
    REST_XMM
    REST_GPR
    ret
-ENDFUNC mpi_umul_bin
+ENDFUNC mpn_mul
 
 ;*************************************************************
 ;*
-;* uint64_t  mpi_usqr_bin(uint64_t* pR;
+;* uint64_t  mpn_sqr(uint64_t* pR;
 ;*                       const uint64_t* pA, int  aSize)
 ;*
 ;*************************************************************
 align ARCH_ALIGN_FACTOR
-IPPASM mpi_usqr_bin,PUBLIC
+IPPASM mpn_sqr,PUBLIC
 %assign LOCAL_FRAME 0
         USES_GPR rbx,rbp,rsi,rdi,r12,r13,r14,r15
         USES_XMM
@@ -195,7 +195,7 @@ IPPASM mpi_usqr_bin,PUBLIC
    REST_XMM
    REST_GPR
    ret
-ENDFUNC mpi_usqr_bin
+ENDFUNC mpn_sqr
 
 ;*************************************************************
 ;*

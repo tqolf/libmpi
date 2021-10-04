@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef MULTIPLE_PRECISION_INTEGER_OPTIMIZER_H
-#define MULTIPLE_PRECISION_INTEGER_OPTIMIZER_H
+#ifndef MULTIPLE_PRECISION_OPTIMIZER_H
+#define MULTIPLE_PRECISION_OPTIMIZER_H
 
 #include <mpi/mpi-conf.h>
 
@@ -22,56 +22,56 @@
 extern "C" {
 #endif
 
-typedef struct mpi_optimizer_t {
+typedef struct mpn_optimizer_t {
     unsigned int size;            /**< offset of used chunk */
     unsigned int room;            /**< max size of chunk */
-    mpi_limb_t *chunk;            /**< mpi chunk */
-    struct mpi_optimizer_t *next; /**< next optimizer node */
-} mpi_optimizer_t;
+    mpn_limb_t *chunk;            /**< mpi chunk */
+    struct mpn_optimizer_t *next; /**< next optimizer node */
+} mpn_optimizer_t;
 
 /**
  * mpi(optimizer): create optimizer for mpi operation
  *
  * @note:
- *   1. room: room size of optimizer chunk, in unit of 'mpi_limb_t'
+ *   1. room: room size of optimizer chunk, in unit of 'mpn_limb_t'
  */
-mpi_optimizer_t *mpi_optimizer_create(unsigned int room);
+mpn_optimizer_t *mpn_optimizer_create(unsigned int room);
 
 /**
  * mpi(optimizer): destory optimizer
  */
-void mpi_optimizer_destory(mpi_optimizer_t *opt);
+void mpn_optimizer_destory(mpn_optimizer_t *opt);
 
 /**
  * mpi(optimizer): get memory chunk for mpi operation
  *
  * @note:
- *   1. size: size of chunk, in unit of 'mpi_limb_t'
+ *   1. size: size of chunk, in unit of 'mpn_limb_t'
  */
-mpi_limb_t *mpi_optimizer_get_limbs(mpi_optimizer_t *opt, unsigned int size);
+mpn_limb_t *mpn_optimizer_get_limbs(mpn_optimizer_t *opt, unsigned int size);
 
 /**
  * mpi(optimizer): put back memory chunk
  */
-void mpi_optimizer_put_limbs(mpi_optimizer_t *optimizer, unsigned int size);
+void mpn_optimizer_put_limbs(mpn_optimizer_t *optimizer, unsigned int size);
 
 /**
  * mpi(optimizer): get mpi with specified room from optimizer
  *
  * @note:
- *   1. size: size of chunk, in unit of 'mpi_limb_t'
+ *   1. size: size of chunk, in unit of 'mpn_limb_t'
  */
-mpi_t *mpi_optimizer_get(mpi_optimizer_t *optimizer, unsigned int size);
+mpi_t *mpn_optimizer_get(mpn_optimizer_t *optimizer, unsigned int size);
 
 /**
  * mpi(optimizer): put back mpi of specified room
  */
-void mpi_optimizer_put(mpi_optimizer_t *optimizer, unsigned int size);
+void mpn_optimizer_put(mpn_optimizer_t *optimizer, unsigned int size);
 
 /**
  * mpi(optimizer): reset optimizer, mark all as unused
  */
-void mpi_optimizer_reset(mpi_optimizer_t *opt);
+void mpn_optimizer_reset(mpn_optimizer_t *opt);
 
 #if defined(__cplusplus)
 }

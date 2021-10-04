@@ -3,13 +3,13 @@
 
 ;
 ; carry, r[:n] = a[:n] + b[:n]
-; uint64_t mpi_uadd_school_bin(uint64_t *r, const uint64_t *a, const uint64_t *b, unsigned int n)
+; uint64_t mpn_add_school(uint64_t *r, const uint64_t *a, const uint64_t *b, unsigned int n)
 ;
 
 segment .text align=ARCH_ALIGN_FACTOR
 
 align ARCH_ALIGN_FACTOR
-IPPASM mpi_uadd_school_bin,PUBLIC
+IPPASM mpn_add_school,PUBLIC
 %assign LOCAL_FRAME 0
         USES_GPR rsi,rdi
         USES_XMM
@@ -290,4 +290,4 @@ align ARCH_ALIGN_FACTOR
     REST_XMM
     REST_GPR
     ret
-ENDFUNC mpi_uadd_school_bin
+ENDFUNC mpn_add_school

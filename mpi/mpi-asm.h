@@ -13,25 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-/**
- * definitions for mixed size 32/64 bit arithmetic.
- *
- */
+#ifndef MULTIPLE_PRECISION_ASM_H
+#define MULTIPLE_PRECISION_ASM_H
 
-#ifndef MULTIPLE_PRECISION_INTEGER_ASM_H
-#define MULTIPLE_PRECISION_INTEGER_ASM_H
-
+#include <stdint.h>
 #include <mpi/mpi.h>
-
-#if (defined(__GNUC__) && (__GNUC__ >= 2)) || defined(__clang__)
-#define LIKELY(x)           __builtin_expect(!!(x), 1)
-#define UNLIKELY(x)         __builtin_expect(!!(x), 0)
-#define BUILTIN_CONSTANT(c) __builtin_constant_p(c)
-#else
-#define LIKELY(x)           (x)
-#define UNLIKELY(x)         (x)
-#define BUILTIN_CONSTANT(c) (c)
-#endif
 
 /**
  * Define auxiliary asm macros.
@@ -41,24 +27,24 @@
  *   4. USUB_ABC(borrow, difference, minuend, subtrahend_1, subtrahend_2)
  *
  *   5. UADD_AABB(high_sum, low_sum, high_addend_1, low_addend_1,
- *   high_addend_2, low_addend_2) adds two mpi_limb_t integers, composed by
+ *   high_addend_2, low_addend_2) adds two mpn_limb_t integers, composed by
  *   HIGH_ADDEND_1 and LOW_ADDEND_1, and HIGH_ADDEND_2 and LOW_ADDEND_2
  *   respectively.  The result is placed in HIGH_SUM and LOW_SUM. Overflow
  *   (i.e. carry out) is not stored anywhere, and is lost.
  *
  *   6. USUB_AABB(high_difference, low_difference, high_minuend, low_minuend,
- *   high_subtrahend, low_subtrahend) subtracts two two-word mpi_limb_t integers,
+ *   high_subtrahend, low_subtrahend) subtracts two two-word mpn_limb_t integers,
  *   composed by HIGH_MINUEND_1 and LOW_MINUEND_1, and HIGH_SUBTRAHEND_2 and
  *   LOW_SUBTRAHEND_2 respectively.  The result is placed in HIGH_DIFFERENCE
  *   and LOW_DIFFERENCE.  Overflow (i.e. carry out) is not stored anywhere,
  *   and is lost.
  *
  *   7. UMUL_AB(high_prod, low_prod, multiplier, multiplicand) multiplies two
- *   mpi_limb_t integers MULTIPLIER and MULTIPLICAND, and generates a two mpi_limb_t
+ *   mpn_limb_t integers MULTIPLIER and MULTIPLICAND, and generates a two mpn_limb_t
  *   word product in HIGH_PROD and LOW_PROD.
  *
  *   8. UDIV_NND(quotient, remainder, high_numerator, low_numerator,
- *   denominator) divides a (twice as large a mpi_limb_t), composed by the mpi_limb_t integers
+ *   denominator) divides a (twice as large a mpn_limb_t), composed by the mpn_limb_t integers
  *   HIGH_NUMERATOR and LOW_NUMERATOR, by DENOMINATOR and places the quotient
  *   in QUOTIENT and the remainder in REMAINDER.  HIGH_NUMERATOR must be less
  *   than DENOMINATOR for correct operation. If, in addition, the most
@@ -66,12 +52,15 @@
  *   UDIV_NEEDS_NORMALIZATION is defined to 1.
  *
  *   9. COUNT_LEADING_ZEROS(count, x) counts the number of zero-bits from the
- *   msb to the first non-zero bit in the mpi_limb_t X.  This is the number of
+ *   msb to the first non-zero bit in the mpn_limb_t X.  This is the number of
  *   steps X needs to be shifted left to set the msb.  Undefined for X == 0,
  *   unless the symbol COUNT_LEADING_ZEROS_0 is defined to some value.
  *
  *   10. COUNT_TRAILING_ZEROS(count, x) like COUNT_LEADING_ZEROS, but counts
  *   from the least significant end.
+ *
+ *   11. UADD_AABB_C like UADD_AABB but propagating carry-out into an additional
+ *   sum operand
  *
  *
  *   If any of these macros are left undefined for a particular CPU,
@@ -95,21 +84,21 @@
  *
  */
 
-#define BITS_S4    (MPI_LIMB_BITS / 4)
-#define UINT_H1    ((mpi_limb_t)1 << (MPI_LIMB_BITS / 2))
-#define UINT_LO(t) ((mpi_limb_t)(t) & (UINT_H1 - 1))
-#define UINT_HI(t) ((mpi_limb_t)(t) >> (MPI_LIMB_BITS / 2))
+#define BITS_S4    (MPN_LIMB_BITS / 4)
+#define UINT_H1    ((mpn_limb_t)1 << (MPN_LIMB_BITS / 2))
+#define UINT_LO(t) ((mpn_limb_t)(t) & (UINT_H1 - 1))
+#define UINT_HI(t) ((mpn_limb_t)(t) >> (MPN_LIMB_BITS / 2))
 
 #ifdef MPI_LIMB_LONG_LONG
 #define COUNT_LEADING_ZEROS_BUILTIN(count, x)       \
     do {                                            \
-        MPI_ASSERT((x) != 0);                       \
+        MPN_ASSERT((x) != 0);                       \
         (count) = (unsigned int)__builtin_clzll(x); \
     } while (0)
 #else
 #define COUNT_LEADING_ZEROS_BUILTIN(count, x)      \
     do {                                           \
-        MPI_ASSERT((x) != 0);                      \
+        MPN_ASSERT((x) != 0);                      \
         (count) = (unsigned int)__builtin_clzl(x); \
     } while (0)
 #endif
@@ -117,20 +106,20 @@
 #ifdef MPI_LIMB_LONG_LONG
 #define COUNT_TRAILING_ZEROS_BUILTIN(count, x)      \
     do {                                            \
-        MPI_ASSERT((x) != 0);                       \
+        MPN_ASSERT((x) != 0);                       \
         (count) = (unsigned int)__builtin_ctzll(x); \
     } while (0)
 #else
 #define COUNT_TRAILING_ZEROS_BUILTIN(count, x)     \
     do {                                           \
-        MPI_ASSERT((x) != 0);                      \
+        MPN_ASSERT((x) != 0);                      \
         (count) = (unsigned int)__builtin_ctzl(x); \
     } while (0)
 #endif
 
-#if !defined(MPI_NO_INLINE_ASM) && defined(__GNUC__) && (__GNUC__ >= 2)
+#if !defined(MPN_NO_INLINE_ASM) && defined(__GNUC__) && (__GNUC__ >= 2)
 
-#if defined(__arm__) && (defined(__thumb2__) || !defined(__thumb__)) && MPI_LIMB_BITS == 32
+#if defined(__arm__) && (defined(__thumb2__) || !defined(__thumb__)) && MPN_LIMB_BITS == 32
 #define UADD_AABB(sh, sl, ah, al, bh, bl)                                \
     do {                                                                 \
         if (BUILTIN_CONSTANT(bl) && -(uint32_t)(bl) < (uint32_t)(bl)) {  \
@@ -146,77 +135,71 @@
         }                                                                \
     } while (0)
 
-/* FIXME: Extend the immediate range for the low word by using both ADDS and
-   SUBS, since they set carry in the same way.  We need separate definitions
-   for thumb and non-thumb since thumb lacks RSC.  */
+/* Extend the immediate range for the low word by using both ADDS and SUBS,
+   since they set carry in the same way.  We need separate definitions for
+   thumb and non-thumb since thumb lacks RSC.  */
 #if defined(__thumb__)
-#define USUB_AABB(sh, sl, ah, al, bh, bl)                                   \
-    do {                                                                    \
-        if (BUILTIN_CONSTANT(ah) && BUILTIN_CONSTANT(bh) && (ah) == (bh)) { \
-            __asm__("subs\t%1, %2, %3\n\tsbc\t%0, %0, %0"                   \
-                    : "=r"(sh), "=r"(sl)                                    \
-                    : "r"(al), "rI"(bl)                                     \
-                    : "cc");                                                \
-        } else if (BUILTIN_CONSTANT(al)) {                                  \
-            __asm__("rsbs\t%1, %5, %4\n\tsbc\t%0, %2, %3"                   \
-                    : "=r"(sh), "=&r"(sl)                                   \
-                    : "r"(ah), "rI"(bh), "rI"(al), "r"(bl)                  \
-                    : "cc");                                                \
-        } else if (BUILTIN_CONSTANT(bl)) {                                  \
-            __asm__("subs\t%1, %4, %5\n\tsbc\t%0, %2, %3"                   \
-                    : "=r"(sh), "=&r"(sl)                                   \
-                    : "r"(ah), "rI"(bh), "r"(al), "rI"(bl)                  \
-                    : "cc");                                                \
-        } else {                                                            \
-            __asm__("subs\t%1, %4, %5\n\tsbc\t%0, %2, %3"                   \
-                    : "=r"(sh), "=&r"(sl)                                   \
-                    : "r"(ah), "rI"(bh), "r"(al), "rI"(bl)                  \
-                    : "cc");                                                \
-        }                                                                   \
+#define USUB_AABB(sh, sl, ah, al, bh, bl)                                                                   \
+    do {                                                                                                    \
+        if (BUILTIN_CONSTANT(ah) && BUILTIN_CONSTANT(bh) && (ah) == (bh)) {                                 \
+            __asm__("subs\t%1, %2, %3\n\tsbc\t%0, %0, %0" : "=r"(sh), "=r"(sl) : "r"(al), "rI"(bl) : "cc"); \
+        } else if (BUILTIN_CONSTANT(al)) {                                                                  \
+            __asm__("rsbs\t%1, %5, %4\n\tsbc\t%0, %2, %3"                                                   \
+                    : "=r"(sh), "=&r"(sl)                                                                   \
+                    : "r"(ah), "rI"(bh), "rI"(al), "r"(bl)                                                  \
+                    : "cc");                                                                                \
+        } else if (BUILTIN_CONSTANT(bl)) {                                                                  \
+            __asm__("subs\t%1, %4, %5\n\tsbc\t%0, %2, %3"                                                   \
+                    : "=r"(sh), "=&r"(sl)                                                                   \
+                    : "r"(ah), "rI"(bh), "r"(al), "rI"(bl)                                                  \
+                    : "cc");                                                                                \
+        } else {                                                                                            \
+            __asm__("subs\t%1, %4, %5\n\tsbc\t%0, %2, %3"                                                   \
+                    : "=r"(sh), "=&r"(sl)                                                                   \
+                    : "r"(ah), "rI"(bh), "r"(al), "rI"(bl)                                                  \
+                    : "cc");                                                                                \
+        }                                                                                                   \
     } while (0)
 #else
-#define USUB_AABB(sh, sl, ah, al, bh, bl)                                   \
-    do {                                                                    \
-        if (BUILTIN_CONSTANT(ah) && BUILTIN_CONSTANT(bh) && (ah) == (bh)) { \
-            __asm__("subs\t%1, %2, %3\n\tsbc\t%0, %0, %0"                   \
-                    : "=r"(sh), "=r"(sl)                                    \
-                    : "r"(al), "rI"(bl)                                     \
-                    : "cc");                                                \
-        } else if (BUILTIN_CONSTANT(al)) {                                  \
-            if (BUILTIN_CONSTANT(ah)) {                                     \
-                __asm__("rsbs\t%1, %5, %4\n\trsc\t%0, %3, %2"               \
-                        : "=r"(sh), "=&r"(sl)                               \
-                        : "rI"(ah), "r"(bh), "rI"(al), "r"(bl)              \
-                        : "cc");                                            \
-            } else {                                                        \
-                __asm__("rsbs\t%1, %5, %4\n\tsbc\t%0, %2, %3"               \
-                        : "=r"(sh), "=&r"(sl)                               \
-                        : "r"(ah), "rI"(bh), "rI"(al), "r"(bl)              \
-                        : "cc");                                            \
-            }                                                               \
-        } else if (BUILTIN_CONSTANT(ah)) {                                  \
-            if (BUILTIN_CONSTANT(bl)) {                                     \
-                __asm__("subs\t%1, %4, %5\n\trsc\t%0, %3, %2"               \
-                        : "=r"(sh), "=&r"(sl)                               \
-                        : "rI"(ah), "r"(bh), "r"(al), "rI"(bl)              \
-                        : "cc");                                            \
-            } else {                                                        \
-                __asm__("rsbs\t%1, %5, %4\n\trsc\t%0, %3, %2"               \
-                        : "=r"(sh), "=&r"(sl)                               \
-                        : "rI"(ah), "r"(bh), "rI"(al), "r"(bl)              \
-                        : "cc");                                            \
-            }                                                               \
-        } else if (BUILTIN_CONSTANT(bl)) {                                  \
-            __asm__("subs\t%1, %4, %5\n\tsbc\t%0, %2, %3"                   \
-                    : "=r"(sh), "=&r"(sl)                                   \
-                    : "r"(ah), "rI"(bh), "r"(al), "rI"(bl)                  \
-                    : "cc");                                                \
-        } else {                                                            \
-            __asm__("subs\t%1, %4, %5\n\tsbc\t%0, %2, %3"                   \
-                    : "=r"(sh), "=&r"(sl)                                   \
-                    : "r"(ah), "rI"(bh), "r"(al), "rI"(bl)                  \
-                    : "cc");                                                \
-        }                                                                   \
+#define USUB_AABB(sh, sl, ah, al, bh, bl)                                                                   \
+    do {                                                                                                    \
+        if (BUILTIN_CONSTANT(ah) && BUILTIN_CONSTANT(bh) && (ah) == (bh)) {                                 \
+            __asm__("subs\t%1, %2, %3\n\tsbc\t%0, %0, %0" : "=r"(sh), "=r"(sl) : "r"(al), "rI"(bl) : "cc"); \
+        } else if (BUILTIN_CONSTANT(al)) {                                                                  \
+            if (BUILTIN_CONSTANT(ah)) {                                                                     \
+                __asm__("rsbs\t%1, %5, %4\n\trsc\t%0, %3, %2"                                               \
+                        : "=r"(sh), "=&r"(sl)                                                               \
+                        : "rI"(ah), "r"(bh), "rI"(al), "r"(bl)                                              \
+                        : "cc");                                                                            \
+            } else {                                                                                        \
+                __asm__("rsbs\t%1, %5, %4\n\tsbc\t%0, %2, %3"                                               \
+                        : "=r"(sh), "=&r"(sl)                                                               \
+                        : "r"(ah), "rI"(bh), "rI"(al), "r"(bl)                                              \
+                        : "cc");                                                                            \
+            }                                                                                               \
+        } else if (BUILTIN_CONSTANT(ah)) {                                                                  \
+            if (BUILTIN_CONSTANT(bl)) {                                                                     \
+                __asm__("subs\t%1, %4, %5\n\trsc\t%0, %3, %2"                                               \
+                        : "=r"(sh), "=&r"(sl)                                                               \
+                        : "rI"(ah), "r"(bh), "r"(al), "rI"(bl)                                              \
+                        : "cc");                                                                            \
+            } else {                                                                                        \
+                __asm__("rsbs\t%1, %5, %4\n\trsc\t%0, %3, %2"                                               \
+                        : "=r"(sh), "=&r"(sl)                                                               \
+                        : "rI"(ah), "r"(bh), "rI"(al), "r"(bl)                                              \
+                        : "cc");                                                                            \
+            }                                                                                               \
+        } else if (BUILTIN_CONSTANT(bl)) {                                                                  \
+            __asm__("subs\t%1, %4, %5\n\tsbc\t%0, %2, %3"                                                   \
+                    : "=r"(sh), "=&r"(sl)                                                                   \
+                    : "r"(ah), "rI"(bh), "r"(al), "rI"(bl)                                                  \
+                    : "cc");                                                                                \
+        } else {                                                                                            \
+            __asm__("subs\t%1, %4, %5\n\tsbc\t%0, %2, %3"                                                   \
+                    : "=r"(sh), "=&r"(sl)                                                                   \
+                    : "r"(ah), "rI"(bh), "r"(al), "rI"(bl)                                                  \
+                    : "cc");                                                                                \
+        }                                                                                                   \
     } while (0)
 #endif
 
@@ -251,39 +234,35 @@
 #define COUNT_TRAILING_ZEROS(count, x) COUNT_TRAILING_ZEROS_BUILTIN(count, x)
 #endif /* __arm__ */
 
-#if defined(__aarch64__) && MPI_LIMB_BITS == 64
-#define UADD_AABB(sh, sl, ah, al, bh, bl)                                               \
-    do {                                                                                \
-        if (BUILTIN_CONSTANT(bl) && ~(uint64_t)(bl) <= (uint64_t)(bl)) {                \
-            __asm__("subs\t%1, %x4, %5\n\tadc\t%0, %x2, %x3"                            \
-                    : "=r"(sh), "=&r"(sl)                                               \
-                    : "rZ"((uint64_t)(ah)), "rZ"((uint64_t)(bh)), "%r"((uint64_t)(al)), \
-                      "rI"(-(uint64_t)(bl))                                             \
-                    : "cc");                                                            \
-        } else {                                                                        \
-            __asm__("adds\t%1, %x4, %5\n\tadc\t%0, %x2, %x3"                            \
-                    : "=r"(sh), "=&r"(sl)                                               \
-                    : "rZ"((uint64_t)(ah)), "rZ"((uint64_t)(bh)), "%r"((uint64_t)(al)), \
-                      "rI"((uint64_t)(bl))                                              \
-                    : "cc");                                                            \
-        }                                                                               \
+#if defined(__aarch64__) && MPN_LIMB_BITS == 64
+#define UADD_AABB(sh, sl, ah, al, bh, bl)                                                                     \
+    do {                                                                                                      \
+        if (BUILTIN_CONSTANT(bl) && ~(uint64_t)(bl) <= (uint64_t)(bl)) {                                      \
+            __asm__("subs\t%1, %x4, %5\n\tadc\t%0, %x2, %x3"                                                  \
+                    : "=r"(sh), "=&r"(sl)                                                                     \
+                    : "rZ"((uint64_t)(ah)), "rZ"((uint64_t)(bh)), "%r"((uint64_t)(al)), "rI"(-(uint64_t)(bl)) \
+                    : "cc");                                                                                  \
+        } else {                                                                                              \
+            __asm__("adds\t%1, %x4, %5\n\tadc\t%0, %x2, %x3"                                                  \
+                    : "=r"(sh), "=&r"(sl)                                                                     \
+                    : "rZ"((uint64_t)(ah)), "rZ"((uint64_t)(bh)), "%r"((uint64_t)(al)), "rI"((uint64_t)(bl))  \
+                    : "cc");                                                                                  \
+        }                                                                                                     \
     } while (0)
 
-#define USUB_AABB(sh, sl, ah, al, bh, bl)                                                      \
-    do {                                                                                       \
-        if (BUILTIN_CONSTANT(bl) && ~(uint64_t)(bl) <= (uint64_t)(bl)) {                       \
-            __asm__("adds\t%1, %x4, %5\n\tsbc\t%0, %x2, %x3"                                   \
-                    : "=r,r"(sh), "=&r,&r"(sl)                                                 \
-                    : "rZ,rZ"((uint64_t)(ah)), "rZ,rZ"((uint64_t)(bh)), "r,Z"((uint64_t)(al)), \
-                      "rI,r"(-(uint64_t)(bl))                                                  \
-                    : "cc");                                                                   \
-        } else {                                                                               \
-            __asm__("subs\t%1, %x4, %5\n\tsbc\t%0, %x2, %x3"                                   \
-                    : "=r,r"(sh), "=&r,&r"(sl)                                                 \
-                    : "rZ,rZ"((uint64_t)(ah)), "rZ,rZ"((uint64_t)(bh)), "r,Z"((uint64_t)(al)), \
-                      "rI,r"((uint64_t)(bl))                                                   \
-                    : "cc");                                                                   \
-        }                                                                                      \
+#define USUB_AABB(sh, sl, ah, al, bh, bl)                                                                              \
+    do {                                                                                                               \
+        if (BUILTIN_CONSTANT(bl) && ~(uint64_t)(bl) <= (uint64_t)(bl)) {                                               \
+            __asm__("adds\t%1, %x4, %5\n\tsbc\t%0, %x2, %x3"                                                           \
+                    : "=r,r"(sh), "=&r,&r"(sl)                                                                         \
+                    : "rZ,rZ"((uint64_t)(ah)), "rZ,rZ"((uint64_t)(bh)), "r,Z"((uint64_t)(al)), "rI,r"(-(uint64_t)(bl)) \
+                    : "cc");                                                                                           \
+        } else {                                                                                                       \
+            __asm__("subs\t%1, %x4, %5\n\tsbc\t%0, %x2, %x3"                                                           \
+                    : "=r,r"(sh), "=&r,&r"(sl)                                                                         \
+                    : "rZ,rZ"((uint64_t)(ah)), "rZ,rZ"((uint64_t)(bh)), "r,Z"((uint64_t)(al)), "rI,r"((uint64_t)(bl))  \
+                    : "cc");                                                                                           \
+        }                                                                                                              \
     } while (0)
 
 #define UMUL_AB(ph, pl, m0, m1)                                         \
@@ -299,7 +278,7 @@
 
 /* On x86 and x86_64, every asm implicitly clobbers "flags" and "fpsr",
    so we don't need : "cc".  */
-#if (defined(__i386__) || defined(__i486__)) && MPI_LIMB_BITS == 32
+#if (defined(__i386__) || defined(__i486__)) && MPN_LIMB_BITS == 32
 #define UADD_AABB(sh, sl, ah, al, bh, bl) \
     __asm__("addl %5,%k1\n\tadcl %3,%k0"  \
             : "=r"(sh), "=&r"(sl)         \
@@ -308,8 +287,7 @@
     __asm__("subl %5,%k1\n\tsbbl %3,%k0"  \
             : "=r"(sh), "=&r"(sl)         \
             : "0"((uint32_t)(ah)), "g"((uint32_t)(bh)), "1"((uint32_t)(al)), "g"((uint32_t)(bl)))
-#define UMUL_AB(w1, w0, u, v) \
-    __asm__("mull %3" : "=a"(w0), "=d"(w1) : "%0"((uint32_t)(u)), "rm"((uint32_t)(v)))
+#define UMUL_AB(w1, w0, u, v)      __asm__("mull %3" : "=a"(w0), "=d"(w1) : "%0"((uint32_t)(u)), "rm"((uint32_t)(v)))
 #define UDIV_NND(q, r, n1, n0, dx) /* d renamed to dx avoiding "=d" */ \
     __asm__("divl %4"              /* stringification in K&R C */      \
             : "=a"(q), "=d"(r)                                         \
@@ -372,7 +350,7 @@
             double d;                        \
             unsigned a[2];                   \
         } __u;                               \
-        __u.d = (mpi_limb_t)(n);             \
+        __u.d = (mpn_limb_t)(n);             \
         (c) = 0x3FF + 31 - (__u.a[1] >> 20); \
     } while (0)
 #define COUNT_LEADING_ZEROS_0 (0x3FF + 31)
@@ -391,7 +369,7 @@
 #define COUNT_LEADING_ZEROS(count, x)                                \
     do {                                                             \
         uint32_t __cbtmp;                                            \
-        MPI_ASSERT((x) != 0);                                        \
+        MPN_ASSERT((x) != 0);                                        \
         __asm__("bsrl %1,%0" : "=r"(__cbtmp) : "rm"((uint32_t)(x))); \
         (count) = 31 - __cbtmp;                                      \
     } while (0)
@@ -401,7 +379,7 @@
 #define COUNT_LEADING_ZEROS(count, x)                                \
     do {                                                             \
         uint32_t __cbtmp;                                            \
-        MPI_ASSERT((x) != 0);                                        \
+        MPN_ASSERT((x) != 0);                                        \
         __asm__("bsrl %1,%0" : "=r"(__cbtmp) : "rm"((uint32_t)(x))); \
         (count) = __cbtmp ^ 31;                                      \
     } while (0)
@@ -410,7 +388,7 @@
 #ifndef COUNT_TRAILING_ZEROS
 #define COUNT_TRAILING_ZEROS(count, x)                              \
     do {                                                            \
-        MPI_ASSERT((x) != 0);                                       \
+        MPN_ASSERT((x) != 0);                                       \
         __asm__("bsfl %1,%k0" : "=r"(count) : "rm"((uint32_t)(x))); \
     } while (0)
 #endif /* asm bsfl */
@@ -419,7 +397,7 @@
 
 #endif /* 80x86 */
 
-#if defined(__amd64__) && MPI_LIMB_BITS == 64
+#if defined(__amd64__) && MPN_LIMB_BITS == 64
 #define UADD_AABB(sh, sl, ah, al, bh, bl) \
     __asm__("addq %5,%q1\n\tadcq %3,%q0"  \
             : "=r"(sh), "=&r"(sl)         \
@@ -428,14 +406,13 @@
     __asm__("subq %5,%q1\n\tsbbq %3,%q0"  \
             : "=r"(sh), "=&r"(sl)         \
             : "0"((uint64_t)(ah)), "rme"((uint64_t)(bh)), "1"((uint64_t)(al)), "rme"((uint64_t)(bl)))
-#if (defined MPI_ASM_X86_MULX)                                             \
-    && (defined(HAVE_HOST_CPU_haswell) || defined(HAVE_HOST_CPU_broadwell) \
-        || defined(HAVE_HOST_CPU_skylake) || defined(HAVE_HOST_CPU_bd4) || defined(HAVE_HOST_CPU_zen))
+#if (defined MPI_ASM_X86_MULX)                                                                               \
+    && (defined(HAVE_HOST_CPU_haswell) || defined(HAVE_HOST_CPU_broadwell) || defined(HAVE_HOST_CPU_skylake) \
+        || defined(HAVE_HOST_CPU_bd4) || defined(HAVE_HOST_CPU_zen))
 #define UMUL_AB(w1, w0, u, v) \
     __asm__("mulx\t%3, %q0, %q1" : "=r"(w0), "=r"(w1) : "%d"((uint64_t)(u)), "rm"((uint64_t)(v)))
 #else
-#define UMUL_AB(w1, w0, u, v) \
-    __asm__("mulq\t%3" : "=a"(w0), "=d"(w1) : "%0"((uint64_t)(u)), "rm"((uint64_t)(v)))
+#define UMUL_AB(w1, w0, u, v) __asm__("mulq\t%3" : "=a"(w0), "=d"(w1) : "%0"((uint64_t)(u)), "rm"((uint64_t)(v)))
 #endif
 #define UDIV_NND(q, r, n1, n0, dx) /* d renamed to dx avoiding "=d" */ \
     __asm__("divq %4"              /* stringification in K&R C */      \
@@ -457,7 +434,7 @@
 #define COUNT_LEADING_ZEROS(count, x)                                \
     do {                                                             \
         uint64_t __cbtmp;                                            \
-        MPI_ASSERT((x) != 0);                                        \
+        MPN_ASSERT((x) != 0);                                        \
         __asm__("bsr\t%1,%0" : "=r"(__cbtmp) : "rm"((uint64_t)(x))); \
         (count) = __cbtmp ^ 63;                                      \
     } while (0)
@@ -475,12 +452,44 @@
 #else
 #define COUNT_TRAILING_ZEROS(count, x)                               \
     do {                                                             \
-        MPI_ASSERT((x) != 0);                                        \
+        MPN_ASSERT((x) != 0);                                        \
         __asm__("bsf\t%1, %q0" : "=r"(count) : "rm"((uint64_t)(x))); \
     } while (0)
 #endif
 #endif /* __amd64__ */
 
+#if (defined HAVE_HOST_CPU_FAMILY_x86) && MPN_LIMB_BITS == 32
+#define UADD_AABB_C(s2, s1, s0, a1, a0, b1, b0)                                                    \
+    __asm__("add\t%7, %k2\n\tadc\t%5, %k1\n\tadc\t$0, %k0"                                         \
+            : "=r"(s2), "=&r"(s1), "=&r"(s0)                                                       \
+            : "0"((uint32_t)(s2)), "1"((uint32_t)(a1)), "g"((uint32_t)(b1)), "%2"((uint32_t)(a0)), \
+              "g"((uint32_t)(b0)))
+#endif
+
+#if defined(__amd64__) && MPN_LIMB_BITS == 64
+#define UADD_AABB_C(s2, s1, s0, a1, a0, b1, b0)                                                      \
+    __asm__("add\t%7, %q2\n\tadc\t%5, %q1\n\tadc\t$0, %q0"                                           \
+            : "=r"(s2), "=&r"(s1), "=&r"(s0)                                                         \
+            : "0"((uint64_t)(s2)), "1"((uint64_t)(a1)), "rme"((uint64_t)(b1)), "%2"((uint64_t)(a0)), \
+              "rme"((uint64_t)(b0)))
+#endif
+
+#if defined(__aarch64__) && MPN_LIMB_BITS == 64
+#define UADD_AABB_C(s2, s1, s0, a1, a0, b1, b0)                           \
+    __asm__("adds\t%2, %x6, %7\n\tadcs\t%1, %x4, %x5\n\tadc\t%0, %3, xzr" \
+            : "=r"(s2), "=&r"(s1), "=&r"(s0)                              \
+            : "rZ"(s2), "%rZ"(a1), "rZ"(b1), "%rZ"(a0), "rI"(b0) "cc")
+#endif
+
+#if (defined HAVE_HOST_CPU_FAMILY_powerpc) && !defined(MPI_LIMB_LONG_LONG)
+/* This works fine for 32-bit and 64-bit limbs, except for 64-bit limbs with a
+   processor running in 32-bit mode, since the carry flag then gets the 32-bit
+   carry.  */
+#define UADD_AABB_C(s2, s1, s0, a1, a0, b1, b0)                   \
+    __asm__("add%I7c\t%2,%6,%7\n\tadde\t%1,%4,%5\n\taddze\t%0,%3" \
+            : "=r"(s2), "=&r"(s1), "=&r"(s0)                      \
+            : "r"(s2), "r"(a1), "r"(b1), "%r"(a0), "rI"(b0)__CLOBBER_CC)
+#endif
 #endif
 
 /* If this machine has no inline assembler, use C macros.  */
@@ -488,7 +497,7 @@
 #ifndef UADD_AB
 #define UADD_AB(CARRY, R, A, B)     \
     do {                            \
-        mpi_limb_t __t = (A) + (B); \
+        mpn_limb_t __t = (A) + (B); \
         (CARRY) = __t < (A);        \
         (R) = __t;                  \
     } while (0)
@@ -498,10 +507,10 @@
 #if !defined(UADD_ABC)
 #define UADD_ABC(CARRY, R, A, B, C)  \
     do {                             \
-        mpi_limb_t __s = (A) + (B);  \
-        mpi_limb_t __t1 = __s < (A); \
-        mpi_limb_t __r = __s + (C);  \
-        mpi_limb_t __t2 = __r < __s; \
+        mpn_limb_t __s = (A) + (B);  \
+        mpn_limb_t __t1 = __s < (A); \
+        mpn_limb_t __r = __s + (C);  \
+        mpn_limb_t __t2 = __r < __s; \
         (CARRY) = __t1 + __t2;       \
         (R) = __r;                   \
     } while (0)
@@ -520,10 +529,10 @@
 #if !defined(USUB_ABC)
 #define USUB_ABC(BORROW, R, A, B, C) \
     do {                             \
-        mpi_limb_t __s = (A) - (B);  \
-        mpi_limb_t __t1 = __s > (A); \
-        mpi_limb_t __r = __s - (C);  \
-        mpi_limb_t __t2 = __r > __s; \
+        mpn_limb_t __s = (A) - (B);  \
+        mpn_limb_t __t1 = __s > (A); \
+        mpn_limb_t __r = __s - (C);  \
+        mpn_limb_t __t2 = __r > __s; \
         (BORROW) = __t1 + __t2;      \
         (R) = __r;                   \
     } while (0)
@@ -532,21 +541,23 @@
 #if !defined(UADD_AABB)
 #define UADD_AABB(sh, sl, ah, al, bh, bl)  \
     do {                                   \
-        mpi_limb_t __x;                    \
-        mpi_limb_t __al = (al);            \
-        mpi_limb_t __bl = (bl);            \
+        mpn_limb_t __x;                    \
+        mpn_limb_t __al = (al);            \
+        mpn_limb_t __bl = (bl);            \
         __x = __al + __bl;                 \
         (sh) = (ah) + (bh) + (__x < __al); \
         (sl) = __x;                        \
     } while (0)
 #endif
 
+
+
 #if !defined(USUB_AABB)
 #define USUB_AABB(sh, sl, ah, al, bh, bl)   \
     do {                                    \
-        mpi_limb_t __x;                     \
-        mpi_limb_t __al = (al);             \
-        mpi_limb_t __bl = (bl);             \
+        mpn_limb_t __x;                     \
+        mpn_limb_t __al = (al);             \
+        mpn_limb_t __bl = (bl);             \
         __x = __al - __bl;                  \
         (sh) = (ah) - (bh) - (__al < __bl); \
         (sl) = __x;                         \
@@ -555,13 +566,12 @@
 
 /* If we lack UMUL_AB but have SMUL_AB, define UMUL_AB in terms of SMUL_AB. */
 #if !defined(UMUL_AB) && defined(SMUL_AB)
-#define UMUL_AB(w1, w0, u, v)                                                                             \
-    do {                                                                                                  \
-        mpi_limb_t __w1;                                                                                  \
-        mpi_limb_t __xm0 = (u), __xm1 = (v);                                                              \
-        SMUL_AB(__w1, w0, __xm0, __xm1);                                                                  \
-        (w1) =                                                                                            \
-            __w1 + (-(__xm0 >> (MPI_LIMB_BITS - 1)) & __xm1) + (-(__xm1 >> (MPI_LIMB_BITS - 1)) & __xm0); \
+#define UMUL_AB(w1, w0, u, v)                                                                                \
+    do {                                                                                                     \
+        mpn_limb_t __w1;                                                                                     \
+        mpn_limb_t __xm0 = (u), __xm1 = (v);                                                                 \
+        SMUL_AB(__w1, w0, __xm0, __xm1);                                                                     \
+        (w1) = __w1 + (-(__xm0 >> (MPN_LIMB_BITS - 1)) & __xm1) + (-(__xm1 >> (MPN_LIMB_BITS - 1)) & __xm0); \
     } while (0)
 #endif
 
@@ -569,17 +579,17 @@
 #if !defined(UMUL_AB)
 #define UMUL_AB(w1, w0, u, v)                                       \
     do {                                                            \
-        mpi_limb_t __u = (u), __v = (v);                            \
+        mpn_limb_t __u = (u), __v = (v);                            \
                                                                     \
-        mpi_limb_t __ul = UINT_LO(__u);                             \
-        mpi_limb_t __uh = UINT_HI(__u);                             \
-        mpi_limb_t __vl = UINT_LO(__v);                             \
-        mpi_limb_t __vh = UINT_HI(__v);                             \
+        mpn_limb_t __ul = UINT_LO(__u);                             \
+        mpn_limb_t __uh = UINT_HI(__u);                             \
+        mpn_limb_t __vl = UINT_LO(__v);                             \
+        mpn_limb_t __vh = UINT_HI(__v);                             \
                                                                     \
-        mpi_limb_t __x0 = (mpi_limb_t)__ul * __vl;                  \
-        mpi_limb_t __x1 = (mpi_limb_t)__ul * __vh;                  \
-        mpi_limb_t __x2 = (mpi_limb_t)__uh * __vl;                  \
-        mpi_limb_t __x3 = (mpi_limb_t)__uh * __vh;                  \
+        mpn_limb_t __x0 = (mpn_limb_t)__ul * __vl;                  \
+        mpn_limb_t __x1 = (mpn_limb_t)__ul * __vh;                  \
+        mpn_limb_t __x2 = (mpn_limb_t)__uh * __vl;                  \
+        mpn_limb_t __x3 = (mpn_limb_t)__uh * __vh;                  \
                                                                     \
         __x1 += UINT_HI(__x0); /* this can't give carry */          \
         __x1 += __x2;          /* but this indeed can */            \
@@ -588,19 +598,18 @@
         }                                                           \
                                                                     \
         (w1) = __x3 + UINT_HI(__x1);                                \
-        (w0) = (__x1 << (MPI_LIMB_BITS / 2)) + UINT_LO(__x0);       \
+        (w0) = (__x1 << (MPN_LIMB_BITS / 2)) + UINT_LO(__x0);       \
     } while (0)
 #endif
 
 /* If we don't have SMUL_AB, define it using UMUL_AB */
 #if !defined(SMUL_AB)
-#define SMUL_AB(w1, w0, u, v)                                                                             \
-    do {                                                                                                  \
-        mpi_limb_t __w1;                                                                                  \
-        mpi_limb_t __xm0 = (u), __xm1 = (v);                                                              \
-        UMUL_AB(__w1, w0, __xm0, __xm1);                                                                  \
-        (w1) =                                                                                            \
-            __w1 - (-(__xm0 >> (MPI_LIMB_BITS - 1)) & __xm1) - (-(__xm1 >> (MPI_LIMB_BITS - 1)) & __xm0); \
+#define SMUL_AB(w1, w0, u, v)                                                                                \
+    do {                                                                                                     \
+        mpn_limb_t __w1;                                                                                     \
+        mpn_limb_t __xm0 = (u), __xm1 = (v);                                                                 \
+        UMUL_AB(__w1, w0, __xm0, __xm1);                                                                     \
+        (w1) = __w1 - (-(__xm0 >> (MPN_LIMB_BITS - 1)) & __xm1) - (-(__xm1 >> (MPN_LIMB_BITS - 1)) & __xm0); \
     } while (0)
 #endif
 
@@ -608,10 +617,10 @@
 #if !defined(UDIV_NND)
 #define UDIV_NND(q, r, n1, n0, d)                                                 \
     do {                                                                          \
-        mpi_limb_t __d1, __d0, __q1, __q0, __r1, __r0, __m;                       \
+        mpn_limb_t __d1, __d0, __q1, __q0, __r1, __r0, __m;                       \
                                                                                   \
-        MPI_ASSERT((d) != 0);                                                     \
-        MPI_ASSERT((n1) < (d));                                                   \
+        MPN_ASSERT((d) != 0);                                                     \
+        MPN_ASSERT((n1) < (d));                                                   \
                                                                                   \
         __d1 = UINT_HI(d);                                                        \
         __d0 = UINT_LO(d);                                                        \
@@ -654,24 +663,24 @@
 #if !defined(COUNT_LEADING_ZEROS)
 #define COUNT_LEADING_ZEROS(count, x)                                                                \
     do {                                                                                             \
-        mpi_limb_t __xr = (x);                                                                       \
-        mpi_limb_t __a;                                                                              \
+        mpn_limb_t __xr = (x);                                                                       \
+        mpn_limb_t __a;                                                                              \
                                                                                                      \
-        if (MPI_LIMB_BITS == 32) {                                                                   \
-            __a = __xr < ((mpi_limb_t)1 << 2 * BITS_S4)                                              \
-                      ? (__xr < ((mpi_limb_t)1 << BITS_S4) ? 1 : BITS_S4 + 1)                        \
-                      : (__xr < ((mpi_limb_t)1 << 3 * BITS_S4) ? 2 * BITS_S4 + 1 : 3 * BITS_S4 + 1); \
+        if (MPN_LIMB_BITS == 32) {                                                                   \
+            __a = __xr < ((mpn_limb_t)1 << 2 * BITS_S4)                                              \
+                      ? (__xr < ((mpn_limb_t)1 << BITS_S4) ? 1 : BITS_S4 + 1)                        \
+                      : (__xr < ((mpn_limb_t)1 << 3 * BITS_S4) ? 2 * BITS_S4 + 1 : 3 * BITS_S4 + 1); \
         } else {                                                                                     \
-            for (__a = MPI_LIMB_BITS - 8; __a > 0; __a -= 8) {                                       \
+            for (__a = MPN_LIMB_BITS - 8; __a > 0; __a -= 8) {                                       \
                 if (((__xr >> __a) & 0xff) != 0) { break; }                                          \
             }                                                                                        \
             ++__a;                                                                                   \
         }                                                                                            \
                                                                                                      \
-        (count) = MPI_LIMB_BITS + 1 - __a - __mpi_clz_tab[__xr >> __a];                              \
+        (count) = MPN_LIMB_BITS + 1 - __a - __mpi_clz_tab[__xr >> __a];                              \
     } while (0)
 /* This version gives a well-defined value for zero. */
-#define COUNT_LEADING_ZEROS_0 (MPI_LIMB_BITS - 1)
+#define COUNT_LEADING_ZEROS_0 (MPN_LIMB_BITS - 1)
 #define COUNT_LEADING_ZEROS_NEED_CLZ_TAB
 #define COUNT_LEADING_ZEROS_SLOW
 #endif
@@ -690,11 +699,11 @@ extern const unsigned char __mpi_clz_tab[129];
 /* Define COUNT_TRAILING_ZEROS using an asm COUNT_LEADING_ZEROS.  */
 #define COUNT_TRAILING_ZEROS(count, x)                    \
     do {                                                  \
-        mpi_limb_t __ctz_x = (x);                         \
-        mpi_limb_t __ctz_c;                               \
-        MPI_ASSERT(__ctz_x != 0);                         \
+        mpn_limb_t __ctz_x = (x);                         \
+        mpn_limb_t __ctz_c;                               \
+        MPN_ASSERT(__ctz_x != 0);                         \
         COUNT_LEADING_ZEROS(__ctz_c, __ctz_x & -__ctz_x); \
-        (count) = MPI_LIMB_BITS - 1 - __ctz_c;            \
+        (count) = MPN_LIMB_BITS - 1 - __ctz_c;            \
     } while (0)
 #else
 /* Define COUNT_TRAILING_ZEROS in plain C, assuming small counts are common.
@@ -702,13 +711,13 @@ extern const unsigned char __mpi_clz_tab[129];
    pulled it in.  */
 #define COUNT_TRAILING_ZEROS(count, x)                                         \
     do {                                                                       \
-        mpi_limb_t __ctz_x = (x);                                              \
+        mpn_limb_t __ctz_x = (x);                                              \
         int __ctz_c;                                                           \
                                                                                \
         if (LIKELY((__ctz_x & 0xff) != 0))                                     \
             (count) = __mpi_clz_tab[__ctz_x & -__ctz_x] - 2;                   \
         else {                                                                 \
-            for (__ctz_c = 8 - 2; __ctz_c < MPI_LIMB_BITS - 2; __ctz_c += 8) { \
+            for (__ctz_c = 8 - 2; __ctz_c < MPN_LIMB_BITS - 2; __ctz_c += 8) { \
                 __ctz_x >>= 8;                                                 \
                 if (LIKELY((__ctz_x & 0xff) != 0)) break;                      \
             }                                                                  \
@@ -754,18 +763,18 @@ extern const unsigned char __mpi_clz_tab[129];
  */
 #define UDIV_NND_PREINV(q, r, nh, nl, d, di)                            \
     do {                                                                \
-        mpi_limb_t _qh, _ql, _r, _mask;                                 \
+        mpn_limb_t _qh, _ql, _r, _mask;                                 \
         UMUL_AB(_qh, _ql, (nh), (di));                                  \
         if (BUILTIN_CONSTANT(nl) && (nl) == 0) {                        \
             _qh += (nh) + 1;                                            \
             _r = -_qh * (d);                                            \
-            _mask = -(mpi_limb_t)(_r > _ql); /* both > and >= are OK */ \
+            _mask = -(mpn_limb_t)(_r > _ql); /* both > and >= are OK */ \
             _qh += _mask;                                               \
             _r += _mask & (d);                                          \
         } else {                                                        \
             UADD_AB(_qh, _ql, _qh, _ql, (nh) + 1, (nl));                \
             _r = (nl)-_qh * (d);                                        \
-            _mask = -(mpi_limb_t)(_r > _ql); /* both > and >= are OK */ \
+            _mask = -(mpn_limb_t)(_r > _ql); /* both > and >= are OK */ \
             _qh += _mask;                                               \
             _r += _mask & (d);                                          \
             if (UNLIKELY(_r >= (d))) {                                  \
@@ -785,16 +794,16 @@ extern const unsigned char __mpi_clz_tab[129];
  */
 #define UMOD_NND_PREINV(r, nh, nl, d, di)                               \
     do {                                                                \
-        mpi_limb_t _qh, _ql, _r, _mask;                                 \
+        mpn_limb_t _qh, _ql, _r, _mask;                                 \
         UMUL_AB(_qh, _ql, (nh), (di));                                  \
         if (BUILTIN_CONSTANT(nl) && (nl) == 0) {                        \
             _r = ~(_qh + (nh)) * (d);                                   \
-            _mask = -(mpi_limb_t)(_r > _ql); /* both > and >= are OK */ \
+            _mask = -(mpn_limb_t)(_r > _ql); /* both > and >= are OK */ \
             _r += _mask & (d);                                          \
         } else {                                                        \
             UADD_AB(_qh, _ql, _qh, _ql, (nh) + 1, (nl));                \
             _r = (nl)-_qh * (d);                                        \
-            _mask = -(mpi_limb_t)(_r > _ql); /* both > and >= are OK */ \
+            _mask = -(mpn_limb_t)(_r > _ql); /* both > and >= are OK */ \
             _r += _mask & (d);                                          \
             if (UNLIKELY(_r >= (d))) { _r -= (d); }                     \
         }                                                               \
@@ -812,7 +821,7 @@ extern const unsigned char __mpi_clz_tab[129];
  */
 #define UDIV_NNNDD(q, r1, r0, n2, n1, n0, d1, d0, dinv)              \
     do {                                                             \
-        mpi_limb_t _q0, _t1, _t0, _mask;                             \
+        mpn_limb_t _q0, _t1, _t0, _mask;                             \
         UMUL_AB((q), _q0, (n2), (dinv));                             \
         UADD_AABB((q), _q0, (q), _q0, (n2), (n1));                   \
                                                                      \
@@ -824,7 +833,7 @@ extern const unsigned char __mpi_clz_tab[129];
         (q)++;                                                       \
                                                                      \
         /* Conditionally adjust q and the remainders */              \
-        _mask = -(mpi_limb_t)((r1) >= _q0);                          \
+        _mask = -(mpn_limb_t)((r1) >= _q0);                          \
         (q) += _mask;                                                \
         UADD_AABB((r1), (r0), (r1), (r0), _mask &(d1), _mask &(d0)); \
         if (UNLIKELY((r1) >= (d1))) {                                \
@@ -835,25 +844,30 @@ extern const unsigned char __mpi_clz_tab[129];
         }                                                            \
     } while (0)
 
-#ifndef INVERT_UINT
-#define INVERT_UINT(invxl, xl)                                \
-    do {                                                      \
-        mpi_limb_t _dummy;                                    \
-        MPI_ASSERT((xl) != 0);                                \
-        UDIV_NND(invxl, _dummy, ~(xl), ~((mpi_limb_t)0), xl); \
-        (void)_dummy;                                         \
+#if defined MPI_LIMB_USE_LONG_LONG
+#define CNST_LIMB(C) ((mpn_limb_t)C##LL)
+#else
+#define CNST_LIMB(C) ((mpn_limb_t)C##L)
+#endif
+
+#ifndef INVERT_LIMB
+#define INVERT_LIMB(invxl, xl)                             \
+    do {                                                   \
+        mpn_limb_t _dummy;                                 \
+        MPN_ASSERT((xl) != 0);                             \
+        UDIV_NND(invxl, _dummy, ~(xl), ~CNST_LIMB(0), xl); \
     } while (0)
 #endif
 
-#define INVERT_PI1(inv32, d1, d0)                   \
+#define INVERT_PI1(dinv, d1, d0)                    \
     do {                                            \
-        mpi_limb_t _v, _p, _t1, _t0, _mask;         \
-        INVERT_UINT(_v, d1);                        \
+        mpn_limb_t _v, _p, _t1, _t0, _mask;         \
+        INVERT_LIMB(_v, d1);                        \
         _p = (d1)*_v;                               \
         _p += (d0);                                 \
         if (_p < (d0)) {                            \
             _v--;                                   \
-            _mask = -(mpi_limb_t)(_p >= (d1));      \
+            _mask = -(mpn_limb_t)(_p >= (d1));      \
             _p -= (d1);                             \
             _v += _mask;                            \
             _p -= _mask & (d1);                     \
@@ -866,20 +880,22 @@ extern const unsigned char __mpi_clz_tab[129];
                 if (_p > (d1) || _t0 >= (d0)) _v--; \
             }                                       \
         }                                           \
-        inv32 = _v;                                 \
+        dinv = _v;                                  \
     } while (0)
+
+
 
 #if 0
 // FIXME: not working
 #define UDIV_NNDD(q, r1, r0, n1, n0, d1, d0)        \
     {                                               \
-        mpi_limb_t quo = n1 / d1 + 1;               \
+        mpn_limb_t quo = n1 / d1 + 1;               \
         for (;;) {                                  \
-            mpi_limb_t w2, w1, w0, t1, t0;          \
+            mpn_limb_t w2, w1, w0, t1, t0;          \
             UMUL_AB(t0, w0, quo, d0);               \
             UMUL_AB(w1, t1, quo, d1);               \
             UADD_ABC(w2, w1, w1, t0, t1);           \
-            MPI_ASSERT(w2 == 0 && w1 >= n1);        \
+            MPN_ASSERT(w2 == 0 && w1 >= n1);        \
                                                     \
             if (w1 > n1 || (w1 == n1 && w0 > n0)) { \
                 quo--;                              \
@@ -893,15 +909,30 @@ extern const unsigned char __mpi_clz_tab[129];
 #else
 #define UDIV_NNDD(q, r1, r0, n1, n0, d1, d0)                                   \
     {                                                                          \
-        __uint128_t nn = ((__uint128_t)n1 << MPI_LIMB_BITS) + (__uint128_t)n0; \
-        __uint128_t dd = ((__uint128_t)d1 << MPI_LIMB_BITS) + (__uint128_t)d0; \
+        __uint128_t nn = ((__uint128_t)n1 << MPN_LIMB_BITS) + (__uint128_t)n0; \
+        __uint128_t dd = ((__uint128_t)d1 << MPN_LIMB_BITS) + (__uint128_t)d0; \
         __uint128_t qq = nn / dd;                                              \
         __uint128_t rr = nn - dd * qq;                                         \
-        (q) = (mpi_limb_t)qq;                                                  \
-        (r1) = (mpi_limb_t)(rr >> MPI_LIMB_BITS);                              \
-        (r0) = (mpi_limb_t)(rr & MPI_LIMB_MASK);                               \
+        (q) = (mpn_limb_t)qq;                                                  \
+        (r1) = (mpn_limb_t)(rr >> MPN_LIMB_BITS);                              \
+        (r0) = (mpn_limb_t)(rr & MPN_LIMB_MASK);                               \
     }
 // XXX: implement with INVERT_PI1, UDIV_NNNDD
+#endif
+
+#ifndef UADD_AABB_C
+#define UADD_AABB_C(s2, s1, s0, a1, a0, b1, b0) \
+    do {                                        \
+        mpn_limb_t __s0, __s1, __c0, __c1;      \
+        __s0 = (a0) + (b0);                     \
+        __s1 = (a1) + (b1);                     \
+        __c0 = __s0 < (a0);                     \
+        __c1 = __s1 < (a1);                     \
+        (s0) = __s0;                            \
+        __s1 = __s1 + __c0;                     \
+        (s1) = __s1;                            \
+        (s2) += __c1 + (__s1 < __c0);           \
+    } while (0)
 #endif
 
 #endif

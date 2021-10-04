@@ -537,7 +537,7 @@ TEST(MPI, Multiplication)
         mpi_from_octets(&a, abuffer.data(), abuffer.size());
         mpi_from_octets(&b, bbuffer.data(), bbuffer.size());
 
-        size_t sz = mpi_bits(a) + mpi_bits(b) + MPI_LIMB_BITS;
+        size_t sz = mpi_bits(a) + mpi_bits(b) + MPN_LIMB_BITS;
         mpi_t *r = mpi_create(sz);
 
         mpi_mul(r, a, b);
@@ -583,7 +583,7 @@ TEST(MPI, Square)
         mpi_t *a = mpi_create(buffer.size() * BITS_PER_BYTE);
         mpi_from_octets(&a, buffer.data(), buffer.size());
 
-        mpi_t *r = mpi_create((a != NULL ? a->size : 0) * 2 * MPI_LIMB_BITS);
+        mpi_t *r = mpi_create((a != NULL ? a->size : 0) * 2 * MPN_LIMB_BITS);
         mpi_sqr(r, a);
         verifier::get()->trace("  r = a ^ 2", r);
         EXPECT_TRUE(verifier::get()->probe("r = a ^ 2", r));
@@ -648,12 +648,12 @@ TEST(MPI, Division)
         mpi_t *b = mpi_create(bbuffer.size() * BITS_PER_BYTE);
         mpi_from_octets(&a, abuffer.data(), abuffer.size());
         mpi_from_octets(&b, bbuffer.data(), bbuffer.size());
-        a = mpi_expand(a, mpi_bits(a) + MPI_LIMB_BITS); // @IMPORTANT: one additional word required
+        a = mpi_expand(a, mpi_bits(a) + MPN_LIMB_BITS); // @IMPORTANT: one additional word required
 
         size_t qsize = 0, rsize = mpi_bits(b);
         if (mpi_bits(a) >= mpi_bits(b)) {
             rsize = mpi_bits(a);
-            qsize = mpi_bits(a) - mpi_bits(b) + MPI_LIMB_BITS;
+            qsize = mpi_bits(a) - mpi_bits(b) + MPN_LIMB_BITS;
         }
 
         mpi_t *q = mpi_create(qsize);
@@ -849,7 +849,7 @@ TEST(MPI, RightShiftAssign)
 #if 0 // FIXME
 TEST(MPI, Exponentiation)
 {
-    mpi_limb_t e;
+    mpn_limb_t e;
     std::vector<unsigned char> gbuffer;
     {
         size_t size;
@@ -884,7 +884,7 @@ TEST(MPI, Exponentiation)
         mpi_t *g = NULL;
         mpi_from_octets(&g, gbuffer.data(), gbuffer.size());
 
-        size_t rbits = (mpi_bits(g) + 1) << ((MPI_LIMB_BITS - mpi_nlz_limb_consttime(e)) % MPI_LIMB_BITS);
+        size_t rbits = (mpi_bits(g) + 1) << ((MPN_LIMB_BITS - mpn_limb_nlz_consttime(e)) % MPN_LIMB_BITS);
         mpi_t *r = mpi_create(rbits);
 
         mpi_exp_limb(r, g, e);
@@ -900,7 +900,7 @@ TEST(MPI, Exponentiation)
 // gcd: greatest common divisor algorithms
 TEST(MPI, BinaryGCD)
 {
-    mpi_limb_t x, y;
+    mpn_limb_t x, y;
     {
         RAND_bytes((unsigned char *)&x, sizeof(x));
         RAND_bytes((unsigned char *)&y, sizeof(y));
@@ -911,7 +911,7 @@ TEST(MPI, BinaryGCD)
 
     // binary gcd algorithm: gcd(x, y)
     {
-        mpi_limb_t r = mpi_gcd_limb(x, y);
+        mpn_limb_t r = mpn_limb_gcd(x, y);
         verifier::get()->trace("gcd(x, y)", r);
 
         EXPECT_TRUE(true);
@@ -1221,21 +1221,21 @@ TEST(RSA, cipher)
 
             mpikey = rsa_new(mpi_bits(pubexp), bits, 2);
             {
-                mpi_t *n = NULL, *e = NULL, *d = NULL, *dp = NULL, *dq = NULL, *qinv = NULL;
-                mpi_from_octets(&n, N.data(), N.size());
-                mpi_from_octets(&e, E.data(), E.size());
-                mpi_from_octets(&d, D.data(), D.size());
-                mpi_from_octets(&dp, DP.data(), DP.size());
-                mpi_from_octets(&dq, DQ.data(), DQ.size());
-                mpi_from_octets(&qinv, QINV.data(), QINV.size());
+                mpi_t *_n = NULL, *_e = NULL, *_d = NULL, *_dp = NULL, *_dq = NULL, *_qinv = NULL;
+                mpi_from_octets(&_n, N.data(), N.size());
+                mpi_from_octets(&_e, E.data(), E.size());
+                mpi_from_octets(&_d, D.data(), D.size());
+                mpi_from_octets(&_dp, DP.data(), DP.size());
+                mpi_from_octets(&_dq, DQ.data(), DQ.size());
+                mpi_from_octets(&_qinv, QINV.data(), QINV.size());
 
-                ASSERT_EQ(0, rsa_import(mpikey, n, e, d, dp, dq, qinv));
-                mpi_destory(n);
-                mpi_destory(e);
-                mpi_destory(d);
-                mpi_destory(dp);
-                mpi_destory(dq);
-                mpi_destory(qinv);
+                ASSERT_EQ(0, rsa_import(mpikey, _n, _e, _d, _dp, _dq, _qinv));
+                mpi_destory(_n);
+                mpi_destory(_e);
+                mpi_destory(_d);
+                mpi_destory(_dp);
+                mpi_destory(_dq);
+                mpi_destory(_qinv);
             }
 
             mpi_destory(pubexp);
@@ -1259,31 +1259,31 @@ TEST(RSA, cipher)
 
         // export N
         N.resize(MPI_BITS_TO_BYTES(mpikey->nbits));
-        mpi_to_octets_bin(N.data(), N.size(), mpikey->montN->modulus, MPI_BITS_TO_LIMBS(mpikey->nbits));
+        mpn_to_octets(N.data(), N.size(), mpikey->montN->modulus, MPN_BITS_TO_LIMBS(mpikey->nbits));
 
         // export D
         D.resize(MPI_BITS_TO_BYTES(mpikey->dbits));
-        mpi_to_octets_bin(D.data(), D.size(), mpikey->d, MPI_BITS_TO_LIMBS(mpikey->dbits));
+        mpn_to_octets(D.data(), D.size(), mpikey->d, MPN_BITS_TO_LIMBS(mpikey->dbits));
 
         // export P
         P.resize(MPI_BITS_TO_BYTES(mpikey->pbits));
-        mpi_to_octets_bin(P.data(), P.size(), mpikey->montP->modulus, MPI_BITS_TO_LIMBS(mpikey->pbits));
+        mpn_to_octets(P.data(), P.size(), mpikey->montP->modulus, MPN_BITS_TO_LIMBS(mpikey->pbits));
 
         // export Q
         Q.resize(MPI_BITS_TO_BYTES(mpikey->qbits));
-        mpi_to_octets_bin(Q.data(), Q.size(), mpikey->montQ->modulus, MPI_BITS_TO_LIMBS(mpikey->qbits));
+        mpn_to_octets(Q.data(), Q.size(), mpikey->montQ->modulus, MPN_BITS_TO_LIMBS(mpikey->qbits));
 
         // export DP
         DP.resize(MPI_BITS_TO_BYTES(mpikey->pbits));
-        mpi_to_octets_bin(DP.data(), DP.size(), mpikey->dp, MPI_BITS_TO_LIMBS(mpikey->pbits));
+        mpn_to_octets(DP.data(), DP.size(), mpikey->dp, MPN_BITS_TO_LIMBS(mpikey->pbits));
 
         // export DQ
         DQ.resize(MPI_BITS_TO_BYTES(mpikey->qbits));
-        mpi_to_octets_bin(DQ.data(), DQ.size(), mpikey->dq, MPI_BITS_TO_LIMBS(mpikey->qbits));
+        mpn_to_octets(DQ.data(), DQ.size(), mpikey->dq, MPN_BITS_TO_LIMBS(mpikey->qbits));
 
         // export QINV
         QINV.resize(MPI_BITS_TO_BYTES(mpikey->pbits));
-        mpi_to_octets_bin(QINV.data(), QINV.size(), mpikey->qinv, MPI_BITS_TO_LIMBS(mpikey->pbits));
+        mpn_to_octets(QINV.data(), QINV.size(), mpikey->qinv, MPN_BITS_TO_LIMBS(mpikey->pbits));
 
         // import to osslkey
         {

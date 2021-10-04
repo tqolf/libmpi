@@ -29,21 +29,21 @@ void sqr_avx2(uint64_t *pR, const uint64_t *pA, int aLen, uint64_t *pBuffer);
 void mont_red_avx2(uint64_t *pR, uint64_t *pProduct, const uint64_t *pModulus, int mLen, uint64_t k0);
 
 /* number of "diSize" chunks in "bitSize" bit string */
-MPI_INLINE int __digit_num_avx2(int bitSize, int digSize)
+MPN_INLINE int __digit_num_avx2(int bitSize, int digSize)
 {
     return (bitSize + digSize - 1) / digSize;
 }
 
 /* number of "EXP_DIGIT_SIZE_AVX2" chunks in "bitSize" bit string matched for AMM */
-MPI_INLINE unsigned int num_of_variable_avx2(int modulusBits)
+MPN_INLINE unsigned int num_of_variable_avx2(int modulusBits)
 {
-    unsigned int ammBitSize = 2 + __digit_num_avx2(modulusBits, MPI_LIMB_BITS) * MPI_LIMB_BITS;
+    unsigned int ammBitSize = 2 + __digit_num_avx2(modulusBits, MPN_LIMB_BITS) * MPN_LIMB_BITS;
     unsigned int redNum = __digit_num_avx2(ammBitSize, EXP_DIGIT_SIZE_AVX2);
     return redNum;
 }
 
 /* buffer corresponding to num_of_variable_avx2() */
-MPI_INLINE unsigned int num_of_variable_buff_avx2(int numV)
+MPN_INLINE unsigned int num_of_variable_buff_avx2(int numV)
 {
     return numV + 4;
 }
@@ -64,7 +64,7 @@ static int regular_dig27(uint64_t *pRep27, int repLen, const uint32_t *pRegular,
     /* expected number of digit in redundant representation */
     int n = __digit_num_avx2(regLen * 32, EXP_DIGIT_SIZE_AVX2);
 
-    MPI_ASSERT(pRegular[regLen] == 0);
+    MPN_ASSERT(pRegular[regLen] == 0);
     {
         int redBit; /* output representatin bit */
         int i;
@@ -113,7 +113,7 @@ static int dig27_regular(uint32_t *pRegular, int regLen, const uint64_t *pRep27,
 }
 
 /* mont_mul wraper */
-MPI_INLINE void __mont_mul_avx2(uint64_t *pR, const uint64_t *pA, const uint64_t *pB, const uint64_t *pModulus, int mLen, uint64_t k0, uint64_t *pBuffer)
+MPN_INLINE void __mont_mul_avx2(uint64_t *pR, const uint64_t *pA, const uint64_t *pB, const uint64_t *pModulus, int mLen, uint64_t k0, uint64_t *pBuffer)
 {
     if (mLen == 38) { /* corresponds to 1024-bit regular representation */
         mont_mul1024_avx2(pR, pA, pB, pModulus, mLen, k0);
@@ -137,7 +137,7 @@ MPI_INLINE void __mont_mul_avx2(uint64_t *pR, const uint64_t *pA, const uint64_t
 }
 
 /* mont_sqr wraper */
-MPI_INLINE void __mont_sqr_avx2(uint64_t *pR, const uint64_t *pA, const uint64_t *pModulus, int mLen, uint64_t k0, uint64_t *pBuffer)
+MPN_INLINE void __mont_sqr_avx2(uint64_t *pR, const uint64_t *pA, const uint64_t *pModulus, int mLen, uint64_t k0, uint64_t *pBuffer)
 {
     if (mLen == 38) /* corresponds to 1024-bit regular representation */
         mont_sqr1024_avx2(pR, pA, pModulus, mLen, k0, pBuffer);
@@ -164,7 +164,7 @@ unsigned int mont_exp_win_buffer_avx2(int modulusBits)
     unsigned int redNum = num_of_variable_avx2(modulusBits);       /* "sizeof" variable */
     unsigned int redBufferNum = num_of_variable_buff_avx2(redNum); /* "sizeof" variable  buffer */
 
-    unsigned int bufferNum = CACHE_LINE_SIZE / (int32_t)sizeof(mpi_limb_t) + mont_scramble_buffer_size(redNum, w) /* pre-computed table */
+    unsigned int bufferNum = CACHE_LINE_SIZE / (int32_t)sizeof(mpn_limb_t) + mont_scramble_buffer_size(redNum, w) /* pre-computed table */
                              + redBufferNum * 7;                                                                  /* addition 7 variables */
     return bufferNum;
 }
@@ -184,23 +184,23 @@ unsigned int mont_exp_win_buffer_avx2(int modulusBits)
  *    redM[redBufferLen]
  *    redBuffer[redBufferLen*3]
  */
-unsigned int mont_exp_bin_avx2(mpi_limb_t *dataY, const mpi_limb_t *dataX, unsigned int nsX, const mpi_limb_t *dataE, unsigned int bitsizeE, const mpi_limb_t *dataM, unsigned int bitsizeM, const mpi_limb_t *dataRR, mpi_limb_t k0,
-                               mpi_limb_t *pBuffer)
+unsigned int mont_exp_bin_avx2(mpn_limb_t *dataY, const mpn_limb_t *dataX, unsigned int nsX, const mpn_limb_t *dataE, unsigned int bitsizeE, const mpn_limb_t *dataM, unsigned int bitsizeM, const mpn_limb_t *dataRR, mpn_limb_t k0,
+                               mpn_limb_t *pBuffer)
 {
-    unsigned int nsM = MPI_BITS_TO_LIMBS(bitsizeM);
-    unsigned int nsE = MPI_BITS_TO_LIMBS(bitsizeE);
+    unsigned int nsM = MPN_BITS_TO_LIMBS(bitsizeM);
+    unsigned int nsE = MPN_BITS_TO_LIMBS(bitsizeE);
 
-    int convModulusBitSize = __digit_num_avx2(bitsizeM, MPI_LIMB_BITS) * MPI_LIMB_BITS;
+    int convModulusBitSize = __digit_num_avx2(bitsizeM, MPN_LIMB_BITS) * MPN_LIMB_BITS;
     int modulusLen32 = (bitsizeM + 31) / 32;
     int redLen = __digit_num_avx2(convModulusBitSize + 2, EXP_DIGIT_SIZE_AVX2);
     int redBufferLen = num_of_variable_buff_avx2(redLen);
 
     /* allocate buffers */
-    mpi_limb_t *redX = pBuffer;
-    mpi_limb_t *redT = redX + redBufferLen;
-    mpi_limb_t *redY = redT + redBufferLen;
-    mpi_limb_t *redM = redY + redBufferLen;
-    mpi_limb_t *redBuffer = redM + redBufferLen;
+    mpn_limb_t *redX = pBuffer;
+    mpn_limb_t *redT = redX + redBufferLen;
+    mpn_limb_t *redY = redT + redBufferLen;
+    mpn_limb_t *redM = redY + redBufferLen;
+    mpn_limb_t *redBuffer = redM + redBufferLen;
 
     /* convert modulus into reduced domain */
     ZEXPAND(redT, nsM + 1, dataM, nsM);
@@ -218,37 +218,37 @@ unsigned int mont_exp_bin_avx2(mpi_limb_t *dataY, const mpi_limb_t *dataX, unsig
 
     /* convert base to Montgomery domain */
     ZEXPAND(redY, redBufferLen /*nsX+1*/, dataX, nsX);
-    regular_dig27(redX, redBufferLen, (uint32_t *)redY, nsX * sizeof(mpi_limb_t) / sizeof(uint32_t));
+    regular_dig27(redX, redBufferLen, (uint32_t *)redY, nsX * sizeof(mpn_limb_t) / sizeof(uint32_t));
     __mont_mul_avx2(redX, redX, redT, redM, redLen, k0, redBuffer);
 
     /* init result */
     COPY(redY, redX, redLen);
 
-    nsE = mpi_fix_size_bin(dataE, nsE);
+    nsE = mpn_limbs(dataE, nsE);
     {
         /* execute most significant part pE */
-        mpi_limb_t eValue = dataE[nsE - 1];
-        int n = mpi_nlz_limb_consttime(eValue) + 1;
+        mpn_limb_t eValue = dataE[nsE - 1];
+        int n = mpn_limb_nlz_consttime(eValue) + 1;
 
         eValue <<= n;
-        for (; n < MPI_LIMB_BITS; n++, eValue <<= 1) {
+        for (; n < MPN_LIMB_BITS; n++, eValue <<= 1) {
             /* squaring/multiplication: Y = Y*Y */
             __mont_sqr_avx2(redY, redY, redM, redLen, k0, redBuffer);
 
             /* and multiply Y = Y*X */
-            if (eValue & ((mpi_limb_t)1 << (MPI_LIMB_BITS - 1))) __mont_mul_avx2(redY, redY, redX, redM, redLen, k0, redBuffer);
+            if (eValue & ((mpn_limb_t)1 << (MPN_LIMB_BITS - 1))) __mont_mul_avx2(redY, redY, redX, redM, redLen, k0, redBuffer);
         }
 
         /* execute rest bits of E */
         for (--nsE; nsE > 0; nsE--) {
             eValue = dataE[nsE - 1];
 
-            for (n = 0; n < MPI_LIMB_BITS; n++, eValue <<= 1) {
+            for (n = 0; n < MPN_LIMB_BITS; n++, eValue <<= 1) {
                 /* squaring: Y = Y*Y */
                 __mont_sqr_avx2(redY, redY, redM, redLen, k0, redBuffer);
 
                 /* and multiply: Y = Y*X */
-                if (eValue & ((mpi_limb_t)1 << (MPI_LIMB_BITS - 1))) __mont_mul_avx2(redY, redY, redX, redM, redLen, k0, redBuffer);
+                if (eValue & ((mpn_limb_t)1 << (MPN_LIMB_BITS - 1))) __mont_mul_avx2(redY, redY, redX, redM, redLen, k0, redBuffer);
             }
         }
     }
@@ -257,7 +257,7 @@ unsigned int mont_exp_bin_avx2(mpi_limb_t *dataY, const mpi_limb_t *dataX, unsig
     ZEROIZE(redT, 0, redBufferLen);
     redT[0] = 1;
     __mont_mul_avx2(redY, redY, redT, redM, redLen, k0, redBuffer);
-    dig27_regular((uint32_t *)dataY, nsM * sizeof(mpi_limb_t) / sizeof(uint32_t), redY, redLen);
+    dig27_regular((uint32_t *)dataY, nsM * sizeof(mpn_limb_t) / sizeof(uint32_t), redY, redLen);
 
     return nsM;
 }
@@ -272,24 +272,24 @@ unsigned int mont_exp_bin_avx2(mpi_limb_t *dataY, const mpi_limb_t *dataX, unsig
  *    redM[redBufferLen]
  *    redBuffer[redBufferLen*3]
  */
-unsigned int mont_exp_bin_sscm_avx2(mpi_limb_t *dataY, const mpi_limb_t *dataX, unsigned int nsX, const mpi_limb_t *dataE, unsigned int bitsizeE, const mpi_limb_t *dataM, unsigned int bitsizeM, const mpi_limb_t *dataRR, mpi_limb_t k0,
-                                    mpi_limb_t *pBuffer)
+unsigned int mont_exp_bin_sscm_avx2(mpn_limb_t *dataY, const mpn_limb_t *dataX, unsigned int nsX, const mpn_limb_t *dataE, unsigned int bitsizeE, const mpn_limb_t *dataM, unsigned int bitsizeM, const mpn_limb_t *dataRR, mpn_limb_t k0,
+                                    mpn_limb_t *pBuffer)
 {
-    unsigned int nsM = MPI_BITS_TO_LIMBS(bitsizeM);
-    unsigned int nsE = MPI_BITS_TO_LIMBS(bitsizeE);
+    unsigned int nsM = MPN_BITS_TO_LIMBS(bitsizeM);
+    unsigned int nsE = MPN_BITS_TO_LIMBS(bitsizeE);
 
-    int convModulusBitSize = __digit_num_avx2(bitsizeM, MPI_LIMB_BITS) * MPI_LIMB_BITS;
+    int convModulusBitSize = __digit_num_avx2(bitsizeM, MPN_LIMB_BITS) * MPN_LIMB_BITS;
     int modulusLen32 = (bitsizeM + 31) / 32;
     int redLen = __digit_num_avx2(convModulusBitSize + 2, EXP_DIGIT_SIZE_AVX2);
     int redBufferLen = num_of_variable_buff_avx2(redLen);
 
     /* allocate buffers */
-    mpi_limb_t *redX = pBuffer;
-    mpi_limb_t *redM = redX + redBufferLen;
-    mpi_limb_t *redR = redM + redBufferLen;
-    mpi_limb_t *redT = redR + redBufferLen;
-    mpi_limb_t *redY = redT + redBufferLen;
-    mpi_limb_t *redBuffer = redY + redBufferLen;
+    mpn_limb_t *redX = pBuffer;
+    mpn_limb_t *redM = redX + redBufferLen;
+    mpn_limb_t *redR = redM + redBufferLen;
+    mpn_limb_t *redT = redR + redBufferLen;
+    mpn_limb_t *redY = redT + redBufferLen;
+    mpn_limb_t *redBuffer = redY + redBufferLen;
 
     /* convert modulus into reduced domain */
     ZEXPAND(redT, nsM + 1, dataM, nsM);
@@ -307,7 +307,7 @@ unsigned int mont_exp_bin_sscm_avx2(mpi_limb_t *dataY, const mpi_limb_t *dataX, 
 
     /* convert base to Montgomery domain */
     ZEXPAND(redY, redBufferLen /*nsX+1*/, dataX, nsX);
-    regular_dig27(redX, redBufferLen, (uint32_t *)redY, nsX * sizeof(mpi_limb_t) / sizeof(uint32_t));
+    regular_dig27(redX, redBufferLen, (uint32_t *)redY, nsX * sizeof(mpn_limb_t) / sizeof(uint32_t));
     __mont_mul_avx2(redX, redX, redT, redM, redLen, k0, redBuffer);
 
     /* init result */
@@ -318,14 +318,14 @@ unsigned int mont_exp_bin_sscm_avx2(mpi_limb_t *dataY, const mpi_limb_t *dataX, 
 
     /* execute bits of E */
     for (; nsE > 0; nsE--) {
-        mpi_limb_t eValue = dataE[nsE - 1];
+        mpn_limb_t eValue = dataE[nsE - 1];
 
         int n;
-        for (n = MPI_LIMB_BITS; n > 0; n--) {
+        for (n = MPN_LIMB_BITS; n > 0; n--) {
             /* T = ( msb(eValue) )? X : mont(1) */
-            mpi_limb_t mask = mpi_test_msb_limb_consttime(eValue);
+            mpn_limb_t mask = mpn_limb_test_msb_consttime(eValue);
             eValue <<= 1;
-            mpi_masked_copy_consttime(redT, redX, redR, redLen, mask);
+            mpn_masked_copy_consttime(redT, redX, redR, redLen, mask);
 
             /* squaring: Y = Y^2 */
             __mont_sqr_avx2(redY, redY, redM, redLen, k0, redBuffer);
@@ -338,7 +338,7 @@ unsigned int mont_exp_bin_sscm_avx2(mpi_limb_t *dataY, const mpi_limb_t *dataX, 
     ZEROIZE(redT, 0, redBufferLen);
     redT[0] = 1;
     __mont_mul_avx2(redY, redY, redT, redM, redLen, k0, redBuffer);
-    dig27_regular((uint32_t *)dataY, nsM * sizeof(mpi_limb_t) / sizeof(uint32_t), redY, redLen);
+    dig27_regular((uint32_t *)dataY, nsM * sizeof(mpn_limb_t) / sizeof(uint32_t), redY, redLen);
 
     return nsM;
 }
@@ -357,28 +357,28 @@ unsigned int mont_exp_bin_sscm_avx2(mpi_limb_t *dataY, const mpi_limb_t *dataX, 
  *    redBuffer[redBufferLen*3]
  *    redE[redBufferLen]
  */
-unsigned int mont_exp_win_avx2(mpi_limb_t *dataY, const mpi_limb_t *dataX, unsigned int nsX, const mpi_limb_t *dataE, unsigned int bitsizeE, const mpi_limb_t *dataM, unsigned int bitsizeM, const mpi_limb_t *dataRR, mpi_limb_t k0,
-                               mpi_limb_t *pBuffer)
+unsigned int mont_exp_win_avx2(mpn_limb_t *dataY, const mpn_limb_t *dataX, unsigned int nsX, const mpn_limb_t *dataE, unsigned int bitsizeE, const mpn_limb_t *dataM, unsigned int bitsizeM, const mpn_limb_t *dataRR, mpn_limb_t k0,
+                               mpn_limb_t *pBuffer)
 {
-    unsigned int nsM = MPI_BITS_TO_LIMBS(bitsizeM);
-    unsigned int nsE = MPI_BITS_TO_LIMBS(bitsizeE);
+    unsigned int nsM = MPN_BITS_TO_LIMBS(bitsizeM);
+    unsigned int nsE = MPN_BITS_TO_LIMBS(bitsizeE);
 
-    int convModulusBitSize = __digit_num_avx2(bitsizeM, MPI_LIMB_BITS) * MPI_LIMB_BITS;
+    int convModulusBitSize = __digit_num_avx2(bitsizeM, MPN_LIMB_BITS) * MPN_LIMB_BITS;
     int modulusLen32 = (bitsizeM + 31) / 32;
     int redLen = __digit_num_avx2(convModulusBitSize + 2, EXP_DIGIT_SIZE_AVX2);
     int redBufferLen = num_of_variable_buff_avx2(redLen);
 
     unsigned int window = mont_exp_win_size(bitsizeE);
-    mpi_limb_t wmask = (1 << window) - 1;
+    mpn_limb_t wmask = (1 << window) - 1;
     unsigned int nPrecomute = 1 << window;
     int n;
 
-    mpi_limb_t *redTable = pBuffer;
-    mpi_limb_t *redM = redTable + mont_scramble_buffer_size(redLen, window);
-    mpi_limb_t *redY = redM + redBufferLen;
-    mpi_limb_t *redT = redY + redBufferLen;
-    mpi_limb_t *redBuffer = redT + redBufferLen;
-    mpi_limb_t *redE = redBuffer + redBufferLen * 3;
+    mpn_limb_t *redTable = pBuffer;
+    mpn_limb_t *redM = redTable + mont_scramble_buffer_size(redLen, window);
+    mpn_limb_t *redY = redM + redBufferLen;
+    mpn_limb_t *redT = redY + redBufferLen;
+    mpn_limb_t *redBuffer = redT + redBufferLen;
+    mpn_limb_t *redE = redBuffer + redBufferLen * 3;
 
     /* convert modulus into reduced domain */
     ZEXPAND(redE, nsM + 1, dataM, nsM);
@@ -403,7 +403,7 @@ unsigned int mont_exp_win_avx2(mpi_limb_t *dataY, const mpi_limb_t *dataX, unsig
     COPY(redTable + 0, redY, redLen);
 
     ZEXPAND(redE, redBufferLen /*nsX+1*/, dataX, nsX);
-    regular_dig27(redY, redBufferLen, (uint32_t *)redE, nsX * (int32_t)(sizeof(mpi_limb_t) / sizeof(uint32_t)));
+    regular_dig27(redY, redBufferLen, (uint32_t *)redE, nsX * (int32_t)(sizeof(mpn_limb_t) / sizeof(uint32_t)));
     __mont_mul_avx2(redY, redY, redT, redM, redLen, k0, redBuffer);
     COPY(redTable + redLen, redY, redLen);
 
@@ -456,7 +456,7 @@ unsigned int mont_exp_win_avx2(mpi_limb_t *dataY, const mpi_limb_t *dataX, unsig
     ZEROIZE(redT, 0, redBufferLen);
     redT[0] = 1;
     __mont_mul_avx2(redY, redY, redT, redM, redLen, k0, redBuffer);
-    dig27_regular((uint32_t *)dataY, nsM * (int32_t)(sizeof(mpi_limb_t) / sizeof(uint32_t)), redY, redLen);
+    dig27_regular((uint32_t *)dataY, nsM * (int32_t)(sizeof(mpn_limb_t) / sizeof(uint32_t)), redY, redLen);
 
     return nsM;
 }
@@ -472,28 +472,28 @@ unsigned int mont_exp_win_avx2(mpi_limb_t *dataY, const mpi_limb_t *dataX, unsig
  *    redBuffer[redBufferLen*3]
  *    redE[redBufferLen]
  */
-unsigned int mont_exp_win_sscm_avx2(mpi_limb_t *dataY, const mpi_limb_t *dataX, unsigned int nsX, const mpi_limb_t *dataE, unsigned int bitsizeE, const mpi_limb_t *dataM, unsigned int bitsizeM, const mpi_limb_t *dataRR, mpi_limb_t k0,
-                                    mpi_limb_t *pBuffer)
+unsigned int mont_exp_win_sscm_avx2(mpn_limb_t *dataY, const mpn_limb_t *dataX, unsigned int nsX, const mpn_limb_t *dataE, unsigned int bitsizeE, const mpn_limb_t *dataM, unsigned int bitsizeM, const mpn_limb_t *dataRR, mpn_limb_t k0,
+                                    mpn_limb_t *pBuffer)
 {
-    unsigned int nsM = MPI_BITS_TO_LIMBS(bitsizeM);
-    unsigned int nsE = MPI_BITS_TO_LIMBS(bitsizeE);
+    unsigned int nsM = MPN_BITS_TO_LIMBS(bitsizeM);
+    unsigned int nsE = MPN_BITS_TO_LIMBS(bitsizeE);
 
-    int convModulusBitSize = __digit_num_avx2(bitsizeM, MPI_LIMB_BITS) * MPI_LIMB_BITS;
+    int convModulusBitSize = __digit_num_avx2(bitsizeM, MPN_LIMB_BITS) * MPN_LIMB_BITS;
     int modulusLen32 = (bitsizeM + 31) / 32;
     int redLen = __digit_num_avx2(convModulusBitSize + 2, EXP_DIGIT_SIZE_AVX2);
     int redBufferLen = num_of_variable_buff_avx2(redLen);
 
     unsigned int window = mont_exp_win_size(bitsizeE);
     unsigned int nPrecomute = 1 << window;
-    mpi_limb_t wmask = (mpi_limb_t)(nPrecomute - 1);
+    mpn_limb_t wmask = (mpn_limb_t)(nPrecomute - 1);
     int n;
 
-    mpi_limb_t *redTable = (mpi_limb_t *)(MPZ_ALIGNED_PTR((pBuffer), CACHE_LINE_SIZE));
-    mpi_limb_t *redM = redTable + mont_scramble_buffer_size(redLen, window);
-    mpi_limb_t *redY = redM + redBufferLen;
-    mpi_limb_t *redT = redY + redBufferLen;
-    mpi_limb_t *redBuffer = redT + redBufferLen;
-    mpi_limb_t *redE = redBuffer + redBufferLen * 3;
+    mpn_limb_t *redTable = (mpn_limb_t *)(MPZ_ALIGNED_PTR((pBuffer), CACHE_LINE_SIZE));
+    mpn_limb_t *redM = redTable + mont_scramble_buffer_size(redLen, window);
+    mpn_limb_t *redY = redM + redBufferLen;
+    mpn_limb_t *redT = redY + redBufferLen;
+    mpn_limb_t *redBuffer = redT + redBufferLen;
+    mpn_limb_t *redE = redBuffer + redBufferLen * 3;
 
     /* convert modulus into reduced domain */
     ZEXPAND(redE, nsM + 1, dataM, nsM);
@@ -518,7 +518,7 @@ unsigned int mont_exp_win_sscm_avx2(mpi_limb_t *dataY, const mpi_limb_t *dataX, 
     mont_scramble_put(redTable, 0, redY, redLen, window);
 
     ZEXPAND(redE, redBufferLen /*nsX+1*/, dataX, nsX);
-    regular_dig27(redY, redBufferLen, (uint32_t *)redE, nsX * (int32_t)(sizeof(mpi_limb_t) / sizeof(uint32_t)));
+    regular_dig27(redY, redBufferLen, (uint32_t *)redE, nsX * (int32_t)(sizeof(mpn_limb_t) / sizeof(uint32_t)));
     __mont_mul_avx2(redY, redY, redT, redM, redLen, k0, redBuffer);
     mont_scramble_put(redTable, 1, redY, redLen, window);
 
@@ -565,7 +565,7 @@ unsigned int mont_exp_win_sscm_avx2(mpi_limb_t *dataY, const mpi_limb_t *dataX, 
     ZEROIZE(redT, 0, redBufferLen);
     redT[0] = 1;
     __mont_mul_avx2(redY, redY, redT, redM, redLen, k0, redBuffer);
-    dig27_regular((uint32_t *)dataY, nsM * (int32_t)(sizeof(mpi_limb_t) / sizeof(uint32_t)), redY, redLen);
+    dig27_regular((uint32_t *)dataY, nsM * (int32_t)(sizeof(mpn_limb_t) / sizeof(uint32_t)), redY, redLen);
 
     return nsM;
 }

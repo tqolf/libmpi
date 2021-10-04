@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 #include "mpi-rsa.h"
-#include <assert.h>
-#include <mpi/mpi-binary.h>
-#include <mpi/mpi-montgomery.h>
+#include "mpi-binary.h"
+#include "mpi-montgomery.h"
 
 /**
  * Number of Miller-Rabin rounds for an error rate of less than 1/2^80 for random 'b'-bit input, b >= 100.
@@ -43,7 +42,7 @@ rsa_key_t *rsa_new(unsigned int ebits, unsigned int nbits, unsigned int primes)
         MPI_RAISE_ERROR(-EINVAL);
         return NULL;
     }
-    MPI_ASSERT(primes == 2); // only two primes(p, q) supported now
+    MPN_ASSERT(primes == 2); // only two primes(p, q) supported now
 
     unsigned int quo = nbits / primes;
     unsigned int rem = nbits % primes;
@@ -51,14 +50,14 @@ rsa_key_t *rsa_new(unsigned int ebits, unsigned int nbits, unsigned int primes)
     unsigned int pbits = quo;
     unsigned int qbits = quo + rem;
 
-    unsigned int esize = MPI_BITS_TO_LIMBS(ebits);
-    unsigned int nsize = MPI_BITS_TO_LIMBS(nbits);
-    unsigned int psize = MPI_BITS_TO_LIMBS(pbits);
-    unsigned int qsize = MPI_BITS_TO_LIMBS(qbits);
+    unsigned int esize = MPN_BITS_TO_LIMBS(ebits);
+    unsigned int nsize = MPN_BITS_TO_LIMBS(nbits);
+    unsigned int psize = MPN_BITS_TO_LIMBS(pbits);
+    unsigned int qsize = MPN_BITS_TO_LIMBS(qbits);
 
     // @note: assume that addition won't overflow
-    size_t size = sizeof(rsa_key_t) + MPI_LIMB_BYTES;                     /* rsa_key_t, and alignment */
-    size += sizeof(mpi_limb_t) * (esize + nsize + psize + qsize + psize); /* e, d, dp, dq, qinv */
+    size_t size = sizeof(rsa_key_t) + MPN_LIMB_BYTES;                     /* rsa_key_t, and alignment */
+    size += sizeof(mpn_limb_t) * (esize + nsize + psize + qsize + psize); /* e, d, dp, dq, qinv */
     rsa_key_t *key = (rsa_key_t *)MPI_ALLOCATE(size);
     if (key == NULL) {
         MPI_RAISE_ERROR(-ENOMEM);
@@ -75,7 +74,7 @@ rsa_key_t *rsa_new(unsigned int ebits, unsigned int nbits, unsigned int primes)
         key->dbits = nbits; /* max bits here, calcaulte later if needed */
 
         {
-            mpi_limb_t *p = mpi_aligned_pointer((unsigned char *)key + sizeof(rsa_key_t), MPI_LIMB_BYTES);
+            mpn_limb_t *p = mpi_aligned_pointer((unsigned char *)key + sizeof(rsa_key_t), MPN_LIMB_BYTES);
             key->e = p;               /* esize */
             key->d = (p += esize);    /* <= nsize */
             key->dp = (p += nsize);   /* <= psize */
@@ -84,9 +83,9 @@ rsa_key_t *rsa_new(unsigned int ebits, unsigned int nbits, unsigned int primes)
         }
 
         {
-            key->montP = mpi_montgomery_create(pbits, MPI_BITS_TO_LIMBS(pbits) * 6);
-            key->montQ = mpi_montgomery_create(qbits, MPI_BITS_TO_LIMBS(qbits) * 6);
-            key->montN = mpi_montgomery_create(nbits, MPI_BITS_TO_LIMBS(nbits) * 6);
+            key->montP = mpi_montgomery_create(pbits, MPN_BITS_TO_LIMBS(pbits) * 6);
+            key->montQ = mpi_montgomery_create(qbits, MPN_BITS_TO_LIMBS(qbits) * 6);
+            key->montN = mpi_montgomery_create(nbits, MPN_BITS_TO_LIMBS(nbits) * 6);
         }
     }
 
@@ -103,11 +102,10 @@ void rsa_free(rsa_key_t *key)
     }
 }
 
-int rsa_import(rsa_key_t *key, const mpi_t *n, const mpi_t *e, const mpi_t *d, const mpi_t *dp,
-               const mpi_t *dq, const mpi_t *qinv)
+int rsa_import(rsa_key_t *key, const mpi_t *n, const mpi_t *e, const mpi_t *d, const mpi_t *dp, const mpi_t *dq,
+               const mpi_t *qinv)
 {
-    if (key == NULL || (n == NULL && d == NULL)
-        || (n == NULL || dp == NULL || dq == NULL || qinv == NULL)) {
+    if (key == NULL || (n == NULL && d == NULL) || (n == NULL || dp == NULL || dq == NULL || qinv == NULL)) {
         MPI_RAISE_ERROR(-EINVAL);
         return -EINVAL;
     }
@@ -170,8 +168,8 @@ rsa_key_t *rsa_generate_key(const mpi_t *pubexp, unsigned int nbits, unsigned in
 
     unsigned int pbits = key->pbits;
     unsigned int qbits = key->qbits;
-    unsigned int psize = MPI_BITS_TO_LIMBS(pbits);
-    unsigned int qsize = MPI_BITS_TO_LIMBS(qbits);
+    unsigned int psize = MPN_BITS_TO_LIMBS(pbits);
+    unsigned int qsize = MPN_BITS_TO_LIMBS(qbits);
 
     /* copy public exponent */
     {
@@ -208,9 +206,9 @@ rsa_key_t *rsa_generate_key(const mpi_t *pubexp, unsigned int nbits, unsigned in
         }
 
         {
-            unsigned int nsize = MPI_BITS_TO_LIMBS(nbits);
+            unsigned int nsize = MPN_BITS_TO_LIMBS(nbits);
             unsigned int buffsize = (nsize + 1) * 3 + psize;
-            mpi_limb_t *buffer = (mpi_limb_t *)MPI_ZALLOCATE(buffsize, sizeof(mpi_limb_t));
+            mpn_limb_t *buffer = (mpn_limb_t *)MPI_ZALLOCATE(buffsize, sizeof(mpn_limb_t));
             if (buffer == NULL) {
                 MPI_RAISE_ERROR(-ENOMEM);
                 goto exit_with_error;
@@ -219,45 +217,44 @@ rsa_key_t *rsa_generate_key(const mpi_t *pubexp, unsigned int nbits, unsigned in
             mpi_montgomery_t *montN = key->montN;
             mpi_montgomery_t *montP = key->montP;
             mpi_montgomery_t *montQ = key->montQ;
-            mpi_limb_t *dataN = montN->modulus;
-            mpi_limb_t *dataP = montP->modulus;
-            mpi_limb_t *dataQ = montQ->modulus;
+            mpn_limb_t *dataN = montN->modulus;
+            mpn_limb_t *dataP = montP->modulus;
+            mpn_limb_t *dataQ = montQ->modulus;
 
-            mpi_limb_t *exponentD = buffer;                    /* nsize + 1 */
-            mpi_limb_t *exponentDBuff = exponentD + nsize + 1; /* nsize + 1 */
-            mpi_limb_t *phi = exponentDBuff + nsize + 1;       /* nsize + 1 */
-            mpi_limb_t *phiBuff = phi + nsize + 1;             /* psize */
+            mpn_limb_t *exponentD = buffer;                    /* nsize + 1 */
+            mpn_limb_t *exponentDBuff = exponentD + nsize + 1; /* nsize + 1 */
+            mpn_limb_t *phi = exponentDBuff + nsize + 1;       /* nsize + 1 */
+            mpn_limb_t *phiBuff = phi + nsize + 1;             /* psize */
 
             /* phi = (P - 1) * (Q - 1) */
-            mpi_udec_school_bin(dataP, dataP, psize, 1);
-            mpi_udec_school_bin(dataQ, dataQ, qsize, 1);
-            mpi_umul_bin(phi, dataP, psize, dataQ, qsize);
+            mpn_dec_school(dataP, dataP, psize, 1);
+            mpn_dec_school(dataQ, dataQ, qsize, 1);
+            mpn_mul(phi, dataP, psize, dataQ, qsize);
 
             /* D = 1 / E mod phi */
-            unsigned int dsize =
-                mpi_umod_inv_bin(exponentD, pubexp->data, pubexp->size, phi, nsize, montN->optimizer);
+            unsigned int dsize = mpn_mod_invert(exponentD, pubexp->data, pubexp->size, phi, nsize, montN->optimizer);
             if (key->d != NULL) {
                 COPY(key->d, exponentD, dsize);
-                key->dbits = mpi_bits_consttime_bin(exponentD, dsize);
+                key->dbits = mpn_bits_consttime(exponentD, dsize);
             }
 
             /* compute dp = d mod (p - 1) */
             {
                 COPY(exponentDBuff, exponentD, dsize);
-                unsigned int size = mpi_umod_bin(exponentDBuff, dsize, dataP, psize);
+                unsigned int size = mpn_mod(exponentDBuff, dsize, dataP, psize);
                 ZEXPAND(key->dp, psize, exponentDBuff, size);
             }
 
             /* compute dq = d mod (q - 1) */
             {
                 COPY(phi, exponentD, dsize);
-                unsigned int size = mpi_umod_bin(phi, dsize, dataQ, qsize);
+                unsigned int size = mpn_mod(phi, dsize, dataQ, qsize);
                 ZEXPAND(key->dq, qsize, phi, size);
             }
 
             /* restore P and Q */
-            mpi_uinc_school_bin(dataP, dataP, psize, 1);
-            mpi_uinc_school_bin(dataQ, dataQ, qsize, 1);
+            mpn_inc_school(dataP, dataP, psize, 1);
+            mpn_inc_school(dataQ, dataQ, qsize, 1);
 
             /* re-initialize montgomery context */
             mpi_montgomery_set_modulus_bin(montP, dataP, pbits);
@@ -266,17 +263,16 @@ rsa_key_t *rsa_generate_key(const mpi_t *pubexp, unsigned int nbits, unsigned in
             /* qinv = 1 / q mod p */
             {
                 COPY(phiBuff, dataP, psize);
-                unsigned int size =
-                    mpi_umod_inv_bin(key->qinv, dataQ, qsize, phiBuff, psize, montP->optimizer);
+                unsigned int size = mpn_mod_invert(key->qinv, dataQ, qsize, phiBuff, psize, montP->optimizer);
 
                 ZEROIZE(key->qinv, size, psize);
             }
 
             {
-                mpi_umul_bin(dataN, dataP, psize, dataQ, qsize);
+                mpn_mul(dataN, dataP, psize, dataQ, qsize);
                 mpi_montgomery_set_modulus_bin(montN, dataN, nbits);
 
-                key->nbits = nsize * MPI_LIMB_BITS - mpi_ntz_limb_consttime(dataN[nsize - 1]);
+                key->nbits = nsize * MPN_LIMB_BITS - mpn_limb_ntz_consttime(dataN[nsize - 1]);
             }
 
             MPI_DEALLOCATE(buffer);
@@ -313,17 +309,16 @@ int rsa_prv_cipher(mpi_t *r, const mpi_t *x, const rsa_key_t *key)
 
 int rsa_prv_cipher_crt(mpi_t *r, const mpi_t *x, const rsa_key_t *key)
 {
-    if (r == NULL || x == NULL || key == NULL || key->montN == NULL || key->montP == NULL
-        || key->montQ == NULL) {
+    if (r == NULL || x == NULL || key == NULL || key->montN == NULL || key->montP == NULL || key->montQ == NULL) {
         return -EINVAL;
     }
 
-    mpi_limb_t *scratch = (mpi_limb_t *)MPI_ZALLOCATE(1000, sizeof(mpi_limb_t));
-    mpi_limb_t *buffer = &scratch[x->size];
+    mpn_limb_t *scratch = (mpn_limb_t *)MPI_ZALLOCATE(1000, sizeof(mpn_limb_t));
+    mpn_limb_t *buffer = &scratch[x->size];
 
-    mpi_limb_t *dataY = r->data;
-    mpi_limb_t *dataXp = x->data;
-    mpi_limb_t *dataXq = scratch;
+    mpn_limb_t *dataY = r->data;
+    mpn_limb_t *dataXp = x->data;
+    mpn_limb_t *dataXq = scratch;
 
     /* P- and Q- montgometry engines */
     mpi_montgomery_t *montP = key->montP;
@@ -342,7 +337,7 @@ int rsa_prv_cipher_crt(mpi_t *r, const mpi_t *x, const rsa_key_t *key)
         mpi_montgomery_mul_bin(dataXq, dataXq, montQ->montRR, montQ);
     } else {
         COPY(dataXq, x->data, x->size);
-        mpi_udiv_bin(NULL, NULL, dataXq, x->size, montQ->modulus, nsQ);
+        mpn_div(NULL, NULL, dataXq, x->size, montQ->modulus, nsQ);
     }
 
     mpi_montgomery_exp_consttime_bin(dataXq, dataXq, nsQ, key->dq, bitSizeDQ, montQ);
@@ -354,7 +349,7 @@ int rsa_prv_cipher_crt(mpi_t *r, const mpi_t *x, const rsa_key_t *key)
         mpi_montgomery_mul_bin(dataXp, dataXp, montP->montRR, montP);
     } else {
         COPY(dataXp, x->data, x->size);
-        mpi_udiv_bin(NULL, NULL, dataXp, x->size, montP->modulus, nsP);
+        mpn_div(NULL, NULL, dataXp, x->size, montP->modulus, nsP);
     }
 
     mpi_montgomery_exp_consttime_bin(dataXp, dataXp, nsP, key->dp, bitSizeDP, montP);
@@ -375,10 +370,10 @@ int rsa_prv_cipher_crt(mpi_t *r, const mpi_t *x, const rsa_key_t *key)
     } else {
         COPY(buffer, dataXq, nsQ);
         {
-            unsigned int nsQP = mpi_udiv_bin(NULL, NULL, buffer, nsQ, montP->modulus, nsP);
-            mpi_limb_t cf = mpi_usub_school_bin(dataXp, dataXp, buffer, nsQP);
-            if (nsP - nsQP) cf = mpi_udec_school_bin(dataXp + nsQP, dataXp + nsQP, (nsP - nsQP), cf);
-            if (cf) { mpi_uadd_school_bin(dataXp, dataXp, montP->modulus, nsP); }
+            unsigned int nsQP = mpn_div(NULL, NULL, buffer, nsQ, montP->modulus, nsP);
+            mpn_limb_t cf = mpn_sub_school(dataXp, dataXp, buffer, nsQP);
+            if (nsP - nsQP) cf = mpn_dec_school(dataXp + nsQP, dataXp + nsQP, (nsP - nsQP), cf);
+            if (cf) { mpn_add_school(dataXp, dataXp, montP->modulus, nsP); }
         }
     }
 
@@ -389,14 +384,14 @@ int rsa_prv_cipher_crt(mpi_t *r, const mpi_t *x, const rsa_key_t *key)
     mpi_montgomery_mul_bin(dataXp, dataXp, buffer, montP);
 
     /* Y = xq + xp*Q */
-    mpi_umul_bin(buffer, dataXp, nsP, montQ->modulus, nsQ);
+    mpn_mul(buffer, dataXp, nsP, montQ->modulus, nsQ);
     {
-        mpi_limb_t cf = mpi_uadd_school_bin(dataY, buffer, dataXq, nsQ);
-        mpi_uinc_school_bin(dataY + nsQ, buffer + nsQ, nsP, cf);
+        mpn_limb_t cf = mpn_add_school(dataY, buffer, dataXq, nsQ);
+        mpn_inc_school(dataY + nsQ, buffer + nsQ, nsP, cf);
     }
 
     r->sign = MPI_SIGN_NON_NEGTIVE;
-    r->size = mpi_fix_size_bin(r->data, nsP + nsQ);
+    r->size = mpn_limbs(r->data, nsP + nsQ);
 
     MPI_DEALLOCATE(scratch);
 

@@ -20,7 +20,7 @@
 ;               Big Number Operations
 ;
 ;     Content:
-;        mpi_udiv_bin_u32()
+;        mpn_div_u32()
 ;
 ;
 
@@ -290,13 +290,13 @@ segment .text align=ARCH_ALIGN_FACTOR
 
 
 ;*************************************************************
-;* uint32_t mpi_udiv_bin_u32(uint32_t* pQ, unsigned int* sizeQ,
+;* uint32_t mpn_div_u32(uint32_t* pQ, unsigned int* sizeQ,
 ;*                    uint32_t* pX, unsigned int sizeX,
 ;*                    uint32_t* pY, unsigned int sizeY)
 ;*
 ;*************************************************************
 align ARCH_ALIGN_FACTOR
-IPPASM mpi_udiv_bin_u32,PUBLIC
+IPPASM mpn_div_u32,PUBLIC
 %assign LOCAL_FRAME 4*8
         USES_GPR rsi,rdi,rbx,rbp,r12,r13,r14,r15
         USES_XMM
@@ -470,6 +470,6 @@ IPPASM mpi_udiv_bin_u32,PUBLIC
    REST_XMM
    REST_GPR
    ret
-ENDFUNC mpi_udiv_bin_u32
+ENDFUNC mpn_div_u32
 
 %endif

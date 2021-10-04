@@ -23,22 +23,21 @@
  * mpi(optimizer): create optimizer for mpi operation
  *
  * @note:
- *   1. room: room size of optimizer chunk, in unit of 'mpi_limb_t'
+ *   1. room: room size of optimizer chunk, in unit of 'mpn_limb_t'
  */
-mpi_optimizer_t *mpi_optimizer_create(unsigned int room)
+mpn_optimizer_t *mpn_optimizer_create(unsigned int room)
 {
     if (room == 0) {
         /* it's meaningless to create 0-length optimizer */
         return NULL;
     }
-    size_t size = sizeof(mpi_optimizer_t) + MPI_LIMB_BYTES + room * sizeof(mpi_limb_t);
-    mpi_optimizer_t *optimizer = (mpi_optimizer_t *)MPI_ALLOCATE(size);
+    size_t size = sizeof(mpn_optimizer_t) + MPN_LIMB_BYTES + room * sizeof(mpn_limb_t);
+    mpn_optimizer_t *optimizer = (mpn_optimizer_t *)MPI_ALLOCATE(size);
     if (optimizer != NULL) {
         optimizer->size = 0;
         optimizer->next = NULL;
         optimizer->room = room;
-        optimizer->chunk =
-            mpi_aligned_pointer((unsigned char *)optimizer + sizeof(mpi_optimizer_t), MPI_LIMB_BYTES);
+        optimizer->chunk = mpi_aligned_pointer((unsigned char *)optimizer + sizeof(mpn_optimizer_t), MPN_LIMB_BYTES);
     }
 
     return optimizer;
@@ -47,9 +46,9 @@ mpi_optimizer_t *mpi_optimizer_create(unsigned int room)
 /**
  * mpi(optimizer): reset optimizer, mark all as unused
  */
-void mpi_optimizer_reset(mpi_optimizer_t *optimizer)
+void mpn_optimizer_reset(mpn_optimizer_t *optimizer)
 {
-    mpi_optimizer_t *curr = optimizer;
+    mpn_optimizer_t *curr = optimizer;
     while (curr != NULL) {
         curr->size = 0;
         curr = curr->next;
@@ -59,12 +58,12 @@ void mpi_optimizer_reset(mpi_optimizer_t *optimizer)
 /**
  * mpi(optimizer): destory optimizer
  */
-void mpi_optimizer_destory(mpi_optimizer_t *optimizer)
+void mpn_optimizer_destory(mpn_optimizer_t *optimizer)
 {
-    mpi_optimizer_t *curr = optimizer, *next;
+    mpn_optimizer_t *curr = optimizer, *next;
     while (curr != NULL) {
         next = curr->next;
-        MPI_DEALLOCATE(curr); /* cleanse and free mpi_optimizer_t node */
+        MPI_DEALLOCATE(curr); /* cleanse and free mpn_optimizer_t node */
         curr = next;
     }
 }
@@ -73,9 +72,9 @@ void mpi_optimizer_destory(mpi_optimizer_t *optimizer)
  * mpi(optimizer): get memory chunk for mpi operation
  *
  * @note:
- *   1. size: size of chunk, in unit of 'mpi_limb_t'
+ *   1. size: size of chunk, in unit of 'mpn_limb_t'
  */
-mpi_limb_t *mpi_optimizer_get_limbs(mpi_optimizer_t *optimizer, unsigned int size)
+mpn_limb_t *mpn_optimizer_get_limbs(mpn_optimizer_t *optimizer, unsigned int size)
 {
     if (optimizer == NULL) {
         MPI_RAISE_ERROR(-EINVAL);
@@ -84,7 +83,7 @@ mpi_limb_t *mpi_optimizer_get_limbs(mpi_optimizer_t *optimizer, unsigned int siz
     if (size == 0) { return NULL; }
 
     unsigned int total = 0;
-    mpi_optimizer_t *curr = optimizer, *prev = NULL;
+    mpn_optimizer_t *curr = optimizer, *prev = NULL;
     while (curr != NULL) {
         total += curr->size;
         prev = curr;
@@ -95,11 +94,11 @@ mpi_limb_t *mpi_optimizer_get_limbs(mpi_optimizer_t *optimizer, unsigned int siz
         curr = prev;
     } else {
         unsigned int room = size + total / 2; // XXX: optimize growth rule
-        prev->next = curr = mpi_optimizer_create(room);
+        prev->next = curr = mpn_optimizer_create(room);
     }
 
     if (curr != NULL) {
-        mpi_limb_t *p = &curr->chunk[curr->size];
+        mpn_limb_t *p = &curr->chunk[curr->size];
         curr->size += size;
 
         return p;
@@ -113,11 +112,11 @@ mpi_limb_t *mpi_optimizer_get_limbs(mpi_optimizer_t *optimizer, unsigned int siz
 /**
  * mpi(optimizer): put back memory chunk
  */
-void mpi_optimizer_put_limbs(mpi_optimizer_t *optimizer, unsigned int size)
+void mpn_optimizer_put_limbs(mpn_optimizer_t *optimizer, unsigned int size)
 {
     if (optimizer == NULL) { return; }
 
-    mpi_optimizer_t *curr = optimizer, *prev = NULL;
+    mpn_optimizer_t *curr = optimizer, *prev = NULL;
     while (curr != NULL) {
         prev = curr;
         curr = curr->next;
@@ -130,11 +129,11 @@ void mpi_optimizer_put_limbs(mpi_optimizer_t *optimizer, unsigned int size)
  * mpi(optimizer): get mpi with specified room from optimizer
  *
  * @note:
- *   1. size: size of chunk, in unit of 'mpi_limb_t'
+ *   1. size: size of chunk, in unit of 'mpn_limb_t'
  */
-mpi_t *mpi_optimizer_get(mpi_optimizer_t *optimizer, unsigned int size)
+mpi_t *mpn_optimizer_get(mpn_optimizer_t *optimizer, unsigned int size)
 {
-    mpi_limb_t *chunk = mpi_optimizer_get_limbs(optimizer, MPI_ALIGNED_HEAD_LIMBS + size);
+    mpn_limb_t *chunk = mpn_optimizer_get_limbs(optimizer, MPI_ALIGNED_HEAD_LIMBS + size);
     if (chunk != NULL) {
         mpi_t *r = (mpi_t *)chunk;
         ZEROIZE(&chunk[MPI_ALIGNED_HEAD_LIMBS], 0, size);
@@ -149,7 +148,7 @@ mpi_t *mpi_optimizer_get(mpi_optimizer_t *optimizer, unsigned int size)
 /**
  * mpi(optimizer): put back mpi of specified room
  */
-void mpi_optimizer_put(mpi_optimizer_t *optimizer, unsigned int size)
+void mpn_optimizer_put(mpn_optimizer_t *optimizer, unsigned int size)
 {
-    mpi_optimizer_put_limbs(optimizer, MPI_ALIGNED_HEAD_LIMBS + size);
+    mpn_optimizer_put_limbs(optimizer, MPI_ALIGNED_HEAD_LIMBS + size);
 }

@@ -150,50 +150,49 @@ static const uint32_t known_primes[] = {
     17707, 17713, 17729, 17737, 17747, 17749, 17761, 17783, 17789, 17791, 17807, 17827, 17837, 17839, 17851, 17863,
 };
 static const unsigned int known_primes_size = (unsigned int)(sizeof(known_primes) / sizeof(known_primes[0]));
-STATIC_ASSERT(sizeof(mpi_limb_t) >= sizeof(uint32_t), "under this implementation, sizeof(mpi_limb_t) MUST not smaller than sizeof(uint32_t)");
+STATIC_ASSERT(sizeof(mpn_limb_t) >= sizeof(uint32_t), "under this implementation, sizeof(mpn_limb_t) MUST not smaller than sizeof(uint32_t)");
 // clang-format on
 
-static int random_with_pattern_bin(mpi_limb_t *r, unsigned int bits, unsigned int top, unsigned int bottom,
-                                   int (*rand_bytes)(void *, unsigned char *, unsigned int),
-                                   void *rand_state)
+static int random_with_pattern_bin(mpn_limb_t *r, unsigned int bits, unsigned int top, unsigned int bottom,
+                                   int (*rand_bytes)(void *, unsigned char *, unsigned int), void *rand_state)
 {
     if (bits == 0) { return 0; }
     if (top > bits || bottom > bits) { return -EINVAL; }
-    if (top > MPI_LIMB_BITS || bottom > MPI_LIMB_BITS) { return -EINVAL; }
+    if (top > MPN_LIMB_BITS || bottom > MPN_LIMB_BITS) { return -EINVAL; }
 
     int err = 0;
-    unsigned int words = MPI_BITS_TO_LIMBS(bits);
+    unsigned int words = MPN_BITS_TO_LIMBS(bits);
 
-    if ((err = rand_bytes(rand_state, (unsigned char *)r, words * MPI_LIMB_BYTES)) != 0) {
+    if ((err = rand_bytes(rand_state, (unsigned char *)r, words * MPN_LIMB_BYTES)) != 0) {
         MPI_RAISE_ERROR(-EACCES, "RNG failed.");
         return err;
     }
-    r[words - 1] &= MPI_MASK_LIMB_HI(bits);
+    r[words - 1] &= MPN_MASK_LIMB_HI(bits);
 
     if (top > 0) {
-        unsigned int n = bits & (MPI_LIMB_BITS - 1);
+        unsigned int n = bits & (MPN_LIMB_BITS - 1);
         if (n == 0) {
-            r[words - 1] |= MPI_MASK_LIMB_HI(top);
+            r[words - 1] |= MPN_MASK_LIMB_HI(top);
         } else {
             if (n > top) {
-                r[words - 1] |= (((mpi_limb_t)1 << top) - 1) << ((n & (MPI_LIMB_BITS - 1)) - top);
+                r[words - 1] |= (((mpn_limb_t)1 << top) - 1) << ((n & (MPN_LIMB_BITS - 1)) - top);
             } else {
-                r[words - 1] = MPI_MASK_LIMB_HI(bits);
-                r[words - 2] |= MPI_MASK_LIMB_HI(top - n);
+                r[words - 1] = MPN_MASK_LIMB_HI(bits);
+                r[words - 2] |= MPN_MASK_LIMB_HI(top - n);
             }
         }
     }
-    if (bottom > 0) { r[0] |= (((mpi_limb_t)1 << bottom) - 1); }
+    if (bottom > 0) { r[0] |= (((mpn_limb_t)1 << bottom) - 1); }
 
     return 0;
 }
 
-/* return MPI_LIMB_MASK if have more than one lime; otherwise, return the first limb */
-MPI_INLINE mpi_limb_t mpi_get_limb(const mpi_t *a)
+/* return MPN_LIMB_MASK if have more than one lime; otherwise, return the first limb */
+MPN_INLINE mpn_limb_t mpi_get_limb(const mpi_t *a)
 {
-    MPI_ASSERT(a != NULL);
+    MPN_ASSERT(a != NULL);
     if (a->size > 1) {
-        return MPI_LIMB_MASK;
+        return MPN_LIMB_MASK;
     } else if (a->size == 1) {
         return a->data[0];
     } else {
@@ -201,24 +200,23 @@ MPI_INLINE mpi_limb_t mpi_get_limb(const mpi_t *a)
     }
 }
 
-#define square(x) ((mpi_limb_t)(x) * (mpi_limb_t)(x))
+#define square(x) ((mpn_limb_t)(x) * (mpn_limb_t)(x))
 static int generate_probable_prime(mpi_t *rnd, unsigned int bits, unsigned safe,
-                                   int (*rand_bytes)(void *, unsigned char *, unsigned int),
-                                   void *rand_state)
+                                   int (*rand_bytes)(void *, unsigned char *, unsigned int), void *rand_state)
 {
     uint32_t *mods = (uint32_t *)MPI_ZALLOCATE(sizeof(uint32_t), known_primes_size);
     if (mods == NULL) { return -ENOMEM; }
 
     int err;
-    mpi_limb_t delta = 0;
-    const mpi_limb_t maxdelta = MPI_LIMB_MASK - known_primes[known_primes_size - 1];
+    mpn_limb_t delta = 0;
+    const mpn_limb_t maxdelta = MPN_LIMB_MASK - known_primes[known_primes_size - 1];
 
 regenerate:
     if ((err = random_with_pattern_bin(rnd->data, bits, 2, 1, rand_bytes, rand_state)) != 0) {
         MPI_DEALLOCATE(mods);
         return err;
     }
-    rnd->size = mpi_fix_size_bin(rnd->data, MPI_BITS_TO_LIMBS(bits));
+    rnd->size = mpn_limbs(rnd->data, MPN_BITS_TO_LIMBS(bits));
     if (safe && (err = mpi_set_bit(rnd, 1)) != 0) {
         MPI_DEALLOCATE(mods);
         return err;
@@ -226,8 +224,8 @@ regenerate:
 
     /* we now have a random number 'rnd' to test. */
     for (unsigned i = 1; i < known_primes_size; i++) {
-        mpi_limb_t mod = mpi_mod_limb(rnd, (mpi_limb_t)known_primes[i]);
-        if (mod == (mpi_limb_t)-1) {
+        mpn_limb_t mod = mpi_mod_limb(rnd, (mpn_limb_t)known_primes[i]);
+        if (mod == (mpn_limb_t)-1) {
             MPI_DEALLOCATE(mods);
             return -ERANGE;
         }
@@ -265,22 +263,21 @@ recheck:
     return 0;
 }
 
-static int generate_probable_prime_dh(mpi_t *r, unsigned int bits, unsigned safe, const mpi_t *add,
-                                      const mpi_t *rem, mpi_optimizer_t *optimizer,
-                                      int (*rand_bytes)(void *, unsigned char *, unsigned int),
-                                      void *rand_state)
+static int generate_probable_prime_dh(mpi_t *r, unsigned int bits, unsigned safe, const mpi_t *add, const mpi_t *rem,
+                                      mpn_optimizer_t *optimizer,
+                                      int (*rand_bytes)(void *, unsigned char *, unsigned int), void *rand_state)
 {
     int ret = 0;
-    mpi_limb_t delta;
-    mpi_limb_t maxdelta = MPI_LIMB_MASK - known_primes[known_primes_size - 1];
+    mpn_limb_t delta;
+    mpn_limb_t maxdelta = MPN_LIMB_MASK - known_primes[known_primes_size - 1];
 
     uint32_t *mods = (uint32_t *)MPI_ZALLOCATE(sizeof(uint32_t), known_primes_size);
     if (mods == NULL) { goto exit_with_error; }
 
-    mpi_t *t1 = mpi_optimizer_get(optimizer, add->size);
+    mpi_t *t1 = mpn_optimizer_get(optimizer, add->size);
     if (t1 == NULL) { return -ENOMEM; }
 
-    delta = MPI_LIMB_MASK - mpi_get_limb(add);
+    delta = MPN_LIMB_MASK - mpi_get_limb(add);
     if (maxdelta > delta) { maxdelta = delta; }
 
 again:
@@ -301,8 +298,8 @@ again:
 
     /* we now have a random number 'r' to test. */
     for (unsigned int i = 1; i < known_primes_size; i++) {
-        mpi_limb_t mod = mpi_mod_limb(r, (mpi_limb_t)known_primes[i]);
-        if (mod == (mpi_limb_t)-1) goto err;
+        mpn_limb_t mod = mpi_mod_limb(r, (mpn_limb_t)known_primes[i]);
+        if (mod == (mpn_limb_t)-1) goto err;
         mods[i] = (uint32_t)mod;
     }
     delta = 0;
@@ -322,7 +319,7 @@ loop:
     ret = 1;
 
 err:
-    mpi_optimizer_put_limbs(optimizer, add->size);
+    mpn_optimizer_put_limbs(optimizer, add->size);
 
     return ret;
 
@@ -332,9 +329,9 @@ exit_with_error:
 }
 
 /* miller-rabin checks for specified bits */
-MPI_INLINE unsigned int prime_checks_for_bits(unsigned int bits)
+MPN_INLINE unsigned int prime_checks_for_bits(unsigned int bits)
 {
-    MPI_ASSERT(bits >= 6);
+    MPN_ASSERT(bits >= 6);
 
     const struct {
         unsigned int bits;
@@ -351,8 +348,7 @@ MPI_INLINE unsigned int prime_checks_for_bits(unsigned int bits)
     return chocies[count - 1].checks;
 }
 
-static int millerrabin_witness(mpi_t *witness, mpi_t *a1, mpi_t *a1_odd, unsigned int k,
-                               mpi_montgomery_t *mont)
+static int millerrabin_witness(mpi_t *witness, mpi_t *a1, mpi_t *a1_odd, unsigned int k, mpi_montgomery_t *mont)
 {
     int err;
     /* witness = witness^a1_odd mod a */
@@ -362,21 +358,21 @@ static int millerrabin_witness(mpi_t *witness, mpi_t *a1, mpi_t *a1_odd, unsigne
     }
 
     if (mpi_bits(witness) == 1) { return 1; /* probably prime */ }
-    if (mpi_ucmp_bin(witness->data, witness->size, a1->data, a1->size) == 0) {
+    if (mpn_cmp(witness->data, witness->size, a1->data, a1->size) == 0) {
         return 1; /* witness == -1 (mod a), 'a' is probably prime */
     }
 
     while (--k > 0) {
         /* witness := witness^2 mod a */
         mpi_montgomery_sqr_bin(witness->data, witness->data, mont);
-        witness->size = mpi_fix_size_bin(witness->data, witness->size);
+        witness->size = mpn_limbs(witness->data, witness->size);
 
         if (mpi_bits(witness) == 1) {
             MPI_RAISE_ERROR(-EINVAL, "witness is composite");
             return 0; /* 'a' is composite, otherwise a previous 'witness' would have been == -1 (mod 'a') */
         }
 
-        if (mpi_ucmp_bin(witness->data, witness->size, a1->data, a1->size) == 0) {
+        if (mpn_cmp(witness->data, witness->size, a1->data, a1->size) == 0) {
             return 1; /* witness == -1 (mod a), 'a' is probably prime */
         }
     }
@@ -394,9 +390,8 @@ static int millerrabin_witness(mpi_t *witness, mpi_t *a1, mpi_t *a1_odd, unsigne
  *   1. return 0 if the number is composite
  *      1 if it is prime with an error probability of less than 0.25^checks
  */
-int mpi_is_prime(const mpi_t *a, unsigned int checks, unsigned do_trial_division,
-                 mpi_optimizer_t *optimizer, int (*rand_bytes)(void *, unsigned char *, unsigned int),
-                 void *rand_state)
+int mpi_is_prime(const mpi_t *a, unsigned int checks, unsigned do_trial_division, mpn_optimizer_t *optimizer,
+                 int (*rand_bytes)(void *, unsigned char *, unsigned int), void *rand_state)
 {
     if (a == NULL) {
         MPI_RAISE_ERROR(-EINVAL, "Invalid Integer: nullptr");
@@ -411,7 +406,7 @@ int mpi_is_prime(const mpi_t *a, unsigned int checks, unsigned do_trial_division
 
     /* binary seach: check if a small prime */
     if (UNLIKELY(mpi_bytes(a) <= sizeof(uint32_t))) {
-        mpi_limb_t aa = a->data[0];
+        mpn_limb_t aa = a->data[0];
         unsigned int lo = 0, hi = known_primes_size - 1;
         while (lo <= hi) {
             unsigned int mid = lo + (hi - lo) / 2;
@@ -428,8 +423,8 @@ int mpi_is_prime(const mpi_t *a, unsigned int checks, unsigned do_trial_division
     /* first look for small factors */
     if (do_trial_division) {
         for (unsigned int i = 1; i < known_primes_size; i++) {
-            mpi_limb_t mod = mpi_mod_limb(a, known_primes[i]);
-            if (mod == (mpi_limb_t)-1) {
+            mpn_limb_t mod = mpi_mod_limb(a, known_primes[i]);
+            if (mod == (mpn_limb_t)-1) {
                 MPI_RAISE_ERROR(-ERANGE);
                 return -ERANGE;
             }
@@ -440,9 +435,9 @@ int mpi_is_prime(const mpi_t *a, unsigned int checks, unsigned do_trial_division
         }
     }
 
-    mpi_optimizer_t *opt = optimizer;
+    mpn_optimizer_t *opt = optimizer;
     if (opt == NULL) {
-        opt = mpi_optimizer_create((a->size + MPI_ALIGNED_HEAD_LIMBS) * 3); /* a1, a1_odd, witness */
+        opt = mpn_optimizer_create((a->size + MPI_ALIGNED_HEAD_LIMBS) * 3); /* a1, a1_odd, witness */
         if (opt == NULL) {
             MPI_RAISE_ERROR(-ENOMEM);
             return -ENOMEM;
@@ -451,9 +446,9 @@ int mpi_is_prime(const mpi_t *a, unsigned int checks, unsigned do_trial_division
 
     int err;
     mpi_montgomery_t *mont = NULL;
-    mpi_t *a1 = mpi_optimizer_get(opt, a->size);
-    mpi_t *a1_odd = mpi_optimizer_get(opt, a->size);
-    mpi_t *witness = mpi_optimizer_get(opt, a->size);
+    mpi_t *a1 = mpn_optimizer_get(opt, a->size);
+    mpi_t *a1_odd = mpn_optimizer_get(opt, a->size);
+    mpi_t *witness = mpn_optimizer_get(opt, a->size);
     if (a1 == NULL || a1_odd == NULL || witness == NULL) {
         MPI_RAISE_ERROR(-ENOMEM);
         err = -ENOMEM;
@@ -487,14 +482,12 @@ int mpi_is_prime(const mpi_t *a, unsigned int checks, unsigned do_trial_division
     if (checks == 0) { checks = prime_checks_for_bits(mpi_bits(a)); }
     for (unsigned int i = 0; i < checks; i++) {
         /* 1 < witness < a-1 */
-        mpi_limb_t one = 1;
-        if ((err = mpi_random_range_bin(witness->data, 1000, &one, 1, a1->data, a1->size, rand_bytes,
-                                        rand_state))
-            != 0) {
+        mpn_limb_t one = 1;
+        if ((err = mpn_random_range(witness->data, 1000, &one, 1, a1->data, a1->size, rand_bytes, rand_state)) != 0) {
             MPI_RAISE_ERROR(err);
             goto exit_with_error;
         }
-        witness->size = mpi_fix_size_bin(witness->data, a1->size);
+        witness->size = mpn_limbs(witness->data, a1->size);
 
         /* miller-rabin test */
         err = millerrabin_witness(witness, a1, a1_odd, k, mont);
@@ -502,10 +495,10 @@ int mpi_is_prime(const mpi_t *a, unsigned int checks, unsigned do_trial_division
     }
 
 exit_with_error:
-    if (witness != NULL) { mpi_optimizer_put(opt, a->size); }
-    if (a1_odd != NULL) { mpi_optimizer_put(opt, a->size); }
-    if (a1 != NULL) { mpi_optimizer_put(opt, a->size); }
-    if (optimizer == NULL && opt != NULL) { mpi_optimizer_destory(opt); }
+    if (witness != NULL) { mpn_optimizer_put(opt, a->size); }
+    if (a1_odd != NULL) { mpn_optimizer_put(opt, a->size); }
+    if (a1 != NULL) { mpn_optimizer_put(opt, a->size); }
+    if (optimizer == NULL && opt != NULL) { mpn_optimizer_destory(opt); }
     mpi_montgomery_destory(mont);
 
     return err;
@@ -543,26 +536,26 @@ int mpi_generate_prime(mpi_t *ret, unsigned int bits, unsigned safe, const mpi_t
 
     int err = 0;
 
-    mpi_optimizer_t *optimizer = NULL;
+    mpn_optimizer_t *optimizer = NULL;
     {
         /* create proper required optimizer once */
         unsigned int optsize = 0;
-        optsize += safe ? (MPI_ALIGNED_HEAD_LIMBS + MPI_BITS_TO_LIMBS(bits)) : 0; /* t */
-        optsize += add != NULL ? (MPI_ALIGNED_HEAD_LIMBS + add->size) : 0; /* generate_probable_prime_dh */
-        optsize += (MPI_ALIGNED_HEAD_LIMBS + MPI_BITS_TO_LIMBS(bits)) * 3; /* mpi_is_prime */
+        optsize += safe ? (MPI_ALIGNED_HEAD_LIMBS + MPN_BITS_TO_LIMBS(bits)) : 0; /* t */
+        optsize += add != NULL ? (MPI_ALIGNED_HEAD_LIMBS + add->size) : 0;        /* generate_probable_prime_dh */
+        optsize += (MPI_ALIGNED_HEAD_LIMBS + MPN_BITS_TO_LIMBS(bits)) * 3;        /* mpi_is_prime */
 
-        optimizer = mpi_optimizer_create(optsize);
+        optimizer = mpn_optimizer_create(optsize);
         if (optimizer == NULL) {
             MPI_RAISE_ERROR(-ENOMEM);
             err = -ENOMEM;
             goto exit_with_error;
         }
     }
-    MPI_ASSERT(optimizer != NULL);
+    MPN_ASSERT(optimizer != NULL);
 
     mpi_t *t = NULL;
     if (safe) {
-        t = mpi_optimizer_get(optimizer, MPI_BITS_TO_LIMBS(bits));
+        t = mpn_optimizer_get(optimizer, MPN_BITS_TO_LIMBS(bits));
         if (t == NULL) {
             MPI_RAISE_ERROR(-ENOMEM);
             err = -ENOMEM;
@@ -580,8 +573,7 @@ regenerate:
             goto exit_with_error;
         }
     } else {
-        if ((err = generate_probable_prime_dh(ret, bits, safe, add, rem, optimizer, rand_bytes, rand_state))
-            != 0) {
+        if ((err = generate_probable_prime_dh(ret, bits, safe, add, rem, optimizer, rand_bytes, rand_state)) != 0) {
             MPI_RAISE_ERROR(err);
             goto exit_with_error;
         }
@@ -622,7 +614,7 @@ regenerate:
     err = 0;
 
 exit_with_error:
-    mpi_optimizer_destory(optimizer);
+    mpn_optimizer_destory(optimizer);
 
     return err;
 }
@@ -630,16 +622,15 @@ exit_with_error:
 /**
  * test if |a| and |b| are coprime
  */
-int mpi_is_coprime_bin(mpi_limb_t *a, unsigned int asize, mpi_limb_t *b, unsigned int bsize,
-                       mpi_optimizer_t *optimizer)
+int mpn_is_coprime(mpn_limb_t *a, unsigned int asize, mpn_limb_t *b, unsigned int bsize, mpn_optimizer_t *optimizer)
 {
     if (asize > bsize) {
-        SWAP(mpi_limb_t *, a, b);
+        SWAP(mpn_limb_t *, a, b);
         SWAP(unsigned int, asize, bsize);
     }
 
-    mpi_t *r = mpi_optimizer_get(optimizer, 64);
-    MPI_ASSERT(r != NULL);
+    mpi_t *r = mpn_optimizer_get(optimizer, 64);
+    MPN_ASSERT(r != NULL);
 
     mpi_t ta, tb;
     mpi_make(&ta, a, asize);
@@ -647,7 +638,7 @@ int mpi_is_coprime_bin(mpi_limb_t *a, unsigned int asize, mpi_limb_t *b, unsigne
 
     mpi_gcd_consttime(r, &ta, &tb, optimizer);
     int ret = r->size == 1 && r->data[0] == 1;
-    mpi_optimizer_put(optimizer, 64);
+    mpn_optimizer_put(optimizer, 64);
 
     return ret;
 }

@@ -448,7 +448,7 @@ int main(void)
             mpi_from_octets(&a, abuffer.data(), abuffer.size());
             mpi_from_octets(&b, bbuffer.data(), bbuffer.size());
 
-            size_t sz = mpi_bits(a) + mpi_bits(b) + MPI_LIMB_BITS;
+            size_t sz = mpi_bits(a) + mpi_bits(b) + MPN_LIMB_BITS;
             mpi_t *r = mpi_create(sz);
 
             Benchmark bench("mul(mpi)", 0);
@@ -499,7 +499,7 @@ int main(void)
             mpi_t *a = mpi_create(buffer.size() * BITS_PER_BYTE);
             mpi_from_octets(&a, buffer.data(), buffer.size());
 
-            mpi_t *r = mpi_create((a != NULL ? a->size : 0) * 2 * MPI_LIMB_BITS);
+            mpi_t *r = mpi_create((a != NULL ? a->size : 0) * 2 * MPN_LIMB_BITS);
 
             Benchmark bench("sqr(mpi)", 0);
             if (bench.run([&]() -> bool {
@@ -565,12 +565,12 @@ int main(void)
             mpi_t *b = mpi_create(bbuffer.size() * BITS_PER_BYTE);
             mpi_from_octets(&a, abuffer.data(), abuffer.size());
             mpi_from_octets(&b, bbuffer.data(), bbuffer.size());
-            a = mpi_expand(a, mpi_bits(a) + MPI_LIMB_BITS); // @IMPORTANT: one additional word required
+            a = mpi_expand(a, mpi_bits(a) + MPN_LIMB_BITS); // @IMPORTANT: one additional word required
 
             size_t qsize = 0, rsize = mpi_bits(b);
             if (mpi_bits(a) >= mpi_bits(b)) {
                 rsize = mpi_bits(a);
-                qsize = mpi_bits(a) - mpi_bits(b) + MPI_LIMB_BITS;
+                qsize = mpi_bits(a) - mpi_bits(b) + MPN_LIMB_BITS;
             }
 
             mpi_t *q = mpi_create(qsize);
@@ -650,7 +650,7 @@ int main(void)
             mpi_from_octets(&a, abuffer.data(), abuffer.size());
             mpi_from_octets(&b, bbuffer.data(), bbuffer.size());
 
-            mpi_t *r = mpi_create(std::max(mpi_bits(a), mpi_bits(b)) + MPI_LIMB_BITS);
+            mpi_t *r = mpi_create(std::max(mpi_bits(a), mpi_bits(b)) + MPN_LIMB_BITS);
 
             // Daniel J. Bernsteion and Bo-Yin Yang's constant-time gcd algorithm
             {

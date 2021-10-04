@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef MULTIPLE_PRECISION_INTEGER_CONFIGURATION_H
-#define MULTIPLE_PRECISION_INTEGER_CONFIGURATION_H
+#ifndef MULTIPLE_PRECISION_CONFIGURATION_H
+#define MULTIPLE_PRECISION_CONFIGURATION_H
 
 #include <errno.h>
 #include <ctype.h>
@@ -68,9 +68,9 @@
 #endif
 
 // clang-format off
-// #define MPI_LIMB_BITS                32 /* undefine to detect automatically */
+// #define MPN_LIMB_BITS                32 /* undefine to detect automatically */
+// #define MPN_NO_INLINE_ASM            /* NOT use inline asm, @see https://gcc.gnu.org/wiki/DontUseInlineAsm */
 // #define MPI_CACHE_LINE_BYTES         64 /* size of cache line (in bytes) */
-// #define MPI_NO_INLINE_ASM            /* NOT use inline asm, @see https://gcc.gnu.org/wiki/DontUseInlineAsm */
 // #define MPI_LOW_FOOTPRINT            /* optimize the static memory footprint of the library */
 // #define MPI_USE_SLIDING_WINDOW_EXP   /* sliding-windows exponentiation */
 // #define MPI_USE_C_MONTGOMERY_MUL_BIN /* use c implementation for mpi_montgomery_mul_bin */
@@ -78,29 +78,33 @@
 // clang-format on
 
 /** automatically detection for some known platforms */
-#ifndef MPI_LIMB_BITS
-#if defined(__x86_64) || defined(__x86_64__) || defined(_M_AMD64) || defined(_M_X64) \
-    || defined(__aarch64__) || defined(__powerpc64__) || defined(_ARCH_PP64)
-#define MPI_LIMB_BITS 64
-#elif defined(__x86) || defined(__i386) || defined(__i386__) || defined(_M_IX86) || defined(__arm) \
-    || defined(__arm__) || defined(_M_ARM)
-#define MPI_LIMB_BITS 32
+#ifndef MPN_LIMB_BITS
+#if defined(__x86_64) || defined(__x86_64__) || defined(_M_AMD64) || defined(_M_X64) || defined(__aarch64__) \
+    || defined(__powerpc64__) || defined(_ARCH_PP64)
+#define MPN_LIMB_BITS 64
+#elif defined(__x86) || defined(__i386) || defined(__i386__) || defined(_M_IX86) || defined(__arm) || defined(__arm__) \
+    || defined(_M_ARM)
+#define MPN_LIMB_BITS 32
 #endif
+#endif
+
+#ifndef MPI_NAIL_BITS
+#define MPI_NAIL_BITS 0
 #endif
 
 /** inline */
 #if defined(__cplusplus)
-#define MPI_INLINE inline
+#define MPN_INLINE inline
 #else
-#define MPI_INLINE static inline
+#define MPN_INLINE static inline
 #endif
 
 /** assertion and static assertion */
-#ifndef MPI_ASSERT
-#define MPI_ASSERT(cond)                                                               \
-    if (!(cond)) {                                                                     \
-        fprintf(stderr, "Assertion Failed: " #cond ", @ %s:%d\n", __FILE__, __LINE__); \
-        MPI_RAISE_EXCEPTION();                                                         \
+#ifndef MPN_ASSERT
+#define MPN_ASSERT(cond)                                                      \
+    if (!(cond)) {                                                            \
+        printf("Assertion Failed: " #cond ", @ %s:%d\n", __FILE__, __LINE__); \
+        MPI_RAISE_EXCEPTION();                                                \
     }
 #endif
 
@@ -109,6 +113,23 @@
 #else
 #define STATIC_ASSERT(cond, msg) _Static_assert(cond, msg)
 #endif
+
+/* branch prediction */
+#if (defined(__GNUC__) && (__GNUC__ >= 2)) || defined(__clang__)
+#define LIKELY(x)           __builtin_expect(!!(x), 1)
+#define UNLIKELY(x)         __builtin_expect(!!(x), 0)
+#define BUILTIN_CONSTANT(c) __builtin_constant_p(c)
+#else
+#define LIKELY(x)           (x)
+#define UNLIKELY(x)         (x)
+#define BUILTIN_CONSTANT(c) (c)
+#endif
+
+#define ABOVE_THRESHOLD(size, thresh)            \
+    ((BUILTIN_CONSTANT(thresh) && (thresh) == 0) \
+     || (!(BUILTIN_CONSTANT(thresh) && (thresh) == ~((size_t)0)) && (size) >= (thresh)))
+#define BELOW_THRESHOLD(size, thresh) (!ABOVE_THRESHOLD(size, thresh))
+
 
 /** mpi: debug macros */
 // clang-format off
@@ -134,7 +155,7 @@
 #define MPI_HAVE_ARGS(...) MPI_NARG(__VA_ARGS__)
 #endif
 
-MPI_INLINE void mpi_raise_exception(void)
+MPN_INLINE void mpi_raise_exception(void)
 {
 #ifdef SIGFPE
     raise(SIGFPE);
@@ -162,16 +183,16 @@ MPI_INLINE void mpi_raise_exception(void)
 #endif
 
 /** definations from configurations, NEVER modify it */
-#if MPI_LIMB_BITS == 64
-typedef int64_t mpi_slimb_t;
-typedef uint64_t mpi_limb_t;
-#define MPI_LIMB_BYTES   8 // sizeof(mpi_limb_t)
-#define MPI_LIMB_FORMAT  PRIu64
-#define MPI_LIMB_MASK    0xFFFFFFFFFFFFFFFF
-#define MPI_LIMB_MASK_LO 0x00000000FFFFFFFF
-#define MPI_LIMB_MASK_HI 0xFFFFFFFF00000000
+#if MPN_LIMB_BITS == 64
+typedef int64_t mpn_slimb_t;
+typedef uint64_t mpn_limb_t;
+#define MPN_LIMB_BYTES   8 // sizeof(mpn_limb_t)
+#define MPN_LIMB_FORMAT  PRIu64
+#define MPN_LIMB_MASK    0xFFFFFFFFFFFFFFFF
+#define MPN_LIMB_MASK_LO 0x00000000FFFFFFFF
+#define MPN_LIMB_MASK_HI 0xFFFFFFFF00000000
 
-MPI_INLINE void MPI_LIMB_TO_OCTETS(unsigned char *p, mpi_limb_t v)
+MPN_INLINE void MPN_LIMB_TO_OCTETS(unsigned char *p, mpn_limb_t v)
 {
     p[0] = (unsigned char)(v >> 56);
     p[1] = (unsigned char)(v >> 48);
@@ -182,16 +203,16 @@ MPI_INLINE void MPI_LIMB_TO_OCTETS(unsigned char *p, mpi_limb_t v)
     p[6] = (unsigned char)(v >> 8);
     p[7] = (unsigned char)(v >> 0);
 }
-#elif MPI_LIMB_BITS == 32
-typedef int32_t mpi_slimb_t;
-typedef uint32_t mpi_limb_t;
-#define MPI_LIMB_BYTES   4 // sizeof(mpi_limb_t)
-#define MPI_LIMB_FORMAT  PRIu32
-#define MPI_LIMB_MASK    0xFFFFFFFF
-#define MPI_LIMB_MASK_LO 0x0000FFFF
-#define MPI_LIMB_MASK_HI 0xFFFF0000
+#elif MPN_LIMB_BITS == 32
+typedef int32_t mpn_slimb_t;
+typedef uint32_t mpn_limb_t;
+#define MPN_LIMB_BYTES   4 // sizeof(mpn_limb_t)
+#define MPN_LIMB_FORMAT  PRIu32
+#define MPN_LIMB_MASK    0xFFFFFFFF
+#define MPN_LIMB_MASK_LO 0x0000FFFF
+#define MPN_LIMB_MASK_HI 0xFFFF0000
 
-MPI_INLINE void MPI_LIMB_TO_OCTETS(unsigned char *p, mpi_limb_t v)
+MPN_INLINE void MPN_LIMB_TO_OCTETS(unsigned char *p, mpn_limb_t v)
 {
     p[0] = (unsigned char)(v >> 24);
     p[1] = (unsigned char)(v >> 16);
@@ -199,39 +220,39 @@ MPI_INLINE void MPI_LIMB_TO_OCTETS(unsigned char *p, mpi_limb_t v)
     p[3] = (unsigned char)(v >> 0);
 }
 #else
-#error MPI_LIMB_BITS MUST bed defined first.
+#error MPN_LIMB_BITS MUST bed defined first.
 #endif
 
 /**
  * Configuration checks: NEVER modify this
  */
-STATIC_ASSERT(sizeof(mpi_limb_t) == MPI_LIMB_BYTES, "mpi_limb_t MUST be MPI_LIMB_BYTES bytes");
-STATIC_ASSERT(~(mpi_limb_t)0 == MPI_LIMB_MASK, "~(mpi_limb_t)0 MUST equals to MPI_LIMB_MASK");
+STATIC_ASSERT(sizeof(mpn_limb_t) == MPN_LIMB_BYTES, "mpn_limb_t MUST be MPN_LIMB_BYTES bytes");
+STATIC_ASSERT(~(mpn_limb_t)0 == MPN_LIMB_MASK, "~(mpn_limb_t)0 MUST equals to MPN_LIMB_MASK");
 
 
-MPI_INLINE unsigned int MPI_BITS_TO_LIMBS(unsigned int bits)
+MPN_INLINE unsigned int MPN_BITS_TO_LIMBS(unsigned int bits)
 {
-    return (bits + MPI_LIMB_BITS - 1) / MPI_LIMB_BITS;
+    return (bits + MPN_LIMB_BITS - 1) / MPN_LIMB_BITS;
 }
 
 /* mask for [lo, hi), (hi - lo) bits */
-MPI_INLINE mpi_limb_t MPI_MASK_LIMB(unsigned int lo, unsigned int hi)
+MPN_INLINE mpn_limb_t MPN_MASK_LIMB(unsigned int lo, unsigned int hi)
 {
-    MPI_ASSERT(lo <= hi);
-    MPI_ASSERT(lo < MPI_LIMB_BITS && hi <= MPI_LIMB_BITS);
+    MPN_ASSERT(lo <= hi);
+    MPN_ASSERT(lo < MPN_LIMB_BITS && hi <= MPN_LIMB_BITS);
 
-    return ~(MPI_LIMB_MASK << hi) & (MPI_LIMB_MASK << lo);
+    return ~(MPN_LIMB_MASK << hi) & (MPN_LIMB_MASK << lo);
 }
 
 /* mask HI nbits */
-MPI_INLINE mpi_limb_t MPI_MASK_LIMB_HI(unsigned int nbits)
+MPN_INLINE mpn_limb_t MPN_MASK_LIMB_HI(unsigned int nbits)
 {
-    return ((mpi_limb_t)(-1) >> ((MPI_LIMB_BITS - (nbits & (MPI_LIMB_BITS - 1))) & (MPI_LIMB_BITS - 1)));
+    return ((mpn_limb_t)(-1) >> ((MPN_LIMB_BITS - (nbits & (MPN_LIMB_BITS - 1))) & (MPN_LIMB_BITS - 1)));
 }
 
-MPI_INLINE mpi_limb_t MPI_MASK_LIMB_LO(unsigned int nbits)
+MPN_INLINE mpn_limb_t MPN_MASK_LIMB_LO(unsigned int nbits)
 {
-    return MPI_LIMB_MASK >> (MPI_LIMB_BITS - (nbits & (MPI_LIMB_BITS - 1)));
+    return MPN_LIMB_MASK >> (MPN_LIMB_BITS - (nbits & (MPN_LIMB_BITS - 1)));
 }
 
 /**
@@ -246,11 +267,10 @@ MPI_INLINE mpi_limb_t MPI_MASK_LIMB_LO(unsigned int nbits)
 typedef struct {
     unsigned int attr; /**< mpi attributes */
     unsigned int sign; /**< mpi sign: negtive or not */
-    unsigned int size; /**< mpi size (count of mpi_limb_t) */
-    unsigned int room; /**< mpi max size (count of mpi_limb_t) */
-    mpi_limb_t *data;  /**< mpi data chunk(most significant limb at the largest) */
+    unsigned int size; /**< mpi size (count of mpn_limb_t) */
+    unsigned int room; /**< mpi max size (count of mpn_limb_t) */
+    mpn_limb_t *data;  /**< mpi data chunk(most significant limb at the largest) */
 } mpi_t;
-#define MPI_ALIGNED_HEAD_LIMBS \
-    ((unsigned int)((sizeof(mpi_t) + sizeof(mpi_limb_t) - 1) / sizeof(mpi_limb_t)))
+#define MPI_ALIGNED_HEAD_LIMBS ((unsigned int)((sizeof(mpi_t) + sizeof(mpn_limb_t) - 1) / sizeof(mpn_limb_t)))
 
 #endif

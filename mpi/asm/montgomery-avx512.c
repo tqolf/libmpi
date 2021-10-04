@@ -17,22 +17,22 @@
 #define EXP_DIGIT_MASK_AVX512 ((uint64_t)0xFFFFFFFFFFFFF)
 
 /* number of digits */
-MPI_INLINE int __digit_num_avx512(int bitSize, int digSize)
+MPN_INLINE int __digit_num_avx512(int bitSize, int digSize)
 {
     return (bitSize + digSize - 1) / digSize;
 }
 
 /* number of "EXP_DIGIT_SIZE_AVX512" chunks in "bitSize" bit string matched for AMM */
-MPI_INLINE unsigned int num_of_variable_avx512(int modulusBits)
+MPN_INLINE unsigned int num_of_variable_avx512(int modulusBits)
 {
-    unsigned int ammBitSize = 2 + __digit_num_avx512(modulusBits, MPI_LIMB_BITS) * MPI_LIMB_BITS;
+    unsigned int ammBitSize = 2 + __digit_num_avx512(modulusBits, MPN_LIMB_BITS) * MPN_LIMB_BITS;
     unsigned int redNum = __digit_num_avx512(ammBitSize, EXP_DIGIT_SIZE_AVX512);
     return redNum;
 }
 
 /* buffer corresponding to num_of_variable_avx2() */
 /* cpMontExp_avx512_BufferSize() */
-MPI_INLINE int num_of_variable_buff_avx512(int len)
+MPN_INLINE int num_of_variable_buff_avx512(int len)
 {
     int tail = len % 8;
     if (0 == tail) tail = 8;
@@ -45,7 +45,7 @@ MPI_INLINE int num_of_variable_buff_avx512(int len)
 */
 
 /* pair of 52-bit digits occupys 13 bytes (the fact is using in implementation beloow) */
-MPI_INLINE uint64_t getDig52(const uint8_t *pStr, int strLen)
+MPN_INLINE uint64_t getDig52(const uint8_t *pStr, int strLen)
 {
     uint64_t digit = 0;
     for (; strLen > 0; strLen--) {
@@ -91,7 +91,7 @@ static void regular_dig52(uint64_t *out, const uint64_t *in, int inBitSize)
    converts "redundant" (base = 2^DIGIT_SIZE) representation
    into regular (base = 2^64)
 */
-MPI_INLINE void putDig52(uint8_t *pStr, int strLen, uint64_t digit)
+MPN_INLINE void putDig52(uint8_t *pStr, int strLen, uint64_t digit)
 {
     for (; strLen > 0; strLen--) {
         *pStr++ = (uint8_t)(digit & 0xFF);
@@ -141,8 +141,8 @@ static void AMM52(uint64_t *out, const uint64_t *a, const uint64_t *b, const uin
     if (tail) expLen += (NUM64 - tail);
 
     /* make sure not inplace operation */
-    // tbcd: temporary excluded: MPI_ASSERT(res!=a);
-    // tbcd: temporary excluded: MPI_ASSERT(res!=b);
+    // tbcd: temporary excluded: MPN_ASSERT(res!=a);
+    // tbcd: temporary excluded: MPN_ASSERT(res!=b);
 
     /* set result to zero */
     for (n = 0; n < expLen; n += NUM64) _mm512_storeu_si512(res + n, zero);
@@ -651,7 +651,7 @@ static void AMM52x79(uint64_t *out, const uint64_t *a, const uint64_t *b, const 
 //#define _EXP_AVX512_DEBUG_
 #ifdef _EXP_AVX512_DEBUG_
 #include "pcpmontred.h"
-void debugToConvMontDomain(mpi_limb_t *pR, const mpi_limb_t *redInp, const mpi_limb_t *redM, int almMM_bitsize, const mpi_limb_t *pM, const mpi_limb_t *pRR, int nsM, mpi_limb_t k0, mpi_limb_t *pBuffer)
+void debugToConvMontDomain(mpn_limb_t *pR, const mpn_limb_t *redInp, const mpn_limb_t *redM, int almMM_bitsize, const mpn_limb_t *pM, const mpn_limb_t *pRR, int nsM, mpn_limb_t k0, mpn_limb_t *pBuffer)
 {
     uint64_t one[32] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     uint64_t redT[32];
@@ -685,7 +685,7 @@ unsigned int gsMontExpWinBuffer_avx512(int modulusBits)
     unsigned int redNum = num_of_variable_avx512(modulusBits);       /* "sizeof" variable */
     unsigned int redBufferNum = num_of_variable_buff_avx512(redNum); /* "sizeof" variable  buffer */
 
-    unsigned int bufferNum = CACHE_LINE_SIZE / (int32_t)sizeof(mpi_limb_t) + mont_scramble_buffer_size(redNum, w) /* pre-computed table */
+    unsigned int bufferNum = CACHE_LINE_SIZE / (int32_t)sizeof(mpn_limb_t) + mont_scramble_buffer_size(redNum, w) /* pre-computed table */
                              + redBufferNum * 7;                                                                  /* addition 7 variables */
     return bufferNum;
 }
@@ -704,27 +704,27 @@ unsigned int gsMontExpWinBuffer_avx512(int modulusBits)
 //    redM[redBufferLen]
 //    redBuffer[redBufferLen*3]
 */
-unsigned int gsMontExpBin_BNU_avx512(mpi_limb_t *dataY, const mpi_limb_t *dataX, unsigned int nsX, const mpi_limb_t *dataE, unsigned int bitsizeE, MPZ_MOD_ENGINE *pMont, mpi_limb_t *pBuffer)
+unsigned int gsMontExpBin_BNU_avx512(mpn_limb_t *dataY, const mpn_limb_t *dataX, unsigned int nsX, const mpn_limb_t *dataE, unsigned int bitsizeE, MPZ_MOD_ENGINE *pMont, mpn_limb_t *pBuffer)
 {
-    const mpi_limb_t *dataM = MOD_MODULUS(pMont);
-    const mpi_limb_t *dataRR = MOD_MNT_R2(pMont);
+    const mpn_limb_t *dataM = MOD_MODULUS(pMont);
+    const mpn_limb_t *dataRR = MOD_MNT_R2(pMont);
     unsigned int nsM = MOD_LEN(pMont);
-    mpi_limb_t k0 = MOD_MNT_FACTOR(pMont);
+    mpn_limb_t k0 = MOD_MNT_FACTOR(pMont);
 
-    unsigned int nsE = MPI_BITS_TO_LIMBS(bitsizeE);
+    unsigned int nsE = MPN_BITS_TO_LIMBS(bitsizeE);
 
     int modulusBitSize = BITSIZE_BNU(dataM, nsM);
-    int cnvMM_bitsize = __digit_num_avx512(modulusBitSize, MPI_LIMB_BITS) * MPI_LIMB_BITS;
+    int cnvMM_bitsize = __digit_num_avx512(modulusBitSize, MPN_LIMB_BITS) * MPN_LIMB_BITS;
     int almMM_bitsize = cnvMM_bitsize + 2;
     int redLen = __digit_num_avx512(almMM_bitsize, EXP_DIGIT_SIZE_AVX512);
     int redBufferLen = num_of_variable_buff_avx512(redLen);
 
     /* allocate buffers */
-    mpi_limb_t *redX = pBuffer;
-    mpi_limb_t *redT = redX + redBufferLen;
-    mpi_limb_t *redY = redT + redBufferLen;
-    mpi_limb_t *redM = redY + redBufferLen;
-    mpi_limb_t *redBuffer = redM + redBufferLen;
+    mpn_limb_t *redX = pBuffer;
+    mpn_limb_t *redT = redX + redBufferLen;
+    mpn_limb_t *redY = redT + redBufferLen;
+    mpn_limb_t *redM = redY + redBufferLen;
+    mpn_limb_t *redBuffer = redM + redBufferLen;
 
     cpAMM52 ammFunc;
     switch (modulusBitSize) {
@@ -770,28 +770,28 @@ unsigned int gsMontExpBin_BNU_avx512(mpi_limb_t *dataY, const mpi_limb_t *dataX,
     FIX_BNU(dataE, nsE);
     {
         /* execute most significant part pE */
-        mpi_limb_t eValue = dataE[nsE - 1];
+        mpn_limb_t eValue = dataE[nsE - 1];
         int n = mpz_nlz(eValue) + 1;
 
         eValue <<= n;
-        for (; n < MPI_LIMB_BITS; n++, eValue <<= 1) {
+        for (; n < MPN_LIMB_BITS; n++, eValue <<= 1) {
             /* squaring/multiplication: Y = Y*Y */
             ammFunc(redY, redY, redY, redM, k0, redLen, redBuffer);
 
             /* and multiply Y = Y*X */
-            if (eValue & ((mpi_limb_t)1 << (MPI_LIMB_BITS - 1))) ammFunc(redY, redY, redX, redM, k0, redLen, redBuffer);
+            if (eValue & ((mpn_limb_t)1 << (MPN_LIMB_BITS - 1))) ammFunc(redY, redY, redX, redM, k0, redLen, redBuffer);
         }
 
         /* execute rest bits of E */
         for (--nsE; nsE > 0; nsE--) {
             eValue = dataE[nsE - 1];
 
-            for (n = 0; n < MPI_LIMB_BITS; n++, eValue <<= 1) {
+            for (n = 0; n < MPN_LIMB_BITS; n++, eValue <<= 1) {
                 /* squaring: Y = Y*Y */
                 ammFunc(redY, redY, redY, redM, k0, redLen, redBuffer);
 
                 /* and multiply: Y = Y*X */
-                if (eValue & ((mpi_limb_t)1 << (MPI_LIMB_BITS - 1))) ammFunc(redY, redY, redX, redM, k0, redLen, redBuffer);
+                if (eValue & ((mpn_limb_t)1 << (MPN_LIMB_BITS - 1))) ammFunc(redY, redY, redX, redM, k0, redLen, redBuffer);
             }
         }
     }
@@ -816,27 +816,27 @@ unsigned int gsMontExpBin_BNU_avx512(mpi_limb_t *dataY, const mpi_limb_t *dataX,
 //    redM[redBufferLen]
 //    redBuffer[redBufferLen*3]
 */
-unsigned int gsMontExpBin_BNU_sscm_avx512(mpi_limb_t *dataY, const mpi_limb_t *dataX, unsigned int nsX, const mpi_limb_t *dataE, unsigned int bitsizeE, MPZ_MOD_ENGINE *pMont, mpi_limb_t *pBuffer)
+unsigned int gsMontExpBin_BNU_sscm_avx512(mpn_limb_t *dataY, const mpn_limb_t *dataX, unsigned int nsX, const mpn_limb_t *dataE, unsigned int bitsizeE, MPZ_MOD_ENGINE *pMont, mpn_limb_t *pBuffer)
 {
-    const mpi_limb_t *dataM = MOD_MODULUS(pMont);
-    const mpi_limb_t *dataRR = MOD_MNT_R2(pMont);
+    const mpn_limb_t *dataM = MOD_MODULUS(pMont);
+    const mpn_limb_t *dataRR = MOD_MNT_R2(pMont);
     unsigned int nsM = MOD_LEN(pMont);
-    unsigned int nsE = MPI_BITS_TO_LIMBS(bitsizeE);
-    mpi_limb_t k0 = MOD_MNT_FACTOR(pMont);
+    unsigned int nsE = MPN_BITS_TO_LIMBS(bitsizeE);
+    mpn_limb_t k0 = MOD_MNT_FACTOR(pMont);
 
     int modulusBitSize = BITSIZE_BNU(dataM, nsM);
-    int cnvMM_bitsize = __digit_num_avx512(modulusBitSize, MPI_LIMB_BITS) * MPI_LIMB_BITS;
+    int cnvMM_bitsize = __digit_num_avx512(modulusBitSize, MPN_LIMB_BITS) * MPN_LIMB_BITS;
     int almMM_bitsize = cnvMM_bitsize + 2;
     int redLen = __digit_num_avx512(almMM_bitsize, EXP_DIGIT_SIZE_AVX512);
     int redBufferLen = num_of_variable_buff_avx512(redLen);
 
     /* allocate buffers */
-    mpi_limb_t *redX = pBuffer;
-    mpi_limb_t *redM = redX + redBufferLen;
-    mpi_limb_t *redR = redM + redBufferLen;
-    mpi_limb_t *redT = redR + redBufferLen;
-    mpi_limb_t *redY = redT + redBufferLen;
-    mpi_limb_t *redBuffer = redY + redBufferLen;
+    mpn_limb_t *redX = pBuffer;
+    mpn_limb_t *redM = redX + redBufferLen;
+    mpn_limb_t *redR = redM + redBufferLen;
+    mpn_limb_t *redT = redR + redBufferLen;
+    mpn_limb_t *redY = redT + redBufferLen;
+    mpn_limb_t *redBuffer = redY + redBufferLen;
 
     cpAMM52 ammFunc;
     switch (modulusBitSize) {
@@ -884,12 +884,12 @@ unsigned int gsMontExpBin_BNU_sscm_avx512(mpi_limb_t *dataY, const mpi_limb_t *d
 
     /* execute bits of E */
     for (; nsE > 0; nsE--) {
-        mpi_limb_t eValue = dataE[nsE - 1];
+        mpn_limb_t eValue = dataE[nsE - 1];
 
         int n;
-        for (n = MPI_LIMB_BITS; n > 0; n--) {
+        for (n = MPN_LIMB_BITS; n > 0; n--) {
             /* T = ( msb(eValue) )? X : mont(1) */
-            mpi_limb_t mask = ct_test_msb(eValue);
+            mpn_limb_t mask = ct_test_msb(eValue);
             eValue <<= 1;
             ct_masked_copy_MPZ_ULONG(redT, mask, redX, redR, redLen);
 
@@ -924,32 +924,32 @@ unsigned int gsMontExpBin_BNU_sscm_avx512(mpi_limb_t *dataY, const mpi_limb_t *d
 //    redE[redBufferLen]
 //    redBuffer[redBufferLen*3]
 */
-unsigned int gsMontExpWin_BNU_avx512(mpi_limb_t *dataY, const mpi_limb_t *dataX, unsigned int nsX, const mpi_limb_t *dataE, unsigned int bitsizeE, MPZ_MOD_ENGINE *pMont, mpi_limb_t *pBuffer)
+unsigned int gsMontExpWin_BNU_avx512(mpn_limb_t *dataY, const mpn_limb_t *dataX, unsigned int nsX, const mpn_limb_t *dataE, unsigned int bitsizeE, MPZ_MOD_ENGINE *pMont, mpn_limb_t *pBuffer)
 {
-    const mpi_limb_t *dataM = MOD_MODULUS(pMont);
-    const mpi_limb_t *dataRR = MOD_MNT_R2(pMont);
+    const mpn_limb_t *dataM = MOD_MODULUS(pMont);
+    const mpn_limb_t *dataRR = MOD_MNT_R2(pMont);
     unsigned int nsM = MOD_LEN(pMont);
-    mpi_limb_t k0 = MOD_MNT_FACTOR(pMont);
+    mpn_limb_t k0 = MOD_MNT_FACTOR(pMont);
 
-    unsigned int nsE = MPI_BITS_TO_LIMBS(bitsizeE);
+    unsigned int nsE = MPN_BITS_TO_LIMBS(bitsizeE);
 
     int modulusBitSize = BITSIZE_BNU(dataM, nsM);
-    int cnvMM_bitsize = __digit_num_avx512(modulusBitSize, MPI_LIMB_BITS) * MPI_LIMB_BITS;
+    int cnvMM_bitsize = __digit_num_avx512(modulusBitSize, MPN_LIMB_BITS) * MPN_LIMB_BITS;
     int almMM_bitsize = cnvMM_bitsize + 2;
     int redLen = __digit_num_avx512(almMM_bitsize, EXP_DIGIT_SIZE_AVX512);
     int redBufferLen = num_of_variable_buff_avx512(redLen);
 
     unsigned int window = mont_exp_win_size(bitsizeE);
-    mpi_limb_t wmask = (1 << window) - 1;
+    mpn_limb_t wmask = (1 << window) - 1;
     unsigned int nPrecomute = 1 << window;
     int n;
 
-    mpi_limb_t *redE = pBuffer;
-    mpi_limb_t *redM = redE + redBufferLen;
-    mpi_limb_t *redY = redM + redBufferLen;
-    mpi_limb_t *redT = redY + redBufferLen;
-    mpi_limb_t *redBuffer = redT + redBufferLen;
-    mpi_limb_t *redTable = redBuffer + redBufferLen * 3;
+    mpn_limb_t *redE = pBuffer;
+    mpn_limb_t *redM = redE + redBufferLen;
+    mpn_limb_t *redY = redM + redBufferLen;
+    mpn_limb_t *redT = redY + redBufferLen;
+    mpn_limb_t *redBuffer = redT + redBufferLen;
+    mpn_limb_t *redTable = redBuffer + redBufferLen * 3;
 
     cpAMM52 ammFunc;
     switch (modulusBitSize) {
@@ -1063,36 +1063,36 @@ unsigned int gsMontExpWin_BNU_avx512(mpi_limb_t *dataY, const mpi_limb_t *dataX,
 //    redBuffer[redBufferLen*3]
 //    redE[redBufferLen]
 */
-unsigned int gsMontExpWin_BNU_sscm_avx512(mpi_limb_t *dataY, const mpi_limb_t *dataX, unsigned int nsX, const mpi_limb_t *dataE, unsigned int bitsizeE, MPZ_MOD_ENGINE *pMont, mpi_limb_t *pBuffer)
+unsigned int gsMontExpWin_BNU_sscm_avx512(mpn_limb_t *dataY, const mpn_limb_t *dataX, unsigned int nsX, const mpn_limb_t *dataE, unsigned int bitsizeE, MPZ_MOD_ENGINE *pMont, mpn_limb_t *pBuffer)
 {
-    const mpi_limb_t *dataM = MOD_MODULUS(pMont);
-    const mpi_limb_t *dataRR = MOD_MNT_R2(pMont);
+    const mpn_limb_t *dataM = MOD_MODULUS(pMont);
+    const mpn_limb_t *dataRR = MOD_MNT_R2(pMont);
     unsigned int nsM = MOD_LEN(pMont);
-    mpi_limb_t k0 = MOD_MNT_FACTOR(pMont);
+    mpn_limb_t k0 = MOD_MNT_FACTOR(pMont);
 
-    unsigned int nsE = MPI_BITS_TO_LIMBS(bitsizeE);
+    unsigned int nsE = MPN_BITS_TO_LIMBS(bitsizeE);
 
     int modulusBitSize = MOD_BITSIZE(pMont);
-    int cnvMM_bitsize = __digit_num_avx512(modulusBitSize, MPI_LIMB_BITS) * MPI_LIMB_BITS;
+    int cnvMM_bitsize = __digit_num_avx512(modulusBitSize, MPN_LIMB_BITS) * MPN_LIMB_BITS;
     int almMM_bitsize = cnvMM_bitsize + 2;
     int redLen = __digit_num_avx512(almMM_bitsize, EXP_DIGIT_SIZE_AVX512);
     int redBufferLen = num_of_variable_buff_avx512(redLen);
 
     unsigned int window = mont_exp_win_size(bitsizeE);
     unsigned int nPrecomute = 1 << window;
-    mpi_limb_t wmask = (mpi_limb_t)(nPrecomute - 1);
+    mpn_limb_t wmask = (mpn_limb_t)(nPrecomute - 1);
     int n;
 
 #ifdef _EXP_AVX512_DEBUG_
-    mpi_limb_t dbgValue[32];
+    mpn_limb_t dbgValue[32];
 #endif
 
-    mpi_limb_t *redTable = (mpi_limb_t *)(MPZ_ALIGNED_PTR(pBuffer, CACHE_LINE_SIZE));
-    mpi_limb_t *redM = redTable + mont_scramble_buffer_size(redLen, window);
-    mpi_limb_t *redY = redM + redBufferLen;
-    mpi_limb_t *redT = redY + redBufferLen;
-    mpi_limb_t *redBuffer = redT + redBufferLen;
-    mpi_limb_t *redE = redBuffer + redBufferLen * 3;
+    mpn_limb_t *redTable = (mpn_limb_t *)(MPZ_ALIGNED_PTR(pBuffer, CACHE_LINE_SIZE));
+    mpn_limb_t *redM = redTable + mont_scramble_buffer_size(redLen, window);
+    mpn_limb_t *redY = redM + redBufferLen;
+    mpn_limb_t *redT = redY + redBufferLen;
+    mpn_limb_t *redBuffer = redT + redBufferLen;
+    mpn_limb_t *redE = redBuffer + redBufferLen * 3;
 
     cpAMM52 ammFunc;
     switch (modulusBitSize) {

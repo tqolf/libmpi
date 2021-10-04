@@ -20,7 +20,7 @@
 ;               Big Number Operations
 ;
 ;     Content:
-;        mpi_umul_bin()
+;        mpn_mul()
 ;
 ;
 
@@ -37,14 +37,14 @@ segment .text align=ARCH_ALIGN_FACTOR
 
 
 ;*************************************************************
-;* uint64_t  mpi_umul_bin(uint64_t* pR;
+;* uint64_t  mpn_mul(uint64_t* pR;
 ;*                       const uint64_t* pA, int  aSize,
 ;*                       const uint64_t* pB, int  bSize)
 ;* returns pR[aSize+bSize]
 ;*
 ;*************************************************************
 align ARCH_ALIGN_FACTOR
-IPPASM mpi_umul_bin,PUBLIC
+IPPASM mpn_mul,PUBLIC
 %assign LOCAL_FRAME (1*sizeof(qword))
         USES_GPR rbx,rbp,rsi,rdi,r12,r13,r14,r15
         USES_XMM
@@ -370,7 +370,7 @@ align ARCH_ALIGN_FACTOR
    REST_XMM
    REST_GPR
    ret
-ENDFUNC mpi_umul_bin
+ENDFUNC mpn_mul
 
 %endif
 

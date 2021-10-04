@@ -20,8 +20,8 @@
  *    1. Assume that all variable representing size will never overflow
  */
 
-#ifndef MULTIPLE_PRECISION_INTEGER_H
-#define MULTIPLE_PRECISION_INTEGER_H
+#ifndef MULTIPLE_PRECISION_H
+#define MULTIPLE_PRECISION_H
 
 #include <mpi/mpi-conf.h>
 #include <mpi/mpi-optimizer.h>
@@ -61,7 +61,7 @@ void mpi_destory(mpi_t *v);
 /**
  * make mpi with given chunk
  */
-void mpi_make(mpi_t *r, mpi_limb_t *data, unsigned int size);
+void mpi_make(mpi_t *r, mpn_limb_t *data, unsigned int size);
 
 /**
  *  copy big-numer |a| to |r|
@@ -137,7 +137,7 @@ int mpi_zeroize(mpi_t *v);
 /**
  * set mpi |r| to unsigned sigle-precision integer |v|
  */
-int mpi_set_limb(mpi_t *r, mpi_limb_t v);
+int mpi_set_limb(mpi_t *r, mpn_limb_t v);
 
 /**
  *  initialize mpi |v| from octets |buff|/|bufflen|
@@ -182,7 +182,7 @@ int mpi_add(mpi_t *r, const mpi_t *a, const mpi_t *b);
  *   1. make sure r->room is enough to store the result
  *      minimal advise size: MAX(bit_size(a), bit_size(w)) + 1
  */
-int mpi_add_limb(mpi_t *r, const mpi_t *a, mpi_limb_t w);
+int mpi_add_limb(mpi_t *r, const mpi_t *a, mpn_limb_t w);
 
 /**
  * mpi subtraction: |r| = |a| - |b|
@@ -201,14 +201,14 @@ int mpi_sub(mpi_t *r, const mpi_t *a, const mpi_t *b);
  *   1. make sure r->room is enough to store the result
  *      minimal advise size: MAX(bit_size(a), bit_size(w))
  */
-int mpi_sub_limb(mpi_t *r, const mpi_t *a, mpi_limb_t w);
+int mpi_sub_limb(mpi_t *r, const mpi_t *a, mpn_limb_t w);
 
 /**
  * mpi multiplication: |r| = |a| * |b|
  *
  * @note:
  *   1. make sure r->room is enough to store the result
- *      minimal advise size: bit_size(a) + bit_size(b) + MPI_LIMB_BITS
+ *      minimal advise size: bit_size(a) + bit_size(b) + MPN_LIMB_BITS
  */
 int mpi_mul(mpi_t *r, const mpi_t *a, const mpi_t *b);
 
@@ -219,7 +219,7 @@ int mpi_mul(mpi_t *r, const mpi_t *a, const mpi_t *b);
  *   1. make sure r->room is enough to store the result
  *      minimal advise size: bit_size(a) + bit_size(b)
  */
-int mpi_mul_limb(mpi_t *r, const mpi_t *a, mpi_limb_t b);
+int mpi_mul_limb(mpi_t *r, const mpi_t *a, mpn_limb_t b);
 
 /**
  * mpi square: |r| = |a| ^ 2
@@ -242,22 +242,22 @@ int mpi_div(mpi_t *q, mpi_t *r, const mpi_t *x, const mpi_t *y);
 /**
  * mpi division: q, r = a / w
  */
-mpi_limb_t mpi_div_limb(mpi_t *a, mpi_limb_t w);
+mpn_limb_t mpi_div_limb(mpi_t *a, mpn_limb_t w);
 
 /**
  * mpi modular: r = a mod m
  */
-mpi_limb_t mpi_mod_limb(const mpi_t *a, mpi_limb_t w);
+mpn_limb_t mpi_mod_limb(const mpi_t *a, mpn_limb_t w);
 
 /**
  * greatest common divisor
  */
-int mpi_gcd(mpi_t *r, const mpi_t *a, const mpi_t *b, mpi_optimizer_t *optimizer);
+int mpi_gcd(mpi_t *r, const mpi_t *a, const mpi_t *b, mpn_optimizer_t *optimizer);
 
 /**
  * greatest common divisor(constant-time version)
  */
-int mpi_gcd_consttime(mpi_t *r, const mpi_t *a, const mpi_t *b, mpi_optimizer_t *optimizer);
+int mpi_gcd_consttime(mpi_t *r, const mpi_t *a, const mpi_t *b, mpn_optimizer_t *optimizer);
 
 /**
  * mpi modular: r = a mod m
@@ -272,7 +272,7 @@ int mpi_exp(mpi_t *r, const mpi_t *g, const mpi_t *e);
 /**
  * mpi exponentiation(word): r = g ^ e
  */
-int mpi_exp_limb(mpi_t *r, const mpi_t *g, mpi_limb_t e);
+int mpi_exp_limb(mpi_t *r, const mpi_t *g, mpn_limb_t e);
 
 /**
  * get bit
@@ -311,9 +311,8 @@ int mpi_swap_consttime(unsigned condition, mpi_t *a, mpi_t *b, unsigned int n);
  *   1. return 0 if the number is composite
  *      1 if it is prime with an error probability of less than 0.25^checks
  */
-int mpi_is_prime(const mpi_t *a, unsigned int checks, unsigned do_trial_division,
-                 mpi_optimizer_t *optimizer, int (*rand_bytes)(void *, unsigned char *, unsigned int),
-                 void *rand_state);
+int mpi_is_prime(const mpi_t *a, unsigned int checks, unsigned do_trial_division, mpn_optimizer_t *optimizer,
+                 int (*rand_bytes)(void *, unsigned char *, unsigned int), void *rand_state);
 
 /**
  * mpi(prime): enerates a pseudo-random prime number of at least bit length |bits|

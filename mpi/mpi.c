@@ -31,14 +31,14 @@ mpi_t *mpi_create(unsigned int bits)
         return NULL;
     }
 
-    unsigned int room = MPI_BITS_TO_LIMBS(bits);
-    mpi_t *r = (mpi_t *)MPI_ALLOCATE(sizeof(mpi_t) + room * MPI_LIMB_BYTES + MPI_LIMB_BYTES);
+    unsigned int room = MPN_BITS_TO_LIMBS(bits);
+    mpi_t *r = (mpi_t *)MPI_ALLOCATE(sizeof(mpi_t) + room * MPN_LIMB_BYTES + MPN_LIMB_BYTES);
     if (r != NULL) {
         r->attr = 0;
         r->size = 0;
         r->room = room;
         r->sign = MPI_SIGN_NON_NEGTIVE;
-        r->data = mpi_aligned_pointer((unsigned char *)r + sizeof(mpi_t), MPI_LIMB_BYTES);
+        r->data = mpi_aligned_pointer((unsigned char *)r + sizeof(mpi_t), MPN_LIMB_BYTES);
     }
 
     return r;
@@ -61,8 +61,8 @@ mpi_t *mpi_create_detached(unsigned int bits)
         r->size = 0;
         r->sign = MPI_SIGN_NON_NEGTIVE;
         r->attr = MPI_ATTR_DETACHED;
-        unsigned int room = MPI_BITS_TO_LIMBS(bits);
-        r->data = (mpi_limb_t *)MPI_ZALLOCATE(room, sizeof(mpi_limb_t));
+        unsigned int room = MPN_BITS_TO_LIMBS(bits);
+        r->data = (mpn_limb_t *)MPI_ZALLOCATE(room, sizeof(mpn_limb_t));
         if (r->data == NULL) {
             MPI_DEALLOCATE(r);
             return NULL;
@@ -76,14 +76,14 @@ mpi_t *mpi_create_detached(unsigned int bits)
 /**
  * make mpi with given chunk(usually static or pre-allocated memory)
  */
-void mpi_make(mpi_t *r, mpi_limb_t *data, unsigned int size)
+void mpi_make(mpi_t *r, mpn_limb_t *data, unsigned int size)
 {
     if (r != NULL) {
         r->room = size;
         r->data = data;
         r->sign = MPI_SIGN_NON_NEGTIVE;
         r->attr = MPI_ATTR_NOTOWNED | MPI_ATTR_DETACHED;
-        r->size = mpi_fix_size_bin(data, size);
+        r->size = mpn_limbs(data, size);
     }
 }
 
@@ -121,20 +121,20 @@ mpi_t *mpi_expand(mpi_t *a, unsigned int bits)
         return NULL;
     }
 
-    unsigned int room = MPI_BITS_TO_LIMBS(bits);
+    unsigned int room = MPN_BITS_TO_LIMBS(bits);
     if (room <= a->room) {
         return a;
     } else {
 #ifdef MPI_REALLOCATE
-        mpi_t *r = (mpi_t *)MPI_REALLOCATE(a, sizeof(mpi_t) + room * MPI_LIMB_BYTES + MPI_LIMB_BYTES);
+        mpi_t *r = (mpi_t *)MPI_REALLOCATE(a, sizeof(mpi_t) + room * MPN_LIMB_BYTES + MPN_LIMB_BYTES);
         if (r != NULL) {
             if (r != a) {
-                unsigned int aoff = mpi_aligned_diff((unsigned char *)a + sizeof(mpi_t), MPI_LIMB_BYTES);
-                unsigned int roff = mpi_aligned_diff((unsigned char *)r + sizeof(mpi_t), MPI_LIMB_BYTES);
+                unsigned int aoff = mpi_aligned_diff((unsigned char *)a + sizeof(mpi_t), MPN_LIMB_BYTES);
+                unsigned int roff = mpi_aligned_diff((unsigned char *)r + sizeof(mpi_t), MPN_LIMB_BYTES);
                 if (aoff != roff) { memmove(r + sizeof(mpi_t) + roff, r + sizeof(mpi_t) + aoff, r->size); }
             }
             r->room = room;
-            r->data = mpi_aligned_pointer((unsigned char *)r + sizeof(mpi_t), MPI_LIMB_BYTES);
+            r->data = mpi_aligned_pointer((unsigned char *)r + sizeof(mpi_t), MPN_LIMB_BYTES);
         }
 
         return r;
@@ -170,20 +170,20 @@ mpi_t *mpi_resize(mpi_t *a, unsigned int bits)
         return NULL;
     }
 
-    unsigned int room = MPI_BITS_TO_LIMBS(bits);
+    unsigned int room = MPN_BITS_TO_LIMBS(bits);
     if (room == a->room) {
         return a;
     } else if (room >= a->size) { // expand or shrink to proper size
 #ifdef MPI_REALLOCATE
-        mpi_t *r = (mpi_t *)MPI_REALLOCATE(a, sizeof(mpi_t) + room * MPI_LIMB_BYTES + MPI_LIMB_BYTES);
+        mpi_t *r = (mpi_t *)MPI_REALLOCATE(a, sizeof(mpi_t) + room * MPN_LIMB_BYTES + MPN_LIMB_BYTES);
         if (r != NULL) {
             if (r != a) {
-                unsigned int aoff = mpi_aligned_diff((unsigned char *)a + sizeof(mpi_t), MPI_LIMB_BYTES);
-                unsigned int roff = mpi_aligned_diff((unsigned char *)r + sizeof(mpi_t), MPI_LIMB_BYTES);
+                unsigned int aoff = mpi_aligned_diff((unsigned char *)a + sizeof(mpi_t), MPN_LIMB_BYTES);
+                unsigned int roff = mpi_aligned_diff((unsigned char *)r + sizeof(mpi_t), MPN_LIMB_BYTES);
                 if (aoff != roff) { memmove(r + sizeof(mpi_t) + roff, r + sizeof(mpi_t) + aoff, r->size); }
             }
             r->room = room;
-            r->data = mpi_aligned_pointer((unsigned char *)r + sizeof(mpi_t), MPI_LIMB_BYTES);
+            r->data = mpi_aligned_pointer((unsigned char *)r + sizeof(mpi_t), MPN_LIMB_BYTES);
         }
 
         return r;
@@ -278,7 +278,7 @@ unsigned int mpi_bits(const mpi_t *a)
     }
 
     if (a->size == 0) { return 0; }
-    return mpi_bits_consttime_bin(a->data, a->size);
+    return mpn_bits_consttime(a->data, a->size);
 }
 
 /**
@@ -305,7 +305,7 @@ unsigned int mpi_max_bits(const mpi_t *a)
         return 0;
     }
 
-    return MPI_LIMB_BITS * a->room;
+    return MPN_LIMB_BITS * a->room;
 }
 
 /**
@@ -334,7 +334,7 @@ int mpi_cmp(const mpi_t *a, const mpi_t *b)
     }
 
     if (a->sign != b->sign) { return a->sign == MPI_SIGN_NON_NEGTIVE ? 1 : -1; }
-    return mpi_ucmp_bin(a->data, a->size, b->data, b->size);
+    return mpn_cmp(a->data, a->size, b->data, b->size);
 }
 
 /**
@@ -357,7 +357,7 @@ int mpi_zeroize(mpi_t *r)
 /**
  * set mpi |r| to unsigned sigle-precision integer |w|
  */
-int mpi_set_limb(mpi_t *r, mpi_limb_t w)
+int mpi_set_limb(mpi_t *r, mpn_limb_t w)
 {
     if (r == NULL) {
         MPI_RAISE_ERROR(-EINVAL, "Invalid Integer: nullptr");
@@ -415,7 +415,7 @@ int mpi_from_octets(mpi_t **pr, const unsigned char *buff, unsigned int bufflen)
         *pr = r;
     }
 
-    r->size = mpi_from_octets_bin(r->data, r->room, buff, bufflen);
+    r->size = mpn_from_octets(r->data, r->room, buff, bufflen);
 
     return 0;
 }
@@ -440,7 +440,7 @@ int mpi_to_octets(const mpi_t *a, unsigned char *out, unsigned int outsize, unsi
         return -ERANGE;
     }
     if (outlen != NULL) { *outlen = reqsize; }
-    mpi_to_octets_bin(out, outsize, a->data, a->size);
+    mpn_to_octets(out, outsize, a->data, a->size);
 
     return 0;
 }
@@ -469,9 +469,7 @@ int mpi_from_string(mpi_t **pr, const char *a)
             neg = 1;
             a++;
         }
-        for (nchars = 0; isxdigit(a[nchars]) && nchars < MPI_MAX_BITS / BITS_PER_CHAR; nchars++) {
-            continue;
-        }
+        for (nchars = 0; isxdigit(a[nchars]) && nchars < MPI_MAX_BITS / BITS_PER_CHAR; nchars++) { continue; }
         if (nchars == 0) {
             MPI_RAISE_ERROR(-EINVAL);
             return -EINVAL;
@@ -497,7 +495,7 @@ int mpi_from_string(mpi_t **pr, const char *a)
         }
         r->sign = neg ? MPI_SIGN_NEGTIVE : MPI_SIGN_NON_NEGTIVE;
     }
-    r->size = mpi_from_string_bin(r->data, r->room, a, nchars);
+    r->size = mpn_from_string(r->data, r->room, a, nchars);
     if (r->size == 0) { r->sign = MPI_SIGN_NON_NEGTIVE; }
 
     return 0;
@@ -517,7 +515,7 @@ char *mpi_to_string(const mpi_t *a)
     }
 
     char *out = NULL;
-    unsigned int outlen = a->size * MPI_LIMB_BYTES * 2 + 2; // case(a->size == 0) requires 2 bytes
+    unsigned int outlen = a->size * MPN_LIMB_BYTES * 2 + 2; // case(a->size == 0) requires 2 bytes
     if ((out = (char *)MPI_ALLOCATE(outlen)) == NULL) {
         MPI_RAISE_ERROR(-ENOMEM);
         return NULL;
@@ -525,12 +523,12 @@ char *mpi_to_string(const mpi_t *a)
 
     char *p = out;
     if (a->sign == MPI_SIGN_NEGTIVE) {
-        MPI_ASSERT(a->size != 0);
+        MPN_ASSERT(a->size != 0);
         *p++ = '-';
         outlen--;
     }
 
-    p += mpi_to_string_bin(p, outlen, a->data, a->size);
+    p += mpn_to_string(p, outlen, a->data, a->size);
     *p = '\0';
 
     return out;
@@ -549,12 +547,12 @@ int mpi_get_bit(const mpi_t *a, unsigned int n)
         return -EINVAL;
     }
 
-    unsigned int nw = n / MPI_LIMB_BITS;
-    unsigned int nb = n % MPI_LIMB_BITS;
+    unsigned int nw = n / MPN_LIMB_BITS;
+    unsigned int nb = n % MPN_LIMB_BITS;
     if (UNLIKELY(nw >= a->size)) {
         return 0;
     } else {
-        return (int)(((a->data[nw]) >> nb) & ((mpi_limb_t)1));
+        return (int)(((a->data[nw]) >> nb) & ((mpn_limb_t)1));
     }
 }
 
@@ -568,14 +566,14 @@ int mpi_set_bit(const mpi_t *a, unsigned int n)
         return -EINVAL;
     }
 
-    unsigned int nw = n / MPI_LIMB_BITS;
-    unsigned int nb = n % MPI_LIMB_BITS;
+    unsigned int nw = n / MPN_LIMB_BITS;
+    unsigned int nb = n % MPN_LIMB_BITS;
     if (UNLIKELY(nw >= a->size)) {
         MPI_RAISE_ERROR(-EINVAL, "Out of range, expand before operation.");
 
         return -EINVAL;
     } else {
-        a->data[nw] |= (((mpi_limb_t)1) << nb);
+        a->data[nw] |= (((mpn_limb_t)1) << nb);
 
         return 0;
     }
@@ -591,9 +589,9 @@ int mpi_clr_bit(const mpi_t *a, unsigned int n)
         return -EINVAL;
     }
 
-    unsigned int nw = n / MPI_LIMB_BITS;
-    unsigned int nb = n % MPI_LIMB_BITS;
-    if (LIKELY(nw < a->size)) { a->data[nw] &= (~(((mpi_limb_t)1) << nb)); }
+    unsigned int nw = n / MPN_LIMB_BITS;
+    unsigned int nb = n % MPN_LIMB_BITS;
+    if (LIKELY(nw < a->size)) { a->data[nw] &= (~(((mpn_limb_t)1) << nb)); }
 
     return 0;
 }
@@ -609,13 +607,12 @@ int mpi_lshift(mpi_t *r, const mpi_t *a, unsigned int n)
     }
 
     if (mpi_bits(a) == 0) { return mpi_zeroize(r); }
-    if (mpi_max_bits(r)
-        < mpi_bits(a) + n) { // @IMPORTANT: addition here will never overflow under the limitations
+    if (mpi_max_bits(r) < mpi_bits(a) + n) { // @IMPORTANT: addition here will never overflow under the limitations
         return -ERANGE;
     }
 
     r->sign = a->sign;
-    r->size = mpi_lshift_bin(r->data, a->data, a->size, n);
+    r->size = mpn_lshift(r->data, a->data, a->size, n);
     ZEROIZE(r->data, r->size, r->room);
 
     return 0;
@@ -635,7 +632,7 @@ int mpi_rshift(mpi_t *r, const mpi_t *a, unsigned int n)
     if (mpi_max_bits(r) + n < mpi_bits(a)) { return -ERANGE; }
 
     r->sign = a->sign;
-    r->size = mpi_rshift_bin(r->data, a->data, a->size, n);
+    r->size = mpn_rshift(r->data, a->data, a->size, n);
     ZEROIZE(r->data, r->size, r->room);
 
     return 0;
@@ -646,15 +643,15 @@ int mpi_rshift(mpi_t *r, const mpi_t *a, unsigned int n)
  */
 static int mpi_uadd(mpi_t *r, const mpi_t *a, const mpi_t *b)
 {
-    MPI_ASSERT(r != NULL && a != NULL && b != NULL);
-    MPI_ASSERT(a->sign == b->sign);
+    MPN_ASSERT(r != NULL && a != NULL && b != NULL);
+    MPN_ASSERT(a->sign == b->sign);
 
     if (a->size < b->size) { SWAP(const mpi_t *, a, b); }
     if (r->room < a->size) {
         MPI_RAISE_ERROR(-ERANGE);
         return -ERANGE; // resize before subtraction
     }
-    mpi_limb_t carry = mpi_uadd_bin(r->data, r->room, a->data, a->size, b->data, b->size);
+    mpn_limb_t carry = mpn_add(r->data, r->room, a->data, a->size, b->data, b->size);
     if (carry != 0 && a->size >= r->room) {
         MPI_RAISE_ERROR(-ERANGE);
         return -ERANGE; // resize before subtraction
@@ -666,14 +663,14 @@ static int mpi_uadd(mpi_t *r, const mpi_t *a, const mpi_t *b)
 
 static int mpi_usub(mpi_t *r, const mpi_t *a, const mpi_t *b)
 {
-    MPI_ASSERT(r != NULL && a != NULL && b != NULL);
-    MPI_ASSERT(a->size >= b->size);
+    MPN_ASSERT(r != NULL && a != NULL && b != NULL);
+    MPN_ASSERT(a->size >= b->size);
 
     if (a->size > r->room) {
         MPI_RAISE_ERROR(-ERANGE);
         return -ERANGE; // resize before subtraction
     }
-    r->size = mpi_usub_bin(r->data, r->room, a->data, a->size, b->data, b->size);
+    r->size = mpn_sub(r->data, r->room, a->data, a->size, b->data, b->size);
 
     return 0;
 }
@@ -696,7 +693,7 @@ int mpi_add(mpi_t *r, const mpi_t *a, const mpi_t *b)
         r->sign = a->sign;
         return mpi_uadd(r, a, b);
     } else {
-        int res = mpi_ucmp_bin(a->data, a->size, b->data, b->size);
+        int res = mpn_cmp(a->data, a->size, b->data, b->size);
         if (res > 0) { // a > b
             r->sign = a->sign;
             return mpi_usub(r, a, b);
@@ -709,17 +706,17 @@ int mpi_add(mpi_t *r, const mpi_t *a, const mpi_t *b)
     }
 }
 
-static int mpi_uinc(mpi_t *r, const mpi_t *a, mpi_limb_t w)
+static int mpi_uinc(mpi_t *r, const mpi_t *a, mpn_limb_t w)
 {
-    MPI_ASSERT(r != NULL && a != NULL);
-    MPI_ASSERT(a->sign == MPI_SIGN_NON_NEGTIVE);
+    MPN_ASSERT(r != NULL && a != NULL);
+    MPN_ASSERT(a->sign == MPI_SIGN_NON_NEGTIVE);
 
     if (r->room < a->size) {
         MPI_RAISE_ERROR(-ERANGE);
         return -ERANGE; // resize before addition
     }
 
-    mpi_limb_t carry = mpi_uinc_bin(r->data, r->room, a->data, a->size, w);
+    mpn_limb_t carry = mpn_inc(r->data, r->room, a->data, a->size, w);
     if (carry != 0 && a->size >= r->room) {
         MPI_RAISE_ERROR(-ERANGE);
         return -ERANGE; // resize before addition
@@ -729,9 +726,9 @@ static int mpi_uinc(mpi_t *r, const mpi_t *a, mpi_limb_t w)
     return 0;
 }
 
-static int mpi_udec(mpi_t *r, const mpi_t *a, mpi_limb_t w)
+static int mpi_udec(mpi_t *r, const mpi_t *a, mpn_limb_t w)
 {
-    MPI_ASSERT(r != NULL && a != NULL);
+    MPN_ASSERT(r != NULL && a != NULL);
 
     if (r->room < a->size) {
         MPI_RAISE_ERROR(-ERANGE);
@@ -741,7 +738,7 @@ static int mpi_udec(mpi_t *r, const mpi_t *a, mpi_limb_t w)
         MPI_RAISE_ERROR(-EINVAL);
         return -EINVAL; // resize before subtraction
     }
-    r->size = mpi_udec_bin(r->data, r->room, a->data, a->size, w);
+    r->size = mpn_dec(r->data, r->room, a->data, a->size, w);
 
     return 0;
 }
@@ -753,7 +750,7 @@ static int mpi_udec(mpi_t *r, const mpi_t *a, mpi_limb_t w)
  *   1. make sure r->room is enough to store the result
  *      minimal advise size: MAX(bit_size(a), bit_size(w)) + 1
  */
-int mpi_add_limb(mpi_t *r, const mpi_t *a, mpi_limb_t w)
+int mpi_add_limb(mpi_t *r, const mpi_t *a, mpn_limb_t w)
 {
     if (r == NULL || a == NULL) {
         MPI_RAISE_ERROR(-EINVAL, "Invalid Integer: at least one of (sum, addend) is nullptr");
@@ -771,7 +768,7 @@ int mpi_add_limb(mpi_t *r, const mpi_t *a, mpi_limb_t w)
             }
             if (a->data[0] >= w) {
                 r->data[0] = a->data[0] - w;
-                r->size = mpi_fix_size_bin(r->data, 1);
+                r->size = mpn_limbs(r->data, 1);
             } else {
                 r->sign = MPI_SIGN_NON_NEGTIVE;
                 r->data[0] = w - a->data[0];
@@ -792,7 +789,7 @@ int mpi_add_limb(mpi_t *r, const mpi_t *a, mpi_limb_t w)
  *   1. make sure r->room is enough to store the result
  *      minimal advise size: MAX(bit_size(a), bit_size(w))
  */
-int mpi_sub_limb(mpi_t *r, const mpi_t *a, mpi_limb_t w)
+int mpi_sub_limb(mpi_t *r, const mpi_t *a, mpn_limb_t w)
 {
     if (r == NULL || a == NULL) {
         MPI_RAISE_ERROR(-EINVAL, "Invalid Integer: at least one of (r, a) is nullptr");
@@ -810,7 +807,7 @@ int mpi_sub_limb(mpi_t *r, const mpi_t *a, mpi_limb_t w)
             }
             if (a->data[0] >= w) {
                 r->data[0] = a->data[0] - w;
-                r->size = mpi_fix_size_bin(r->data, 1);
+                r->size = mpn_limbs(r->data, 1);
             } else {
                 r->sign = MPI_SIGN_NEGTIVE;
                 r->data[0] = w - a->data[0];
@@ -842,7 +839,7 @@ int mpi_sub(mpi_t *r, const mpi_t *a, const mpi_t *b)
         r->sign = b->sign;
         return mpi_uadd(r, a, b);
     } else {
-        int res = mpi_ucmp_bin(a->data, a->size, b->data, b->size);
+        int res = mpn_cmp(a->data, a->size, b->data, b->size);
         r->sign = res >= 0 ? MPI_SIGN_NON_NEGTIVE : MPI_SIGN_NEGTIVE;
         if (res == 0) {
             mpi_zeroize(r);
@@ -863,7 +860,7 @@ int mpi_sub(mpi_t *r, const mpi_t *a, const mpi_t *b)
  *
  * @note:
  *   1. make sure r->room is enough to store the result
- *      minimal advise size: bit_size(a) + bit_size(b) + MPI_LIMB_BITS
+ *      minimal advise size: bit_size(a) + bit_size(b) + MPN_LIMB_BITS
  */
 int mpi_mul(mpi_t *r, const mpi_t *a, const mpi_t *b)
 {
@@ -883,8 +880,8 @@ int mpi_mul(mpi_t *r, const mpi_t *a, const mpi_t *b)
     }
 
     r->sign = a->sign != b->sign;
-    mpi_umul_bin(r->data, a->data, a->size, b->data, b->size);
-    r->size = mpi_fix_size_bin(r->data, size);
+    mpn_mul(r->data, a->data, a->size, b->data, b->size);
+    r->size = mpn_limbs(r->data, size);
 
     return 0;
 }
@@ -896,7 +893,7 @@ int mpi_mul(mpi_t *r, const mpi_t *a, const mpi_t *b)
  *   1. make sure r->room is enough to store the result
  *      minimal advise size: bit_size(a) + bit_size(b)
  */
-int mpi_mul_limb(mpi_t *r, const mpi_t *a, mpi_limb_t b)
+int mpi_mul_limb(mpi_t *r, const mpi_t *a, mpn_limb_t b)
 {
     if (r == NULL || a == NULL) {
         MPI_RAISE_ERROR(-EINVAL, "Invalid Integer: at least one of (r, a) is nullptr");
@@ -909,11 +906,11 @@ int mpi_mul_limb(mpi_t *r, const mpi_t *a, mpi_limb_t b)
 
     ZEROIZE(r->data, 0, r->room);
     r->size = a->size;
-    mpi_limb_t extension = mpi_umul_acc_bin(r->data, a->data, a->size, b);
+    mpn_limb_t extension = mpn_mul_acc(r->data, a->data, a->size, b);
     if (extension != 0) {
         if (r->room >= a->size) { r->data[r->size++] = extension; }
     }
-    r->size = mpi_fix_size_bin(r->data, r->size);
+    r->size = mpn_limbs(r->data, r->size);
 
     return 0;
 }
@@ -944,8 +941,8 @@ int mpi_sqr(mpi_t *r, const mpi_t *a)
         return 0;
     }
 
-    mpi_usqr_bin(r->data, a->data, a->size);
-    r->size = mpi_fix_size_bin(r->data, 2 * a->size);
+    mpn_sqr(r->data, a->data, a->size);
+    r->size = mpn_limbs(r->data, 2 * a->size);
 
     return 0;
 #endif
@@ -976,7 +973,7 @@ int mpi_div(mpi_t *q, mpi_t *r, const mpi_t *x, const mpi_t *y)
         return -ERANGE;
     }
 
-    int ret = mpi_ucmp_bin(x->data, x->size, y->data, y->size);
+    int ret = mpn_cmp(x->data, x->size, y->data, y->size);
     if (ret < 0) { // special case: x < y, q = 0, r = x
         mpi_zeroize(q);
         return MPI_ABS_COPY(r, x);
@@ -992,10 +989,10 @@ int mpi_div(mpi_t *q, mpi_t *r, const mpi_t *x, const mpi_t *y)
 
     unsigned int qsize = q != NULL ? q->room : 0;
     unsigned int rsize = r != NULL ? r->size : 0;
-    mpi_limb_t *qdata = q != NULL ? q->data : NULL;
-    mpi_limb_t *rdata = r != NULL ? r->data : NULL;
+    mpn_limb_t *qdata = q != NULL ? q->data : NULL;
+    mpn_limb_t *rdata = r != NULL ? r->data : NULL;
 
-    rsize = mpi_udiv_bin(qdata, &qsize, rdata, rsize, y->data, y->size);
+    rsize = mpn_div(qdata, &qsize, rdata, rsize, y->data, y->size);
     if (q != NULL) {
         q->size = qsize;
         q->sign = x->sign == y->sign ? MPI_SIGN_NON_NEGTIVE : MPI_SIGN_NEGTIVE;
@@ -1019,34 +1016,34 @@ int mpi_mod(mpi_t *r, const mpi_t *a, const mpi_t *m)
 /**
  * mpi division: q, r = a / w
  */
-mpi_limb_t mpi_div_limb(mpi_t *a, mpi_limb_t w)
+mpn_limb_t mpi_div_limb(mpi_t *a, mpn_limb_t w)
 {
     /* special cases */
     {
         if (w == 0) { /* actually this an error (division by zero) */
-            return (mpi_limb_t)-1;
+            return (mpn_limb_t)-1;
         }
         if (a == NULL || a->size == 0) { return 0; }
     }
 
-    mpi_limb_t rem = 0;
-    unsigned int shifts = mpi_nlz_limb_consttime(w);
+    mpn_limb_t rem = 0;
+    unsigned int shifts = mpn_limb_nlz_consttime(w);
 
     /* normalize input (so UDIV_NND doesn't complain) */
     {
         w <<= shifts;
-        if (mpi_lshift(a, a, shifts) != 0) { return (mpi_limb_t)-1; }
+        if (mpi_lshift(a, a, shifts) != 0) { return (mpn_limb_t)-1; }
     }
 
     {
         for (unsigned int i = a->size; i > 0; i--) {
-            mpi_limb_t l = a->data[i - 1], quo;
+            mpn_limb_t l = a->data[i - 1], quo;
             UDIV_NND(quo, rem, rem, l, w);
             a->data[i - 1] = quo;
         }
         if ((a->size > 0) && (a->data[a->size - 1] == 0)) { a->size--; }
         if (!a->size) { a->sign = MPI_SIGN_NON_NEGTIVE; /* don't allow negative zero */ }
-        a->size = mpi_fix_size_bin(a->data, a->size);
+        a->size = mpn_limbs(a->data, a->size);
     }
 
     /* de-normalize */
@@ -1060,29 +1057,29 @@ mpi_limb_t mpi_div_limb(mpi_t *a, mpi_limb_t w)
 /**
  * mpi modular: r = a mod m
  */
-mpi_limb_t mpi_mod_limb(const mpi_t *a, mpi_limb_t w)
+mpn_limb_t mpi_mod_limb(const mpi_t *a, mpn_limb_t w)
 {
-    if (w == 0) { return (mpi_limb_t)-1; }
+    if (w == 0) { return (mpn_limb_t)-1; }
 
     /*
      * If |w| is too long and we don't have BN_ULLONG then we need to fall
      * back to using mpi_div_limb
      */
-    if (w > ((mpi_limb_t)1 << BITS_S4)) {
+    if (w > ((mpn_limb_t)1 << BITS_S4)) {
         mpi_t *tmp = mpi_dup(a);
-        if (tmp == NULL) { return (mpi_limb_t)-1; }
+        if (tmp == NULL) { return (mpn_limb_t)-1; }
 
-        mpi_limb_t rem = mpi_div_limb(tmp, w);
+        mpn_limb_t rem = mpi_div_limb(tmp, w);
         mpi_destory(tmp);
 
         return rem;
     } else {
-        mpi_limb_t rem = 0;
+        mpn_limb_t rem = 0;
         for (unsigned int i = a->size; i > 0; i--) {
-            /* rem < ((mpi_limb_t)1 << BITS_S4), won't overflow */
-            mpi_limb_t aa = a->data[i - 1];
-            rem = ((rem << BITS_S4) | ((aa >> BITS_S4) & MPI_LIMB_MASK_LO)) % w;
-            rem = ((rem << BITS_S4) | (aa & MPI_LIMB_MASK_LO)) % w;
+            /* rem < ((mpn_limb_t)1 << BITS_S4), won't overflow */
+            mpn_limb_t aa = a->data[i - 1];
+            rem = ((rem << BITS_S4) | ((aa >> BITS_S4) & MPN_LIMB_MASK_LO)) % w;
+            rem = ((rem << BITS_S4) | (aa & MPN_LIMB_MASK_LO)) % w;
         }
         return rem;
     }
@@ -1125,7 +1122,7 @@ int mpi_exp(mpi_t *r, const mpi_t *g, const mpi_t *e)
         }
     }
 
-    mpi_limb_t *p = e->data, mask = 0x1 << 1;
+    mpn_limb_t *p = e->data, mask = 0x1 << 1;
     for (unsigned int i = 1; i < ebits;) {
         if ((err = mpi_sqr(t, t)) != 0) {
             MPI_RAISE_ERROR(err);
@@ -1140,7 +1137,7 @@ int mpi_exp(mpi_t *r, const mpi_t *g, const mpi_t *e)
             }
         }
         mask <<= 1;
-        if (++i % MPI_LIMB_BITS == 0) {
+        if (++i % MPN_LIMB_BITS == 0) {
             p++;
             mask = 0x1;
         }
@@ -1154,10 +1151,10 @@ int mpi_exp(mpi_t *r, const mpi_t *g, const mpi_t *e)
 /**
  * mpi exponentiation(word): r = g ^ e(FIXME)
  */
-int mpi_exp_limb(mpi_t *r, const mpi_t *g, mpi_limb_t e)
+int mpi_exp_limb(mpi_t *r, const mpi_t *g, mpn_limb_t e)
 {
     mpi_t v;
-    mpi_limb_t dataE = e;
+    mpn_limb_t dataE = e;
     mpi_make(&v, &dataE, 1);
     return mpi_exp(r, g, &v);
 }
@@ -1167,18 +1164,18 @@ int mpi_exp_limb(mpi_t *r, const mpi_t *g, mpi_limb_t e)
  * @addtogroup: mpi/greatest-common-divisor
  */
 typedef struct {
-    mpi_limb_t H, L;
+    mpn_limb_t H, L;
 } mpi_dlimb_t;
 
 /**
- * mpi(binary): extension, r[] = a[] * x + b[] * y
+ * mpn: extension, r[] = a[] * x + b[] * y
  */
-static mpi_dlimb_t mpi_uadd_with_multiplier_bin(mpi_limb_t *r, const mpi_limb_t *a, mpi_limb_t x,
-                                                const mpi_limb_t *b, mpi_limb_t y, unsigned int n)
+static mpi_dlimb_t mpi_uadd_with_multiplier_bin(mpn_limb_t *r, const mpn_limb_t *a, mpn_limb_t x, const mpn_limb_t *b,
+                                                mpn_limb_t y, unsigned int n)
 {
-    mpi_limb_t extensionH = 0, extensionL = 0;
+    mpn_limb_t extensionH = 0, extensionL = 0;
     for (unsigned int i = 0; i < n; i++) {
-        mpi_limb_t aH, aL, bH, bL, rH;
+        mpn_limb_t aH, aL, bH, bL, rH;
 
         UMUL_AB(aH, aL, a[i], x); // aH, aL = a[i] * x
         UMUL_AB(bH, bL, b[i], y); // bH, bL = b[i] * y
@@ -1196,18 +1193,18 @@ static mpi_dlimb_t mpi_uadd_with_multiplier_bin(mpi_limb_t *r, const mpi_limb_t 
 }
 
 /**
- * mpi(binary): borrow, r[] = a[] * x - b[] * y
+ * mpn: borrow, r[] = a[] * x - b[] * y
  */
-static mpi_limb_t mpi_usub_with_multiplier_bin(mpi_limb_t *r, const mpi_limb_t *a, mpi_limb_t x,
-                                               const mpi_limb_t *b, mpi_limb_t y, unsigned int n)
+static mpn_limb_t mpi_usub_with_multiplier_bin(mpn_limb_t *r, const mpn_limb_t *a, mpn_limb_t x, const mpn_limb_t *b,
+                                               mpn_limb_t y, unsigned int n)
 {
-    MPI_ASSERT(r != NULL);
-    MPI_ASSERT(a != NULL);
-    MPI_ASSERT(b != NULL);
+    MPN_ASSERT(r != NULL);
+    MPN_ASSERT(a != NULL);
+    MPN_ASSERT(b != NULL);
 
-    mpi_limb_t borrow = 0, extension = 0;
+    mpn_limb_t borrow = 0, extension = 0;
     for (unsigned int i = 0; i < n; i++) {
-        mpi_limb_t aH, aL, bH, bL, t;
+        mpn_limb_t aH, aL, bH, bL, t;
 
         UMUL_AB(aH, aL, a[i], x); // aH, aL = a[i] * x
         UMUL_AB(bH, bL, b[i], y); // bH, bL = b[i] * y
@@ -1232,19 +1229,19 @@ static mpi_limb_t mpi_usub_with_multiplier_bin(mpi_limb_t *r, const mpi_limb_t *
     return borrow;
 }
 
-static mpi_limb_t __gcd_lehmer_common_quotient(mpi_limb_t x, mpi_limb_t y, mpi_slimb_t A, mpi_slimb_t B,
-                                               mpi_slimb_t C, mpi_slimb_t D)
+static mpn_limb_t __gcd_lehmer_common_quotient(mpn_limb_t x, mpn_limb_t y, mpn_slimb_t A, mpn_slimb_t B, mpn_slimb_t C,
+                                               mpn_slimb_t D)
 {
 #define __ADD(n1, n0, uA, sB)                   \
     if (sB >= 0) {                              \
-        UADD_AB(n1, n0, uA, (mpi_limb_t)sB);    \
+        UADD_AB(n1, n0, uA, (mpn_limb_t)sB);    \
     } else {                                    \
-        USUB_AB(n1, n0, uA, (mpi_limb_t)(-sB)); \
+        USUB_AB(n1, n0, uA, (mpn_limb_t)(-sB)); \
     }
 
-    mpi_limb_t q, q1;
+    mpn_limb_t q, q1;
     {
-        mpi_limb_t nH, nL, dH, dL, rH, rL;
+        mpn_limb_t nH, nL, dH, dL, rH, rL;
         __ADD(nH, nL, x, A);
         __ADD(dH, dL, y, C);
 
@@ -1260,22 +1257,22 @@ static mpi_limb_t __gcd_lehmer_common_quotient(mpi_limb_t x, mpi_limb_t y, mpi_s
     }
 #undef __ADD
 
-    return q == q1 ? q : MPI_LIMB_MASK;
+    return q == q1 ? q : MPN_LIMB_MASK;
 }
 
 /**
  * mpi: greatest common divisor(Lehmer's gcd algorithm)
  */
-int mpi_gcd(mpi_t *r, const mpi_t *a, const mpi_t *b, mpi_optimizer_t *optimizer)
+int mpi_gcd(mpi_t *r, const mpi_t *a, const mpi_t *b, mpn_optimizer_t *optimizer)
 {
     if (r == NULL || a == NULL || b == NULL || r->room < 1) {
         MPI_RAISE_ERROR(-EINVAL);
         return -EINVAL;
     }
 
-    mpi_optimizer_t *opt = optimizer;
+    mpn_optimizer_t *opt = optimizer;
     if (opt == NULL) {
-        opt = mpi_optimizer_create(r->room + a->room + b->room);
+        opt = mpn_optimizer_create(r->room + a->room + b->room);
         if (opt == NULL) {
             MPI_RAISE_ERROR(-ENOMEM);
             return -ENOMEM;
@@ -1284,7 +1281,7 @@ int mpi_gcd(mpi_t *r, const mpi_t *a, const mpi_t *b, mpi_optimizer_t *optimizer
 
     int err = 0;
     {
-        mpi_limb_t *rr = r->data, *aa = a->data, *bb = b->data;
+        mpn_limb_t *rr = r->data, *aa = a->data, *bb = b->data;
         unsigned int rsize = r->room, asize = a->size, bsize = b->size;
 
         r->sign = MPI_SIGN_NON_NEGTIVE; /* clear sign flag */
@@ -1292,10 +1289,10 @@ int mpi_gcd(mpi_t *r, const mpi_t *a, const mpi_t *b, mpi_optimizer_t *optimizer
         // special cases
         {
             // Lehmer's algorithm requires that first number must be greater than the second
-            int res = mpi_ucmp_bin(aa, asize, bb, bsize);
+            int res = mpn_cmp(aa, asize, bb, bsize);
             if (res < 0) {
                 SWAP(unsigned int, asize, bsize);
-                SWAP(mpi_limb_t *, aa, bb);
+                SWAP(mpn_limb_t *, aa, bb);
             } else if (res == 0 || bsize == 0) {
                 ZEXPAND(rr, rsize, aa, asize); // the result is truncated if rsize < xsize
                 r->size = asize;               // expected size will be returned
@@ -1304,7 +1301,7 @@ int mpi_gcd(mpi_t *r, const mpi_t *a, const mpi_t *b, mpi_optimizer_t *optimizer
             }
 
             if (asize == 1) {
-                rr[0] = mpi_gcd_limb(aa[0], bb[0]);
+                rr[0] = mpn_limb_gcd(aa[0], bb[0]);
                 r->size = 1;
 
                 return 0;
@@ -1313,9 +1310,9 @@ int mpi_gcd(mpi_t *r, const mpi_t *a, const mpi_t *b, mpi_optimizer_t *optimizer
 
         // common cases
         {
-            mpi_limb_t *xtemp = mpi_optimizer_get_limbs(opt, asize);
-            mpi_limb_t *ytemp = mpi_optimizer_get_limbs(opt, bsize);
-            mpi_limb_t *gtemp = mpi_optimizer_get_limbs(opt, rsize);
+            mpn_limb_t *xtemp = mpn_optimizer_get_limbs(opt, asize);
+            mpn_limb_t *ytemp = mpn_optimizer_get_limbs(opt, bsize);
+            mpn_limb_t *gtemp = mpn_optimizer_get_limbs(opt, rsize);
 
             if (xtemp == NULL || ytemp == NULL || gtemp == NULL) {
                 MPI_RAISE_ERROR(-ENOMEM);
@@ -1324,7 +1321,7 @@ int mpi_gcd(mpi_t *r, const mpi_t *a, const mpi_t *b, mpi_optimizer_t *optimizer
                 goto operation_end;
             }
 
-            mpi_limb_t *gdata = rr;
+            mpn_limb_t *gdata = rr;
             unsigned int xsize = asize, xroom = asize;
             unsigned int ysize = bsize, yroom = bsize;
             unsigned int groom = rsize;
@@ -1335,30 +1332,30 @@ int mpi_gcd(mpi_t *r, const mpi_t *a, const mpi_t *b, mpi_optimizer_t *optimizer
             ZEROIZE(gtemp, 0, groom);
             ZEROIZE(gdata, 0, groom);
 
-            mpi_limb_t *T = gtemp, *u = gdata;
+            mpn_limb_t *T = gtemp, *u = gdata;
             while (xsize > 1) {
                 /* xx and yy is the high-order digit of x and y (yy could be 0) */
-                mpi_limb_t xx = (mpi_limb_t)(xtemp[xsize - 1]);
-                mpi_limb_t yy = (ysize < xsize) ? 0 : (mpi_limb_t)(ytemp[ysize - 1]);
+                mpn_limb_t xx = (mpn_limb_t)(xtemp[xsize - 1]);
+                mpn_limb_t yy = (ysize < xsize) ? 0 : (mpn_limb_t)(ytemp[ysize - 1]);
 
-                mpi_slimb_t AA = 1, BB = 0, CC = 0, DD = 1;
-                while (yy != (mpi_limb_t)(-CC) && yy != (mpi_limb_t)(-DD)) {
-                    mpi_limb_t q = __gcd_lehmer_common_quotient(xx, yy, AA, BB, CC, DD);
-                    if (q == MPI_LIMB_MASK) { break; }
-                    mpi_slimb_t t = AA - (mpi_slimb_t)q * CC;
+                mpn_slimb_t AA = 1, BB = 0, CC = 0, DD = 1;
+                while (yy != (mpn_limb_t)(-CC) && yy != (mpn_limb_t)(-DD)) {
+                    mpn_limb_t q = __gcd_lehmer_common_quotient(xx, yy, AA, BB, CC, DD);
+                    if (q == MPN_LIMB_MASK) { break; }
+                    mpn_slimb_t t = AA - (mpn_slimb_t)q * CC;
                     AA = CC;
                     CC = t;
-                    t = BB - (mpi_slimb_t)q * DD;
+                    t = BB - (mpn_slimb_t)q * DD;
                     BB = DD;
                     DD = t;
-                    t = (mpi_slimb_t)(xx - q * yy);
+                    t = (mpn_slimb_t)(xx - q * yy);
                     xx = yy;
-                    yy = (mpi_limb_t)t;
+                    yy = (mpn_limb_t)t;
                 }
 
                 if (BB == 0) {
                     /* T = x mod y */
-                    unsigned int tsize = mpi_umod_bin(xtemp, xsize, ytemp, ysize);
+                    unsigned int tsize = mpn_mod(xtemp, xsize, ytemp, ysize);
                     ZEXPAND(T, groom, xtemp, tsize);
                     /* a = b; b = T; */
                     ZEXPAND(xtemp, xroom, ytemp, ysize);
@@ -1367,30 +1364,24 @@ int mpi_gcd(mpi_t *r, const mpi_t *a, const mpi_t *b, mpi_optimizer_t *optimizer
                     /* T = AA * x + BB * y */
                     if ((AA >= 0) && (BB < 0)) {
                         /* T = A * x + B * y = A * x - (-B) * y */
-                        mpi_usub_with_multiplier_bin(T, xtemp, (mpi_limb_t)AA, ytemp, (mpi_limb_t)(-BB),
-                                                     ysize);
+                        mpi_usub_with_multiplier_bin(T, xtemp, (mpn_limb_t)AA, ytemp, (mpn_limb_t)(-BB), ysize);
                     } else if ((AA <= 0) && (BB > 0)) {
                         /* T = A * x + B * y = B * y - (-A) * x */
-                        mpi_usub_with_multiplier_bin(T, ytemp, (mpi_limb_t)BB, xtemp, (mpi_limb_t)(-AA),
-                                                     ysize);
+                        mpi_usub_with_multiplier_bin(T, ytemp, (mpn_limb_t)BB, xtemp, (mpn_limb_t)(-AA), ysize);
                     } else {
                         /* AA * BB >= 0 */
-                        mpi_uadd_with_multiplier_bin(T, xtemp, (mpi_limb_t)AA, ytemp, (mpi_limb_t)BB,
-                                                     ysize);
+                        mpi_uadd_with_multiplier_bin(T, xtemp, (mpn_limb_t)AA, ytemp, (mpn_limb_t)BB, ysize);
                     }
 
                     /* u = CC * x + DD * y */
                     if ((CC <= 0) && (DD >= 0)) {
-                        mpi_usub_with_multiplier_bin(u, ytemp, (mpi_limb_t)DD, xtemp, (mpi_limb_t)(-CC),
-                                                     ysize);
+                        mpi_usub_with_multiplier_bin(u, ytemp, (mpn_limb_t)DD, xtemp, (mpn_limb_t)(-CC), ysize);
                     } else if ((CC >= 0) && (DD <= 0)) {
                         /* u= C * x + D * y = C * x - (-D) * y */
-                        mpi_usub_with_multiplier_bin(u, xtemp, (mpi_limb_t)CC, ytemp, (mpi_limb_t)(-DD),
-                                                     ysize);
+                        mpi_usub_with_multiplier_bin(u, xtemp, (mpn_limb_t)CC, ytemp, (mpn_limb_t)(-DD), ysize);
                     } else {
                         /* CC * DD >= 0 */
-                        mpi_uadd_with_multiplier_bin(u, xtemp, (mpi_limb_t)CC, ytemp, (mpi_limb_t)DD,
-                                                     ysize);
+                        mpi_uadd_with_multiplier_bin(u, xtemp, (mpn_limb_t)CC, ytemp, (mpn_limb_t)DD, ysize);
                     }
 
                     /* x = T; y = u */
@@ -1398,12 +1389,12 @@ int mpi_gcd(mpi_t *r, const mpi_t *a, const mpi_t *b, mpi_optimizer_t *optimizer
                     COPY(ytemp, u, ysize);
                 }
 
-                xsize = mpi_fix_size_bin(xtemp, xsize);
-                ysize = mpi_fix_size_bin(ytemp, ysize);
+                xsize = mpn_limbs(xtemp, xsize);
+                ysize = mpn_limbs(ytemp, ysize);
 
                 if (ysize > xsize) {
                     SWAP(unsigned int, xsize, ysize);
-                    SWAP(mpi_limb_t *, aa, bb);
+                    SWAP(mpn_limb_t *, aa, bb);
                 }
 
                 if (ysize == 1 && ytemp[ysize - 1] == 0) {
@@ -1415,14 +1406,14 @@ int mpi_gcd(mpi_t *r, const mpi_t *a, const mpi_t *b, mpi_optimizer_t *optimizer
                 }
             }
 
-            rr[0] = mpi_gcd_limb(xtemp[0], ytemp[0]);
+            rr[0] = mpn_limb_gcd(xtemp[0], ytemp[0]);
             r->size = 1;
 
         operation_end:
-            if (gtemp != NULL) { mpi_optimizer_put_limbs(opt, rsize); }
-            if (ytemp != NULL) { mpi_optimizer_put_limbs(opt, bsize); }
-            if (xtemp != NULL) { mpi_optimizer_put_limbs(opt, asize); }
-            if (optimizer == NULL && opt != NULL) { mpi_optimizer_destory(opt); }
+            if (gtemp != NULL) { mpn_optimizer_put_limbs(opt, rsize); }
+            if (ytemp != NULL) { mpn_optimizer_put_limbs(opt, bsize); }
+            if (xtemp != NULL) { mpn_optimizer_put_limbs(opt, asize); }
+            if (optimizer == NULL && opt != NULL) { mpn_optimizer_destory(opt); }
         }
     }
 
@@ -1460,8 +1451,8 @@ int mpi_swap_consttime(unsigned condition, mpi_t *a, mpi_t *b, unsigned int n)
 
     // conditionally swap the data
     {
-        mpi_limb_t cond = condition, t;
-        cond = ((~cond & ((cond - 1))) >> (sizeof(mpi_limb_t) * BITS_PER_BYTE - 1)) - 1;
+        mpn_limb_t cond = condition, t;
+        cond = ((~cond & ((cond - 1))) >> (sizeof(mpn_limb_t) * BITS_PER_BYTE - 1)) - 1;
         for (unsigned int i = 0; i < n; i++) {
             t = (a->data[i] ^ b->data[i]) & cond;
             a->data[i] ^= t;
@@ -1478,7 +1469,7 @@ int mpi_swap_consttime(unsigned condition, mpi_t *a, mpi_t *b, unsigned int n)
  * @note:
  *    1. reference: openssl/bn_gcd.c; <Fast constant-time gcd computation and modular inversion>
  */
-int mpi_gcd_consttime(mpi_t *r, const mpi_t *a, const mpi_t *b, mpi_optimizer_t *optimizer)
+int mpi_gcd_consttime(mpi_t *r, const mpi_t *a, const mpi_t *b, mpn_optimizer_t *optimizer)
 {
     if (r == NULL || a == NULL || b == NULL) { return -EINVAL; }
 
@@ -1499,11 +1490,11 @@ int mpi_gcd_consttime(mpi_t *r, const mpi_t *a, const mpi_t *b, mpi_optimizer_t 
         unsigned int abits = mpi_bits(a);
         unsigned int bbits = mpi_bits(b);
         unsigned int mbits = abits >= bbits ? abits : bbits;
-        if (mpi_max_bits(r) < mbits + MPI_LIMB_BITS) { return -ERANGE; }
+        if (mpi_max_bits(r) < mbits + MPN_LIMB_BITS) { return -ERANGE; }
 
-        mpi_optimizer_t *opt = optimizer;
+        mpn_optimizer_t *opt = optimizer;
         if (opt == NULL) {
-            opt = mpi_optimizer_create(r->room + a->room + b->room);
+            opt = mpn_optimizer_create(r->room + a->room + b->room);
             if (opt == NULL) {
                 MPI_RAISE_ERROR(-ENOMEM);
                 return -ENOMEM;
@@ -1511,19 +1502,19 @@ int mpi_gcd_consttime(mpi_t *r, const mpi_t *a, const mpi_t *b, mpi_optimizer_t 
         }
 
         /* allocate buffers */
-        mpi_t *g = mpi_optimizer_get(opt, MPI_BITS_TO_LIMBS(mbits) + 1);
-        mpi_t *t = mpi_optimizer_get(opt, MPI_BITS_TO_LIMBS(mbits) + 2);
+        mpi_t *g = mpn_optimizer_get(opt, MPN_BITS_TO_LIMBS(mbits) + 1);
+        mpi_t *t = mpn_optimizer_get(opt, MPN_BITS_TO_LIMBS(mbits) + 2);
         if (g == NULL || t == NULL) {
             err = -ENOMEM;
             goto operation_end;
         }
 
         /* find shared powers of two */
-        mpi_limb_t bit = 1;
+        mpn_limb_t bit = 1;
         unsigned int shifts = 0;
         for (unsigned i = 0; i < a->room && i < b->room; i++) {
-            mpi_limb_t mask = ~(a->data[i] | b->data[i]);
-            for (unsigned int j = 0; j < MPI_LIMB_BITS; j++) {
+            mpn_limb_t mask = ~(a->data[i] | b->data[i]);
+            for (unsigned int j = 0; j < MPN_LIMB_BITS; j++) {
                 bit &= mask;
                 shifts += (unsigned int)bit;
                 mask >>= 1;
@@ -1535,7 +1526,7 @@ int mpi_gcd_consttime(mpi_t *r, const mpi_t *a, const mpi_t *b, mpi_optimizer_t 
 
         /* expand to biggest nword, with room for a possible extra word */
         unsigned top = 1 + ((r->size >= g->size) ? r->size : g->size);
-        MPI_ASSERT(r->room >= top && g->room >= top
+        MPN_ASSERT(r->room >= top && g->room >= top
                    && t->room >= top); // ensured via `mpi_max_bits(r) < mbits` checking
 
         /* re-arrange inputs s.t. r is odd */
@@ -1544,8 +1535,7 @@ int mpi_gcd_consttime(mpi_t *r, const mpi_t *a, const mpi_t *b, mpi_optimizer_t 
         /* compute the number of iterations */
         unsigned int rlen = mpi_bits(r);
         unsigned int glen = mpi_bits(g);
-        unsigned int m =
-            4 + 3 * ((rlen >= glen) ? rlen : glen); // will never overflow under the limitations
+        unsigned int m = 4 + 3 * ((rlen >= glen) ? rlen : glen); // will never overflow under the limitations
 
         int delta = 1;
         for (unsigned i = 0; i < m; i++) {
@@ -1570,9 +1560,9 @@ int mpi_gcd_consttime(mpi_t *r, const mpi_t *a, const mpi_t *b, mpi_optimizer_t 
         mpi_lshift(r, r, shifts);
 
     operation_end:
-        if (t != NULL) { mpi_optimizer_put(optimizer, MPI_BITS_TO_LIMBS(mbits) + 2); }
-        if (g != NULL) { mpi_optimizer_put(optimizer, MPI_BITS_TO_LIMBS(mbits) + 1); }
-        if (optimizer == NULL && opt != NULL) { mpi_optimizer_destory(opt); }
+        if (t != NULL) { mpn_optimizer_put(optimizer, MPN_BITS_TO_LIMBS(mbits) + 2); }
+        if (g != NULL) { mpn_optimizer_put(optimizer, MPN_BITS_TO_LIMBS(mbits) + 1); }
+        if (optimizer == NULL && opt != NULL) { mpn_optimizer_destory(opt); }
 
         return err;
     }
