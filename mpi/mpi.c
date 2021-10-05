@@ -968,10 +968,6 @@ int mpi_div(mpi_t *q, mpi_t *r, const mpi_t *x, const mpi_t *y)
         MPI_RAISE_ERROR(-EINVAL, "Syntax error: divide by zero");
         return -EINVAL;
     }
-    if (r != NULL && mpi_max_bits(r) < mpi_bits(x) + MPN_LIMB_BITS) {
-        MPI_RAISE_ERROR(-ERANGE, "Remainder's space it not enough");
-        return -ERANGE;
-    }
 
     int ret = mpn_cmp(x->data, x->size, y->data, y->size);
     if (ret < 0) { // special case: x < y, q = 0, r = x
@@ -982,6 +978,12 @@ int mpi_div(mpi_t *q, mpi_t *r, const mpi_t *x, const mpi_t *y)
         int err = mpi_set_limb(q, 1);
         if (err == 0) { q->sign = x->sign != y->sign; }
         return err;
+    }
+
+    if (r != NULL && mpi_max_bits(r) < mpi_bits(x) + MPN_LIMB_BITS) {
+        MPI_RAISE_ERROR(-ERANGE, "Remainder's space it not enough, max_bits(r) = %u, bits(x) = %u", mpi_max_bits(r),
+                        mpi_bits(x));
+        return -ERANGE;
     }
 
     if (q != NULL) { ZEROIZE(q->data, 0, x->size - y->size); }

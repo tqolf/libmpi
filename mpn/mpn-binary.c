@@ -557,7 +557,7 @@ mpn_size_t mpn_rshift(mpn_limb_t *r, const mpn_limb_t *a, mpn_size_t asize, mpn_
         if (lo != 0) {
             r[rsize - 1] = lo;
         } else {
-            rsize--;
+            r[--rsize] = 0;
         }
     } else {
         COPY(r, &a[nw], rsize);
@@ -857,9 +857,6 @@ static mpn_limb_t mpn_sub_mul(mpn_limb_t *r, const mpn_limb_t *a, mpn_size_t asi
 }
 #endif
 
-#include <stdio.h>
-#define TRACE(fmt, ...) printf("%s:%d " fmt "\n", __FILE__, __LINE__, ##__VA_ARGS__)
-
 /**
  * mpn division: xsize, q, x(q = x / y, x = x % y)
  */
@@ -896,16 +893,12 @@ mpn_size_t mpn_div(mpn_limb_t *q, mpn_size_t *qsize, mpn_limb_t *x, mpn_size_t x
         mpn_size_t qsz = xsize - ysize + 1;
         mpn_size_t shifts = mpn_limb_nlz_consttime(y[ysize - 1]);
 
-        TRACE("x[%u] = %" MPN_LIMB_FORMAT, xsize - 1, x[xsize - 1]);
-
         /* normalization */
-        x[xsize] = 0;
+        x[xsize] = 0; /* @note: one additional limb required for normalization */
         if (shifts != 0) {
             mpn_lshift(x, x, xsize, shifts);
             mpn_lshift(y, y, ysize, shifts);
         }
-
-        TRACE("x[%u] = %" MPN_LIMB_FORMAT, xsize - 1, x[xsize - 1]);
 
         /* zeroize */
         if (q != NULL && qsize != NULL) { ZEROIZE(q, 0, qsz); }
@@ -954,19 +947,11 @@ mpn_size_t mpn_div(mpn_limb_t *q, mpn_size_t *qsize, mpn_limb_t *x, mpn_size_t x
                     }
                 }
 
-                TRACE("x[%u] = %" MPN_LIMB_FORMAT, xsize - 1, x[xsize - 1]);
-
-                if (__q > 0) { // FIXME: remainder
+                if (__q > 0) {
                     mpn_limb_t extend = mpn_sub_mul(&x[i - ysize], y, ysize, __q);
-                    TRACE("x[%u] = %" MPN_LIMB_FORMAT ", extend = %" MPN_LIMB_FORMAT
-                          ", x[i] - extend = %" MPN_LIMB_FORMAT,
-                          i, x[i], extend, x[i] - extend);
                     extend = (x[i] -= extend);
                     if (extend > 0) { /* subtracted too much */
                         extend = mpn_add_vectorized(&x[i - ysize], &x[i - ysize], y, ysize);
-                        TRACE("x[%u] = %" MPN_LIMB_FORMAT ", extend = %" MPN_LIMB_FORMAT
-                              ", x[i] + extend = %" MPN_LIMB_FORMAT,
-                              i, x[i], extend, x[i] + extend);
                         // x[i] += extend; // XXX: EXPECT_EQ(0, x[i] += extend)
                         x[i] = 0;
                         __q--;
@@ -976,7 +961,6 @@ mpn_size_t mpn_div(mpn_limb_t *q, mpn_size_t *qsize, mpn_limb_t *x, mpn_size_t x
                 /* store quotation digit */
                 if (q != NULL && qsize != NULL) { q[i - ysize] = __q; }
             }
-            TRACE("x[%u] = %" MPN_LIMB_FORMAT, xsize - 1, x[xsize - 1]);
         }
 
         /* de-normalization */

@@ -6,6 +6,10 @@ ADD_TEST(NAME unittest-mpi COMMAND unittest-mpi
 )
 TARGET_STRIP_PATH_PREFIX(unittest-mpi)
 
+IF (BUILD_VENDOR)
+  ADD_DEPENDENCIES(unittest-mpi openssl)
+ENDIF ()
+
 # benchmark
 ADD_EXECUTABLE(benchmark benchmark.cpp)
 TARGET_LINK_LIBRARIES(benchmark mpi crypto pthread dl)
