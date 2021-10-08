@@ -13,9 +13,9 @@ jobs:
           - arch: aarch64
             distro: ubuntu18.04
           - arch: ppc64le
-            distro: alpine_latest
+            distro: ubuntu18.04
           - arch: s390x
-            distro: fedora_latest
+            distro: ubuntu18.04
 
     steps:
       - uses: actions/checkout@v2.1.0
