@@ -477,7 +477,8 @@
 #define UADD_AABB_C(s2, s1, s0, a1, a0, b1, b0)                           \
     __asm__("adds\t%2, %x6, %7\n\tadcs\t%1, %x4, %x5\n\tadc\t%0, %3, xzr" \
             : "=r"(s2), "=&r"(s1), "=&r"(s0)                              \
-            : "rZ"(s2), "%rZ"(a1), "rZ"(b1), "%rZ"(a0), "rI"(b0) "cc")
+            : "rZ"(s2), "%rZ"(a1), "rZ"(b1), "%rZ"(a0), "rI"(b0)          \
+            : "cc")
 #endif
 
 #if (defined HAVE_HOST_CPU_FAMILY_powerpc) && !defined(MPI_LIMB_LONG_LONG)
