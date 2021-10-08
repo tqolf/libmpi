@@ -15,7 +15,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - uses: uraimo/run-on-arch-action@v2.0.5
 
       - name: Install Linux requirements
         if: ${{ matrix.os == 'ubuntu-latest' }}
