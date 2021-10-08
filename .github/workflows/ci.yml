@@ -4,17 +4,18 @@ on: [push, pull_request]
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.distro }}
 
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        distro: [ubuntu-latest]
         build: [Release, Debug]
         compiler: [gcc, clang]
         arch: [aarch64, amd64, x86, x86_64]
 
     steps:
       - uses: actions/checkout@v2
+      - uses: uraimo/run-on-arch-action@v2.0.5
 
       - name: Install Linux requirements
         if: ${{ matrix.os == 'ubuntu-latest' }}
