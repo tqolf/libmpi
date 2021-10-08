@@ -17,7 +17,7 @@ jobs:
           - arch: ppc64le
             distro: ubuntu18.04
           - arch: s390x
-            distro: ubuntu18.04
+            distro: fedora_latest
 
     steps:
       - uses: actions/checkout@v2.1.0
@@ -41,15 +41,15 @@ jobs:
             case "${{ matrix.distro }}" in
               ubuntu*|jessie|stretch|buster|bullseye)
                 # apt-get update -q -y
-                apt-get install -q -y nasm libgtest-dev openssl cmake gcc
+                apt-get install -q -y nasm libgtest-dev openssl cmake
                 ;;
               fedora*)
                 # dnf -y update
-                dnf -y install nasm libgtest-dev openssl cmake gcc
+                dnf -y install nasm gtest openssl cmake
                 ;;
               alpine*)
                 # apk update
-                apk add git nasm libgtest-dev openssl cmake gcc
+                apk add git nasm gtest openssl cmake
                 ;;
             esac
 
