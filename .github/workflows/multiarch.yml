@@ -21,8 +21,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2.1.0
-      - uses: uraimo/run-on-arch-action@v2.0.5
-        name: Configure and Build
+      - name: Configure and Build
+        uses: uraimo/run-on-arch-action@v2.1.1
         id: build
         with:
           arch: ${{ matrix.arch }}
@@ -30,6 +30,17 @@ jobs:
 
           # Not required, but speeds up builds
           githubToken: ${{ github.token }}
+          
+          # Create an artifacts directory
+          setup: |
+            mkdir -p "${PWD}/artifacts"
+            
+          # Mount the artifacts directory as /artifacts in the container
+          dockerRunArgs: |
+            --volume "${PWD}/artifacts:/artifacts"
+          
+          # The shell to run commands with in the container
+          shell: /bin/bash
 
           # Install some dependencies in the container. This speeds up builds if
           # you are also using githubToken. Any dependencies installed here will
@@ -41,11 +52,11 @@ jobs:
             case "${{ matrix.distro }}" in
               ubuntu*|jessie|stretch|buster|bullseye)
                 apt-get update -q -y
-                apt-get install -q -y nasm libgtest-dev openssl cmake
+                apt-get install -q -y git nasm libgtest-dev openssl cmake
                 ;;
               fedora*)
                 dnf -y update
-                dnf -y install nasm gtest openssl cmake
+                dnf -y install git nasm gtest openssl cmake
                 ;;
               alpine*)
                 apk update
@@ -55,6 +66,16 @@ jobs:
 
           # Produce a binary artifact and place it in the mounted volume
           run: |
+            pwd
             cmake --version
+            pwd
             cmake -B ${{github.workspace}}/build
+            pwd
             cmake --build ${{github.workspace}}/build
+            pwd
+
+      - name: Show the artifact
+        # Items placed in /artifacts in the container will be in
+        # ${PWD}/artifacts on the host.
+        run: |
+          ls -al "${PWD}/artifacts"
