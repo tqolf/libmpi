@@ -15,7 +15,7 @@ jobs:
           - arch: aarch64
             distro: ubuntu18.04
           - arch: ppc64le
-            distro: ubuntu18.04
+            distro: alpine_latest
           - arch: s390x
             distro: fedora_latest
 
@@ -55,5 +55,6 @@ jobs:
 
           # Produce a binary artifact and place it in the mounted volume
           run: |
+            cmake --version
             cmake -B ${{github.workspace}}/build
             cmake --build ${{github.workspace}}/build
