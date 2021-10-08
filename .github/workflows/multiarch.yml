@@ -40,15 +40,15 @@ jobs:
           install: |
             case "${{ matrix.distro }}" in
               ubuntu*|jessie|stretch|buster|bullseye)
-                # apt-get update -q -y
+                apt-get update -q -y
                 apt-get install -q -y nasm libgtest-dev openssl cmake
                 ;;
               fedora*)
-                # dnf -y update
+                dnf -y update
                 dnf -y install nasm gtest openssl cmake
                 ;;
               alpine*)
-                # apk update
+                apk update
                 apk add git nasm gtest openssl cmake
                 ;;
             esac
