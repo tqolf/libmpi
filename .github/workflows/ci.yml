@@ -38,7 +38,7 @@ jobs:
           esac
 
       - name: Configure
-        run: cmake -B ${{github.workspace}}/build -DCMAKE_VERBOSE_MAKEFILE=ON -DMPN_NO_ASM=ON -DCMAKE_CXX_FLAGS=${{ steps.requirements.outputs.CPPFLAGS }} -DCMAKE_EXE_LINKER_FLAGS_DEBUG=${{ steps.requirements.outputs.LDFLAGS }}
+        run: cmake -B ${{github.workspace}}/build -DCMAKE_VERBOSE_MAKEFILE=ON -DMPN_NO_ASM=ON -DCMAKE_CXX_FLAGS=${{ steps.requirements.outputs.CPPFLAGS }} -DCMAKE_EXE_LINKER_FLAGS=${{ steps.requirements.outputs.LDFLAGS }}
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build
