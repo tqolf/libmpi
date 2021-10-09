@@ -47,16 +47,16 @@ jobs:
               ubuntu*|jessie|stretch|buster|bullseye)
                 uname -a
                 apt-get update -q -y
-                apt-get install -q -y gcc git nasm libgtest-dev openssl cmake
+                apt-get install -q -y gcc g++ git nasm libgtest-dev openssl cmake
                 ;;
               fedora*)
                 uname -a
                 dnf -y update
-                dnf -y install gcc git nasm gtest openssl cmake
+                dnf -y install gcc g++ git nasm gtest openssl cmake
                 ;;
               alpine*)
                 apk update
-                apk add gcc git nasm gtest openssl cmake
+                apk add gcc g++ git nasm gtest openssl cmake
                 ;;
             esac
 
