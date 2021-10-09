@@ -36,9 +36,12 @@ jobs:
               apk add gcc g++ git nasm gtest openssl cmake
               ;;
           esac
+        env:
+          LDFLAGS: $LDFLAGS
+          CPPFLAGS: $CPPFLAGS
 
       - name: Configure
-        run: cmake -B ${{github.workspace}}/build -DMPN_NO_ASM=ON -DCMAKE_CXX_FLAGS=$CPPFLAGS -DCMAKE_EXE_LINKER_FLAGS_DEBUG=$LDFLAGS
+        run: cmake -B ${{github.workspace}}/build -DMPN_NO_ASM=ON -DCMAKE_CXX_FLAGS=${{ env.CPPFLAGS }} -DCMAKE_EXE_LINKER_FLAGS_DEBUG=${{ env.LDFLAGS }}
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build
