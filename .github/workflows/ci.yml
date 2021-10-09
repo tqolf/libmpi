@@ -38,7 +38,7 @@ jobs:
           esac
 
       - name: Configure
-        run: cmake -B ${{github.workspace}}/build
+        run: cmake -B ${{github.workspace}}/build -DMPN_NO_ASM=ON
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build
