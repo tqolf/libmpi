@@ -63,7 +63,6 @@ jobs:
           # Produce a binary artifact and place it in the mounted volume
           run: |
             cmake --version
-            cd /workspace
-            mkdir build
-            cmake -B /workspace/build
-            cmake --build /workspace/build
+            mkdir -p /workspace/build && cd /workspace/build
+            cmake ..
+            make
