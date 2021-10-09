@@ -22,8 +22,7 @@ jobs:
               sudo apt-get install -q -y gcc g++ git nasm libgtest-dev openssl cmake
               ;;
             macos*)
-              brew update
-              brew install nasm googletest openssl@1.1
+              brew install nasm googletest openssl@1.1 openssl@3
               brew link openssl --force
               echo ::set-output name=LDFLAGS::"-L/usr/local/opt/openssl@1.1/lib"
               echo ::set-output name=CPPFLAGS::"-I/usr/local/opt/openssl@1.1/include"
