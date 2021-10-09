@@ -8,34 +8,37 @@ jobs:
 
     strategy:
       matrix:
-        distro: [ubuntu-latest]
-        build: [Release, Debug]
-        compiler: [gcc, clang]
-        arch: [aarch64, amd64, x86, x86_64]
+        distro: [ubuntu-latest, macos-latest]
 
     steps:
       - uses: actions/checkout@v2
 
-      - name: Install Linux requirements
-        if: ${{ matrix.os == 'ubuntu-latest' }}
+      - name: Install requirements
         run: |
-          lscpu
-          sudo apt install nasm
-          sudo apt install libgtest-dev
-          sudo apt install openssl
-
-      - name: Install MacOS requirements
-        if: ${{ matrix.os == 'macos-latest' }}
-        run: |
-          brew install nasm
-          brew install googletest
-          brew install openssl
-          brew link openssl --force
-          export LDFLAGS="-L/usr/local/opt/openssl@1.1/lib"
-          export CPPFLAGS="-I/usr/local/opt/openssl@1.1/include"
+          case "${{ matrix.distro }}" in
+            ubuntu*|jessie|stretch|buster|bullseye)
+              apt-get update -q -y
+              apt-get install -q -y gcc g++ git nasm libgtest-dev openssl cmake
+              ;;
+            macos*)
+              brew update
+              brew install nasm googletest openssl
+              brew link openssl --force
+              export LDFLAGS="-L/usr/local/opt/openssl@1.1/lib"
+              export CPPFLAGS="-I/usr/local/opt/openssl@1.1/include"
+              ;;
+            fedora*)
+              dnf -y update
+              dnf -y install gcc g++ git nasm gtest openssl cmake
+              ;;
+            alpine*)
+              apk update
+              apk add gcc g++ git nasm gtest openssl cmake
+              ;;
+          esac
 
       - name: Configure
-        run: cmake -B ${{github.workspace}}/build -DCMAKE_C_COMPILER=$(which ${{ matrix.compiler }}) -DCMAKE_BUILD_TYPE=${{ matrix.build }}
+        run: cmake -B ${{github.workspace}}/build
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build

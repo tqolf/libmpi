@@ -14,6 +14,8 @@ jobs:
         include:
           - arch: aarch64
             distro: ubuntu18.04
+          - arch: armv7
+            distro: ubuntu20.04
           - arch: s390x
             distro: fedora_latest
 
@@ -28,11 +30,11 @@ jobs:
 
           # Not required, but speeds up builds
           githubToken: ${{ github.token }}
-            
+
           # Mount the artifacts directory as /artifacts in the container
           dockerRunArgs: |
             --volume "${{ github.workspace }}:/workspace"
-          
+
           # The shell to run commands with in the container
           shell: /bin/bash
 
@@ -45,12 +47,17 @@ jobs:
           install: |
             case "${{ matrix.distro }}" in
               ubuntu*|jessie|stretch|buster|bullseye)
-                uname -a
                 apt-get update -q -y
                 apt-get install -q -y gcc g++ git nasm libgtest-dev openssl cmake
                 ;;
+              macos*)
+                brew update
+                brew install nasm googletest openssl
+                brew link openssl --force
+                export LDFLAGS="-L/usr/local/opt/openssl@1.1/lib"
+                export CPPFLAGS="-I/usr/local/opt/openssl@1.1/include"
+                ;;
               fedora*)
-                uname -a
                 dnf -y update
                 dnf -y install gcc g++ git nasm gtest openssl cmake
                 ;;
