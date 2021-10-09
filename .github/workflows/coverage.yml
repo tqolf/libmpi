@@ -11,8 +11,8 @@ jobs:
 
       - name: Install requirements
         run: |
-          apt-get update -q -y
-          apt-get install -q -y gcc g++ git nasm libgtest-dev openssl cmake
+          sudo apt-get update -q -y
+          sudo apt-get install -q -y gcc g++ git nasm libgtest-dev openssl cmake
 
       - name: Configure
         run: cmake -B ${{github.workspace}}/build -DGCOV=ON -DCMAKE_BUILD_TYPE=Debug -DMPI_NO_ASM=ON

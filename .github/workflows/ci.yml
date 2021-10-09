@@ -17,8 +17,8 @@ jobs:
         run: |
           case "${{ matrix.distro }}" in
             ubuntu*|jessie|stretch|buster|bullseye)
-              apt-get update -q -y
-              apt-get install -q -y gcc g++ git nasm libgtest-dev openssl cmake
+              sudo apt-get update -q -y
+              sudo apt-get install -q -y gcc g++ git nasm libgtest-dev openssl cmake
               ;;
             macos*)
               brew update
@@ -28,8 +28,8 @@ jobs:
               export CPPFLAGS="-I/usr/local/opt/openssl@1.1/include"
               ;;
             fedora*)
-              dnf -y update
-              dnf -y install gcc g++ git nasm gtest openssl cmake
+              sudo dnf -y update
+              sudo dnf -y install gcc g++ git nasm gtest openssl cmake
               ;;
             alpine*)
               apk update
