@@ -14,6 +14,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Install requirements
+        id: requirements
         run: |
           case "${{ matrix.distro }}" in
             ubuntu*|jessie|stretch|buster|bullseye)
@@ -24,8 +25,8 @@ jobs:
               brew update
               brew install nasm googletest openssl@3
               brew link openssl --force
-              export LDFLAGS="-L/usr/local/opt/openssl@3/lib"
-              export CPPFLAGS="-I/usr/local/opt/openssl@3/include"
+              echo ::set-output name=LDFLAGS::"-L/usr/local/opt/openssl@3/lib"
+              echo ::set-output name=CPPFLAGS::"-I/usr/local/opt/openssl@3/include"
               ;;
             fedora*)
               sudo dnf -y update
@@ -36,12 +37,9 @@ jobs:
               apk add gcc g++ git nasm gtest openssl cmake
               ;;
           esac
-        env:
-          LDFLAGS: $LDFLAGS
-          CPPFLAGS: $CPPFLAGS
 
       - name: Configure
-        run: cmake -B ${{github.workspace}}/build -DMPN_NO_ASM=ON -DCMAKE_CXX_FLAGS=${{ env.CPPFLAGS }} -DCMAKE_EXE_LINKER_FLAGS_DEBUG=${{ env.LDFLAGS }}
+        run: cmake -B ${{github.workspace}}/build -DMPN_NO_ASM=ON -DCMAKE_CXX_FLAGS=${{ steps.requirements.outputs.CPPFLAGS }} -DCMAKE_EXE_LINKER_FLAGS_DEBUG=${{ steps.requirements.outputs.LDFLAGS }}
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build
