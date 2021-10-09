@@ -22,7 +22,7 @@ jobs:
               ;;
             macos*)
               brew update
-              brew install nasm googletest openssl
+              brew install nasm googletest openssl@1.1
               brew link openssl --force
               export LDFLAGS="-L/usr/local/opt/openssl@1.1/lib"
               export CPPFLAGS="-I/usr/local/opt/openssl@1.1/include"
