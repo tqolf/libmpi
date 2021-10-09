@@ -11,27 +11,8 @@ jobs:
 
       - name: Install requirements
         run: |
-          case "${{ matrix.distro }}" in
-            ubuntu*|jessie|stretch|buster|bullseye)
-              apt-get update -q -y
-              apt-get install -q -y gcc g++ git nasm libgtest-dev openssl cmake
-              ;;
-            macos*)
-              brew update
-              brew install nasm googletest openssl
-              brew link openssl --force
-              export LDFLAGS="-L/usr/local/opt/openssl@1.1/lib"
-              export CPPFLAGS="-I/usr/local/opt/openssl@1.1/include"
-              ;;
-            fedora*)
-              dnf -y update
-              dnf -y install gcc g++ git nasm gtest openssl cmake
-              ;;
-            alpine*)
-              apk update
-              apk add gcc g++ git nasm gtest openssl cmake
-              ;;
-          esac
+          apt-get update -q -y
+          apt-get install -q -y gcc g++ git nasm libgtest-dev openssl cmake
 
       - name: Configure
         run: cmake -B ${{github.workspace}}/build -DGCOV=ON -DCMAKE_BUILD_TYPE=Debug -DMPI_NO_ASM=ON
