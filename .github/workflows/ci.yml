@@ -22,10 +22,10 @@ jobs:
               ;;
             macos*)
               brew update
-              brew install nasm googletest openssl@1.1
+              brew install nasm googletest openssl@3
               brew link openssl --force
-              export LDFLAGS="-L/usr/local/opt/openssl@1.1/lib"
-              export CPPFLAGS="-I/usr/local/opt/openssl@1.1/include"
+              export LDFLAGS="-L/usr/local/opt/openssl@3/lib"
+              export CPPFLAGS="-I/usr/local/opt/openssl@3/include"
               ;;
             fedora*)
               sudo dnf -y update
