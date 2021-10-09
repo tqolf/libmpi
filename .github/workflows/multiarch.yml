@@ -21,7 +21,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2.1.0
-      - name: Configure and Build
+      - name: Building
         uses: uraimo/run-on-arch-action@v2.1.1
         id: build
         with:
@@ -31,9 +31,13 @@ jobs:
           # Not required, but speeds up builds
           githubToken: ${{ github.token }}
 
-          # Mount the artifacts directory as /artifacts in the container
+          # Mount the github.workspace directory as /workspace in the container
           dockerRunArgs: |
             --volume "${{ github.workspace }}:/workspace"
+
+          # Pass some environment variables to the container
+          env: |
+            workspace: /workspace
 
           # The shell to run commands with in the container
           shell: /bin/bash
@@ -67,9 +71,7 @@ jobs:
                 ;;
             esac
 
-          # Produce a binary artifact and place it in the mounted volume
+          # Configure and Build
           run: |
-            cmake --version
-            mkdir -p /workspace/build && cd /workspace/build
-            cmake ..
-            make
+            mkdir -p ${workspace}/build && cd ${workspace}/build
+            cmake .. && make
