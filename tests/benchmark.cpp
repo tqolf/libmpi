@@ -17,7 +17,10 @@
 #include <mpn/mpn-binary.h>
 #include <mpn/mpn-montgomery.h>
 
-#include "benchmark.hpp"
+#include "benchmark.h"
+
+#include <vector>
+#include <iostream>
 #include <openssl/bn.h>
 #include <openssl/rand.h>
 #include <unistd.h>
@@ -60,23 +63,17 @@ int main(void)
                                   // is empty
 
             {
-                Benchmark bench("from-string(ossl)", 0);
-                if (bench.run([&]() -> bool {
-                        BN_hex2bn(&r, val.c_str());
-                        return true;
-                    })) {
-                    bench.print();
-                }
+                Bencher bench("from-string(ossl)", [&]() -> bool {
+                    BN_hex2bn(&r, val.c_str());
+                    return true;
+                });
             }
 
             {
-                Benchmark bench("to-string(ossl)", 0);
-                if (bench.run([&]() -> bool {
-                        free(BN_bn2hex(r));
-                        return true;
-                    })) {
-                    bench.print();
-                }
+                Bencher bench("to-string(ossl)", [&]() -> bool {
+                    free(BN_bn2hex(r));
+                    return true;
+                });
             }
 
             BN_free(r);
@@ -87,22 +84,16 @@ int main(void)
             mpi_t *r = NULL;
 
             {
-                Benchmark bench("from-string(mpi)", 0);
-                if (bench.run([&]() -> bool {
-                        return mpi_from_string(&r, val.c_str()) == 0;
-                    })) {
-                    bench.print();
-                }
+                Bencher bench("from-string(mpi)", [&]() -> bool {
+                    return mpi_from_string(&r, val.c_str()) == 0;
+                });
             }
 
             {
-                Benchmark bench("to-string(mpi)", 0);
-                if (bench.run([&]() -> bool {
-                        free(mpi_to_string(r));
-                        return true;
-                    })) {
-                    bench.print();
-                }
+                Bencher bench("to-string(mpi)", [&]() -> bool {
+                    free(mpi_to_string(r));
+                    return true;
+                });
             }
 
             mpi_destory(r);
@@ -124,23 +115,17 @@ int main(void)
             BIGNUM *r = BN_new();
 
             {
-                Benchmark bench("from-octets(ossl)", 0);
-                if (bench.run([&]() -> bool {
-                        BN_bin2bn(buffer.data(), static_cast<int>(buffer.size()), r);
-                        return true;
-                    })) {
-                    bench.print();
-                }
+                Bencher bench("from-octets(ossl)", [&]() -> bool {
+                    BN_bin2bn(buffer.data(), static_cast<int>(buffer.size()), r);
+                    return true;
+                });
             }
 
             {
-                Benchmark bench("to-octets(mpi)", 0);
-                if (bench.run([&]() -> bool {
-                        BN_bn2bin(r, buffer.data());
-                        return true;
-                    })) {
-                    bench.print();
-                }
+                Bencher bench("to-octets(mpi)", [&]() -> bool {
+                    BN_bn2bin(r, buffer.data());
+                    return true;
+                });
             }
 
             BN_free(r);
@@ -151,22 +136,16 @@ int main(void)
             mpi_t *r = NULL;
 
             {
-                Benchmark bench("from-octets(mpi)", 0);
-                if (bench.run([&]() -> bool {
-                        return mpi_from_octets(&r, buffer.data(), buffer.size()) == 0;
-                    })) {
-                    bench.print();
-                }
+                Bencher bench("from-octets(mpi)", [&]() -> bool {
+                    return mpi_from_octets(&r, buffer.data(), buffer.size()) == 0;
+                });
             }
 
             {
-                Benchmark bench("to-octets(mpi)", 0);
-                if (bench.run([&]() -> bool {
-                        mpi_to_octets(r, buffer.data(), buffer.size(), NULL);
-                        return true;
-                    })) {
-                    bench.print();
-                }
+                Bencher bench("to-octets(mpi)", [&]() -> bool {
+                    mpi_to_octets(r, buffer.data(), buffer.size(), NULL);
+                    return true;
+                });
             }
 
             mpi_destory(r);
@@ -195,13 +174,10 @@ int main(void)
             BN_bin2bn(abuffer.data(), static_cast<int>(abuffer.size()), a);
             BN_bin2bn(bbuffer.data(), static_cast<int>(bbuffer.size()), b);
 
-            Benchmark bench("add(ossl)", 0);
-            if (bench.run([&]() -> bool {
-                    BN_add(r, a, b);
-                    return true;
-                })) {
-                bench.print();
-            }
+            Bencher bench("add(ossl)", [&]() -> bool {
+                BN_add(r, a, b);
+                return true;
+            });
 
             BN_free(a);
             BN_free(b);
@@ -218,12 +194,9 @@ int main(void)
             size_t sz = (mpi_bits(a) >= mpi_bits(b) ? mpi_bits(a) : mpi_bits(b)) + 1;
             mpi_t *r = mpi_create(sz);
 
-            Benchmark bench("add(mpi)", 0);
-            if (bench.run([&]() -> bool {
-                    return mpi_add(r, a, b) == 0;
-                })) {
-                bench.print();
-            }
+            Bencher bench("add(mpi)", [&]() -> bool {
+                return mpi_add(r, a, b) == 0;
+            });
 
             mpi_destory(a);
             mpi_destory(b);
@@ -252,13 +225,10 @@ int main(void)
             BN_bin2bn(rbuffer.data(), static_cast<int>(rbuffer.size()), r);
             BN_bin2bn(bbuffer.data(), static_cast<int>(bbuffer.size()), b);
 
-            Benchmark bench("add-assign(ossl)", 0);
-            if (bench.run([&]() -> bool {
-                    BN_add(r, r, b);
-                    return true;
-                })) {
-                bench.print();
-            }
+            Bencher bench("add-assign(ossl)", [&]() -> bool {
+                BN_add(r, r, b);
+                return true;
+            });
 
             BN_free(b);
             BN_free(r);
@@ -275,12 +245,9 @@ int main(void)
             size_t sz = (mpi_bits(r) >= mpi_bits(b) ? mpi_bits(r) : mpi_bits(b)) + 1;
             r = mpi_expand(r, sz);
 
-            Benchmark bench("add-assign(mpi)", 0);
-            if (bench.run([&]() -> bool {
-                    return mpi_add(r, r, b) == 0;
-                })) {
-                bench.print();
-            }
+            Bencher bench("add-assign(mpi)", [&]() -> bool {
+                return mpi_add(r, r, b) == 0;
+            });
 
             mpi_destory(b);
             mpi_destory(r);
@@ -309,13 +276,10 @@ int main(void)
             BN_bin2bn(abuffer.data(), static_cast<int>(abuffer.size()), a);
             BN_bin2bn(bbuffer.data(), static_cast<int>(bbuffer.size()), b);
 
-            Benchmark bench("sub(ossl)", 0);
-            if (bench.run([&]() -> bool {
-                    BN_sub(r, a, b);
-                    return true;
-                })) {
-                bench.print();
-            }
+            Bencher bench("sub(ossl)", [&]() -> bool {
+                BN_sub(r, a, b);
+                return true;
+            });
 
             BN_free(a);
             BN_free(b);
@@ -332,12 +296,9 @@ int main(void)
             size_t sz = (mpi_bits(a) >= mpi_bits(b) ? mpi_bits(a) : mpi_bits(b));
             mpi_t *r = mpi_create(sz);
 
-            Benchmark bench("sub(mpi)", 0);
-            if (bench.run([&]() -> bool {
-                    return mpi_sub(r, a, b) == 0;
-                })) {
-                bench.print();
-            }
+            Bencher bench("sub(mpi)", [&]() -> bool {
+                return mpi_sub(r, a, b) == 0;
+            });
 
             mpi_destory(a);
             mpi_destory(b);
@@ -366,13 +327,10 @@ int main(void)
             BN_bin2bn(rbuffer.data(), static_cast<int>(rbuffer.size()), r);
             BN_bin2bn(bbuffer.data(), static_cast<int>(bbuffer.size()), b);
 
-            Benchmark bench("sub-assign(ossl)", 0);
-            if (bench.run([&]() -> bool {
-                    BN_sub(r, r, b);
-                    return true;
-                })) {
-                bench.print();
-            }
+            Bencher bench("sub-assign(ossl)", [&]() -> bool {
+                BN_sub(r, r, b);
+                return true;
+            });
 
             BN_free(b);
             BN_free(r);
@@ -389,12 +347,9 @@ int main(void)
             size_t sz = (mpi_bits(r) >= mpi_bits(b) ? mpi_bits(r) : mpi_bits(b));
             r = mpi_expand(r, sz);
 
-            Benchmark bench("sub-assign(mpi)", 0);
-            if (bench.run([&]() -> bool {
-                    return mpi_sub(r, r, b) == 0;
-                })) {
-                bench.print();
-            }
+            Bencher bench("sub-assign(mpi)", [&]() -> bool {
+                return mpi_sub(r, r, b) == 0;
+            });
 
             mpi_destory(b);
             mpi_destory(r);
@@ -425,13 +380,10 @@ int main(void)
 
             BN_CTX *ctx = BN_CTX_new();
 
-            Benchmark bench("mul(ossl)", 0);
-            if (bench.run([&]() -> bool {
-                    BN_mul(r, a, b, ctx);
-                    return true;
-                })) {
-                bench.print();
-            }
+            Bencher bench("mul(ossl)", [&]() -> bool {
+                BN_mul(r, a, b, ctx);
+                return true;
+            });
 
             BN_CTX_free(ctx);
 
@@ -451,12 +403,9 @@ int main(void)
             size_t sz = mpi_bits(a) + mpi_bits(b) + MPN_LIMB_BITS;
             mpi_t *r = mpi_create(sz);
 
-            Benchmark bench("mul(mpi)", 0);
-            if (bench.run([&]() -> bool {
-                    return mpi_mul(r, a, b) == 0;
-                })) {
-                bench.print();
-            }
+            Bencher bench("mul(mpi)", [&]() -> bool {
+                return mpi_mul(r, a, b) == 0;
+            });
 
             mpi_destory(a);
             mpi_destory(b);
@@ -479,13 +428,10 @@ int main(void)
 
             BN_CTX *ctx = BN_CTX_new();
 
-            Benchmark bench("sqr(ossl)", 0);
-            if (bench.run([&]() -> bool {
-                    BN_sqr(r, a, ctx);
-                    return true;
-                })) {
-                bench.print();
-            }
+            Bencher bench("sqr(ossl)", [&]() -> bool {
+                BN_sqr(r, a, ctx);
+                return true;
+            });
 
             BN_CTX_free(ctx);
 
@@ -501,12 +447,9 @@ int main(void)
 
             mpi_t *r = mpi_create((a != NULL ? a->size : 0) * 2 * MPN_LIMB_BITS);
 
-            Benchmark bench("sqr(mpi)", 0);
-            if (bench.run([&]() -> bool {
-                    return mpi_sqr(r, a) == 0;
-                })) {
-                bench.print();
-            }
+            Bencher bench("sqr(mpi)", [&]() -> bool {
+                return mpi_sqr(r, a) == 0;
+            });
 
             mpi_destory(a);
             mpi_destory(r);
@@ -543,13 +486,10 @@ int main(void)
 
             BN_CTX *ctx = BN_CTX_new();
 
-            Benchmark bench("div(ossl)", 0);
-            if (bench.run([&]() -> bool {
-                    BN_div(q, r, a, b, ctx);
-                    return true;
-                })) {
-                bench.print();
-            }
+            Bencher bench("div(ossl)", [&]() -> bool {
+                BN_div(q, r, a, b, ctx);
+                return true;
+            });
 
             BN_CTX_free(ctx);
 
@@ -569,19 +509,16 @@ int main(void)
 
             size_t qsize = 0, rsize = mpi_bits(b);
             if (mpi_bits(a) >= mpi_bits(b)) {
-                rsize = mpi_bits(a);
+                rsize = mpi_bits(a) + MPN_LIMB_BITS;
                 qsize = mpi_bits(a) - mpi_bits(b) + MPN_LIMB_BITS;
             }
 
             mpi_t *q = mpi_create(qsize);
             mpi_t *r = mpi_create(rsize);
 
-            Benchmark bench("div(mpi)", 0);
-            if (bench.run([&]() -> bool {
-                    return mpi_div(q, r, a, b) == 0;
-                })) {
-                bench.print();
-            }
+            Bencher bench("div(mpi)", [&]() -> bool {
+                return mpi_div(q, r, a, b) == 0;
+            });
 
             mpi_destory(a);
             mpi_destory(b);
@@ -625,16 +562,10 @@ int main(void)
 
             BN_CTX *ctx = BN_CTX_new();
 
-            {
-                Benchmark bench("gcd_consttime(ossl)", 0);
-                if (bench.run([&]() -> bool {
-                        BN_gcd(r, a, b, ctx);
-                        return true;
-                    })) {
-                    bench.print();
-                }
-            }
-
+            Bencher bench("gcd_consttime(ossl)", [&]() -> bool {
+                BN_gcd(r, a, b, ctx);
+                return true;
+            });
 
             BN_CTX_free(ctx);
 
@@ -654,22 +585,16 @@ int main(void)
 
             // Daniel J. Bernsteion and Bo-Yin Yang's constant-time gcd algorithm
             {
-                Benchmark bench("gcd_consttime(mpi)", 0);
-                if (bench.run([&]() -> bool {
-                        return mpi_gcd_consttime(r, a, b, NULL) == 0;
-                    })) {
-                    bench.print();
-                }
+                Bencher bench("gcd_consttime(mpi)", [&]() -> bool {
+                    return mpi_gcd_consttime(r, a, b, NULL) == 0;
+                });
             }
 
             // Lehmer's gcd algorithm
             if (0) { // FIXME: have bugs
-                Benchmark bench("gcd(mpi)", 0);
-                if (bench.run([&]() -> bool {
-                        return mpi_gcd(r, a, b, NULL) == 0;
-                    })) {
-                    bench.print();
-                }
+                Bencher bench("gcd(mpi)", [&]() -> bool {
+                    return mpi_gcd(r, a, b, NULL) == 0;
+                });
             }
 
             mpi_destory(a);
@@ -721,12 +646,9 @@ int main(void)
 
             BIGNUM *r = BN_new();
 
-            Benchmark bench("montgomery-exp(ossl)", 0);
-            if (bench.run([&]() -> bool {
-                    return BN_mod_exp_mont(r, g, e, n, ctx, mont) == 1;
-                })) {
-                bench.print();
-            }
+            Bencher bench("montgomery-exp(ossl)", [&]() -> bool {
+                return BN_mod_exp_mont(r, g, e, n, ctx, mont) == 1;
+            });
 
             BN_CTX_free(ctx);
             BN_MONT_CTX_free(mont);
@@ -751,21 +673,15 @@ int main(void)
             mpi_t *r = mpi_create(mpi_bits(n));
 
             {
-                Benchmark bench("montgomery-exp(mpi)", 0);
-                if (bench.run([&]() -> bool {
-                        return mpi_montgomery_exp(r, g, e, mont) == 0;
-                    })) {
-                    bench.print();
-                }
+                Bencher bench("montgomery-exp(mpi)", [&]() -> bool {
+                    return mpi_montgomery_exp(r, g, e, mont) == 0;
+                });
             }
 
             {
-                Benchmark bench("montgomery_exp_consttime(mpi)", 0);
-                if (bench.run([&]() -> bool {
-                        return mpi_montgomery_exp_consttime(r, g, e, mont) == 0;
-                    })) {
-                    bench.print();
-                }
+                Bencher bench("montgomery-exp-consttime(mpi)", [&]() -> bool {
+                    return mpi_montgomery_exp_consttime(r, g, e, mont) == 0;
+                });
             }
 
             mpn_montgomery_destory(mont);
@@ -785,38 +701,28 @@ int main(void)
         {
             BIGNUM *prime = BN_new();
 
-            Benchmark bench("generate_prime(ossl)", 0);
-            if (bench.run(
-                    [&]() -> bool {
-                        return BN_generate_prime_ex(prime, bits, 0, NULL, NULL, NULL) == 1;
-                    },
-                    6.0)) {
-                bench.print();
-            }
+            Bencher bench("generate_prime(ossl)", [&]() -> bool {
+                return BN_generate_prime_ex(prime, bits, 0, NULL, NULL, NULL) == 1;
+            });
 
             BN_free(prime);
         }
 
         // generate prime: this implementation
-        {
+        if (0) { // FIXME
             mpi_t *prime = mpi_create(bits);
 
-            Benchmark bench("generate_prime(mpi)", 0);
-            if (bench.run(
-                    [&]() -> bool {
-                        return mpi_generate_prime(
-                                   prime, bits, 0, NULL, NULL,
-                                   [](void *state, unsigned char *buffer, unsigned int size) -> int {
-                                       (void)state;
-                                       RAND_bytes(buffer, (int)size);
-                                       return 0;
-                                   },
-                                   NULL)
-                               == 0;
-                    },
-                    6.0)) {
-                bench.print();
-            }
+            Bencher bench("generate_prime(mpi)", [&]() -> bool {
+                return mpi_generate_prime(
+                           prime, bits, 0, NULL, NULL,
+                           [](void *state, unsigned char *buffer, unsigned int size) -> int {
+                               (void)state;
+                               RAND_bytes(buffer, (int)size);
+                               return 0;
+                           },
+                           NULL)
+                       == 0;
+            });
 
             mpi_destory(prime);
         }
@@ -836,34 +742,29 @@ int main(void)
             BN_generate_prime_ex(r, bits, 0, NULL, NULL, NULL);
             BN_bn2bin(r, prime.data());
 
-            Benchmark bench("is_prime(ossl)", 0);
-            if (bench.run([&]() -> bool {
-                    return BN_is_prime_fasttest_ex(r, BN_prime_checks, NULL, 0, NULL) == 1;
-                })) {
-                bench.print();
-            }
+            Bencher bench("is_prime(ossl)", [&]() -> bool {
+                return BN_is_prime_fasttest_ex(r, BN_prime_checks, NULL, 0, NULL) == 1;
+            });
 
             BN_free(r);
         }
 
-        {
+        if (0) { // FIXME
             mpi_t *r = NULL;
             mpi_from_octets(&r, prime.data(), prime.size());
 
-            Benchmark bench("is_prime(mpi)", 0);
-            if (bench.run([&]() -> bool {
-                    return mpi_is_prime(
-                               r, 0, 0, NULL,
-                               [](void *state, unsigned char *buffer, unsigned int size) -> int {
-                                   (void)state;
-                                   RAND_bytes(buffer, static_cast<int>(size));
-                                   return 0;
-                               },
-                               NULL)
-                           == 1;
-                })) {
-                bench.print();
-            }
+            Bencher bench("is_prime(mpi)", [&]() -> bool {
+                return mpi_is_prime(
+                           r, 0, 0, NULL,
+                           [](void *state, unsigned char *buffer, unsigned int size) -> int {
+                               (void)state;
+                               RAND_bytes(buffer, static_cast<int>(size));
+                               return 0;
+                           },
+                           NULL)
+                       == 1;
+            });
+
             mpi_destory(r);
         }
     }
@@ -886,21 +787,15 @@ int main(void)
         mpi_t *r = mpi_create(mpi_bits(a) + 1);
 
         {
-            Benchmark bench("MUL2(a * 2 = a + a)", 0);
-            if (bench.run([&]() -> bool {
-                    return mpi_add(r, a, a) == 0;
-                })) {
-                bench.print();
-            }
+            Bencher bench("MUL2(a * 2 = a + a)", [&]() -> bool {
+                return mpi_add(r, a, a) == 0;
+            });
         }
 
         {
-            Benchmark bench("MUL2(a * 2 = a << 1)", 0);
-            if (bench.run([&]() -> bool {
-                    return mpi_lshift(r, a, 1) == 0;
-                })) {
-                bench.print();
-            }
+            Bencher bench("MUL2(a * 2 = a << 1)", [&]() -> bool {
+                return mpi_lshift(r, a, 1) == 0;
+            });
         }
 
         mpi_destory(a);

@@ -211,10 +211,10 @@ mpn_size_t mpn_limbs_consttime(const mpn_limb_t *data, mpn_size_t size)
 {
     MPN_ASSERT(data != NULL);
     mpn_size_t fixedsz = size;
-    mpn_limb_t zscan = (mpn_limb_t)(-1);
+    mpn_limb_t zscan = MPN_LIMB_MASK;
     for (; size > 0; size--) {
         zscan &= mpn_limb_is_zero_consttime(data[size - 1]);
-        fixedsz -= 1 & zscan;
+        fixedsz -= (mpn_size_t)(CNST_LIMB(1) & zscan);
     }
     return (mpn_size_t)((1 & zscan) | ((mpn_limb_t)fixedsz & ~zscan));
 }
@@ -591,7 +591,6 @@ mpn_size_t mpn_div_limb(mpn_limb_t q[], const mpn_limb_t x[], mpn_size_t size, m
 static mpn_limb_t mpn_div_qr_2n_pi1(mpn_limb_t *qp, mpn_limb_t *rp, const mpn_limb_t *np, size_t nn, mpn_limb_t d1,
                                     mpn_limb_t d0, mpn_limb_t di)
 {
-    size_t i;
     mpn_limb_t qh, r1, r0;
 
     MPN_ASSERT(nn >= 2);
@@ -613,7 +612,7 @@ static mpn_limb_t mpn_div_qr_2n_pi1(mpn_limb_t *qp, mpn_limb_t *rp, const mpn_li
         qh = 1;
     }
 
-    for (i = nn - 2 - 1; i >= 0; i--) {
+    for (long i = (long)(nn - 2 - 1); i >= 0; i--) {
         mpn_limb_t n0, q;
         n0 = np[-1];
         UDIV_NNNDD(q, r1, r0, r1, r0, n0, d1, d0, di);
@@ -706,7 +705,6 @@ static mpn_limb_t mpn_div_qr_2u_pi1(mpn_limb_t *qp, mpn_limb_t *rp, const mpn_li
 {
     mpn_limb_t qh;
     mpn_limb_t r2, r1, r0;
-    size_t i;
 
     MPN_ASSERT(nn >= 2);
     MPN_ASSERT(d1 & MPN_LIMB_HIGHBIT);
@@ -718,7 +716,7 @@ static mpn_limb_t mpn_div_qr_2u_pi1(mpn_limb_t *qp, mpn_limb_t *rp, const mpn_li
 
     UDIV_NNNDD(qh, r2, r1, r2, r1, r0, d1, d0, di);
 
-    for (i = nn - 2 - 1; i >= 0; i--) {
+    for (long i = (long)(nn - 2 - 1); i >= 0; i--) {
         mpn_limb_t q;
         r0 = np[i];
         r1 |= r0 >> (MPN_LIMB_BITS - shift);

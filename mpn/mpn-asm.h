@@ -856,6 +856,7 @@ extern const unsigned char __mpi_clz_tab[129];
         mpn_limb_t _dummy;                                 \
         MPN_ASSERT((xl) != 0);                             \
         UDIV_NND(invxl, _dummy, ~(xl), ~CNST_LIMB(0), xl); \
+        (void)_dummy;                                      \
     } while (0)
 #endif
 

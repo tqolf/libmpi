@@ -83,16 +83,12 @@ unsigned int reverse_1(unsigned int n)
     unsigned char *p = (unsigned char *)(&m);
 
     if (sizeof(unsigned int) == 4) {
-#if 1
         unsigned int r = reverse(p[3]);
         r = r << 8 | reverse(p[2]);
         r = r << 8 | reverse(p[1]);
         r = r << 8 | reverse(p[0]);
 
         return r;
-#else
-        return (reverse(p[3]) << 24) | (reverse(p[2]) << 16) | (reverse(p[1]) << 8) | reverse(p[0]);
-#endif
     }
 
     return m;

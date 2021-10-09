@@ -16,12 +16,12 @@
                 ((te.tv_sec - ts.tv_sec) * 1e9 + (te.tv_nsec - ts.tv_nsec)) / static_cast<double>(REPEAT); \
         }                                                                                                  \
         long double __t = 0;                                                                               \
-        for (unsigned __i = 0; __i < N; __i++) { __t += durations[__i]; }                                  \
+        for (unsigned __i = 0; __i < N; __i++) { __t += static_cast<long double>(durations[__i]); }        \
         prefix##avg = __t / N;                                                                             \
                                                                                                            \
         for (unsigned __i = 0; __i < N; __i++) {                                                           \
             double diff = durations[__i] - prefix##avg;                                                    \
-            __t += diff * diff;                                                                            \
+            __t += static_cast<long double>(diff * diff);                                                  \
         }                                                                                                  \
         __t /= N;                                                                                          \
         prefix##stddev = sqrt(__t);                                                                        \
@@ -42,3 +42,59 @@ inline void DoNotOptimize(Tp &value)
     asm volatile("" : "+m,r"(value) : : "memory");
 #endif
 }
+
+#include <string>
+#include <iostream>
+#include <functional>
+
+class Bencher {
+  public:
+    Bencher(const std::string &name, std::function<bool(void)> task, size_t repeat = 0, const size_t N = 5) : name(name)
+    {
+        if (repeat == 0) { // auto checking
+            struct timespec ts, te;
+            clock_gettime(CLOCK_MONOTONIC, &ts);
+            if (!task()) { return; }
+            clock_gettime(CLOCK_MONOTONIC, &te);
+
+            uint64_t delta = (te.tv_sec - ts.tv_sec) * 1e9 + (te.tv_nsec - ts.tv_nsec);
+            if (delta <= 1000) {
+                repeat = 1000;
+            } else {
+                // Aim for about 100ms between time checks.
+                repeat = static_cast<unsigned>(1e8 / delta);
+                if (repeat > 1000) {
+                    repeat = 1000;
+                } else if (repeat < 1) {
+                    repeat = 1;
+                }
+            }
+        }
+
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wvla-extension"
+#elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wvla-extension"
+#endif
+        BENCHER(_, task(), N, repeat);
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#elif defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
+        avg = _avg;
+        stddev = _stddev;
+    }
+
+    ~Bencher()
+    {
+        std::cout << name << ": avg = " << avg << ", stddev = " << stddev << std::endl;
+    }
+
+  private:
+    double avg;
+    double stddev;
+    std::string name;
+};

@@ -23,7 +23,9 @@ jobs:
 
       - name: Test
         working-directory: ${{github.workspace}}/build
-        run: make test || true
+        run: |
+          make test || true
+          ${{github.workspace}}/build/tests/benchmark || true
 
       - name: Upload To CodeCov
         run: bash <(curl -s https://codecov.io/bash)
