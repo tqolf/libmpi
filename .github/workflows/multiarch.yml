@@ -66,6 +66,7 @@ jobs:
 
           # Produce a binary artifact and place it in the mounted volume
           run: |
+            lscpu
             pwd
             cmake --version
             pwd
