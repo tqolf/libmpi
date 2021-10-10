@@ -46,6 +46,43 @@ inline void DoNotOptimize(Tp &value)
 #include <string>
 #include <iostream>
 #include <functional>
+#include <unordered_map>
+
+class BencherCollection {
+  public:
+    static BencherCollection &GetInstance()
+    {
+        static BencherCollection instance;
+        return instance;
+    }
+
+    void insert(const std::string &key, double avg, double stddev)
+    {
+        collections[key] = value(id++, avg, stddev);
+    }
+
+  private:
+    BencherCollection() : id(0) {}
+    ~BencherCollection()
+    {
+        std::cout << std::endl << std::endl;
+        for (auto const &item : collections) {
+            std::cout << item.first << ": avg = " << item.second.avg << ", stddev = " << item.second.stddev
+                      << std::endl;
+        }
+    }
+
+    struct value {
+        int id;
+        double avg;
+        double stddev;
+        value() {}
+        value(int id_, double avg_, double stddev_) : id(id_), avg(avg_), stddev(stddev_) {}
+    };
+
+    int id = 0;
+    std::unordered_map<std::string, value> collections;
+};
 
 class Bencher {
   public:
@@ -91,6 +128,7 @@ class Bencher {
 
     ~Bencher()
     {
+        BencherCollection::GetInstance().insert(title, avg, stddev);
         std::cout << title << ": avg = " << avg << ", stddev = " << stddev << std::endl;
     }
 
