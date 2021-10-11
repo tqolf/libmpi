@@ -25,11 +25,11 @@ jobs:
         run: |
           ${{github.workspace}}/build/tests/benchmark | tee ${{github.workspace}}/build/benchmark.txt || true
           cat ${{github.workspace}}/docs/README.template.md > ${{github.workspace}}/README.md
-          echo "```" >> ${{github.workspace}}/README.md
+          echo -e '\n```' >> ${{github.workspace}}/README.md
           cat ${{github.workspace}}/build/benchmark.txt | grep -v '.*: avg = .*, stddev = .*' | grep -v '^$' >> ${{github.workspace}}/README.md
-          echo "```" >> ${{github.workspace}}/README.md
+          echo -e '```\n' >> ${{github.workspace}}/README.md
           git add ${{github.workspace}}/README.md
-      
+
       - name: Commit files
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
@@ -41,4 +41,3 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           branch: ${{ github.ref }}
-
