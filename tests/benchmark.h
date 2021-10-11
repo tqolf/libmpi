@@ -74,6 +74,11 @@ class BencherCollection {
         return instance;
     }
 
+    void set_colorize_syntax(int syntax)
+    {
+        colorize_syntax = syntax;
+    }
+
     void insert(const std::string &name, double avg, double stddev)
     {
         collections.emplace_back(name, avg, stddev);
@@ -91,21 +96,27 @@ class BencherCollection {
         int i = 0;
         for (auto const &v : collections) {
             double diff = get_ref(v.name).avg / v.avg;
-            table.add_row({v.name, std::to_string(v.avg), std::to_string(v.stddev / v.avg), std::to_string(diff)});
 
-            i++;
-            if (diff >= 1.2) {
-                table[i][3].format().font_color(tabulate::Color::green);
-                if (diff >= 2.0) { table[i][3].format().font_style({tabulate::FontStyle::bold}); }
-            } else if (diff <= 0.8) {
-                table[i][3].format().font_color(tabulate::Color::red);
-                if (diff <= 0.5) { table[i][3].format().font_style({tabulate::FontStyle::bold}); }
+            if (isatty(fileno(stdout))) {
+                table.add_row({v.name, std::to_string(v.avg), std::to_string(v.stddev / v.avg), std::to_string(diff)});
+
+                i++;
+                if (diff >= 1.2) {
+                    table[i][3].format().font_color(tabulate::Color::green);
+                    if (diff >= 2.0) { table[i][3].format().font_style({tabulate::FontStyle::bold}); }
+                } else if (diff <= 0.8) {
+                    table[i][3].format().font_color(tabulate::Color::red);
+                    if (diff <= 0.5) { table[i][3].format().font_style({tabulate::FontStyle::bold}); }
+                }
+            } else if (colorize_syntax == 1) { // generate for markdown
+                // TODO
             }
         }
         table.column(1).format().font_align(tabulate::FontAlign::center);
         table.column(2).format().font_align(tabulate::FontAlign::center);
         table.column(3).format().font_align(tabulate::FontAlign::center);
 
+        // termcolor::colorize(std::cout);
         std::cout << table << std::endl;
     }
 
@@ -137,10 +148,11 @@ class BencherCollection {
     }
 
   private:
+    int colorize_syntax; // auto, 0; markdown, 1
     std::vector<value> references;
     std::vector<value> collections;
 
-    BencherCollection() {}
+    BencherCollection() : colorize_syntax(0) {}
     ~BencherCollection()
     {
         display();
