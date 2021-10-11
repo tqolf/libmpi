@@ -84,11 +84,28 @@ class BencherCollection {
         tabulate::Table table;
         // avg: average time(ns)
         // cv: coefficient of variation
-        table.add_row({"name", "avg", "cv", "diff"});
+        table.add_row({"operation with options", "average time(nanoseconds)", "coefficient of variation",
+                       "perfermance ratio to ref"});
+        table[0].format().font_align(tabulate::FontAlign::center);
+
+        int i = 0;
         for (auto const &v : collections) {
-            table.add_row({v.name, std::to_string(v.avg), std::to_string(v.stddev / v.avg),
-                           std::to_string(get_ref(v.name).avg / v.avg)});
+            double diff = get_ref(v.name).avg / v.avg;
+            table.add_row({v.name, std::to_string(v.avg), std::to_string(v.stddev / v.avg), std::to_string(diff)});
+
+            i++;
+            if (diff >= 1.2) {
+                table[i][3].format().font_color(tabulate::Color::green);
+                if (diff >= 2.0) { table[i][3].format().font_style({tabulate::FontStyle::bold}); }
+            } else if (diff <= 0.8) {
+                table[i][3].format().font_color(tabulate::Color::red);
+                if (diff <= 0.5) { table[i][3].format().font_style({tabulate::FontStyle::bold}); }
+            }
         }
+        table.column(1).format().font_align(tabulate::FontAlign::center);
+        table.column(2).format().font_align(tabulate::FontAlign::center);
+        table.column(3).format().font_align(tabulate::FontAlign::center);
+
         std::cout << table << std::endl;
     }
 
