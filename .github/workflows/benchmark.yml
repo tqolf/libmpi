@@ -28,6 +28,7 @@ jobs:
           echo "```" >> ${{github.workspace}}/README.md
           cat ${{github.workspace}}/build/benchmark.txt | grep -v '.*: avg = .*, stddev = .*' | grep -v '^$' >> ${{github.workspace}}/README.md
           echo "```" >> ${{github.workspace}}/README.md
+          git add ${{github.workspace}}/README.md
       
       - name: Commit files
         run: |
