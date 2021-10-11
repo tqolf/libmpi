@@ -25,9 +25,9 @@ jobs:
         run: |
           ${{github.workspace}}/build/tests/benchmark | tee ${{github.workspace}}/build/benchmark.txt || true
           cat ${{github.workspace}}/docs/README.template.md > ${{github.workspace}}/README.md
-          cat "```" >> ${{github.workspace}}/README.md
+          cat '```' >> ${{github.workspace}}/README.md
           cat ${{github.workspace}}/build/benchmark.txt | grep -v '.*: avg = .*, stddev = .*' | grep -v '^$' >> ${{github.workspace}}/README.md
-          cat "```" >> ${{github.workspace}}/README.md
+          cat '```' >> ${{github.workspace}}/README.md
       
       - name: Commit files
         run: |
