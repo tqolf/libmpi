@@ -23,10 +23,21 @@ jobs:
       - name: Run Benchmark
         working-directory: ${{github.workspace}}/build
         run: |
-          ${{github.workspace}}/build/tests/benchmark > ${{github.workspace}}/benchmark.data || true
+          ${{github.workspace}}/build/tests/benchmark | tee benchmark.txt || true
+          cat ${{github.workspace}}/docs/README.template.md > ${{github.workspace}}/README.md
+          cat "```" >> ${{github.workspace}}/README.md
+          cat ${{github.workspace}}/benchmark.txt | grep -v ".*: avg = .*, stddev = .*" | grep -v "^$" >> ${{github.workspace}}/README.md
+          cat "```" >> ${{github.workspace}}/README.md
       
-      - uses: actions/upload-artifact@v2
+      - name: Commit files
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git commit -m "Update performance data" -a
+
+      - name: Push changes
+        uses: ad-m/github-push-action@master
         with:
-          name: benchmark
-          path: ${{github.workspace}}/benchmark.data
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
 

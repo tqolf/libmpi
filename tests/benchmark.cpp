@@ -794,7 +794,7 @@ int main(void)
     }
 
 
-    std::cout << std::endl << "Others" << std::endl;
+    std::cout << std::endl;
     // MUL2: r = a * 2 = a + a = a << 1
     // conclusion:
     //   1. perf(mpi_add(r, a, a)) > perf(mpi_lshift(r, a, 1)), about 3 times faster
