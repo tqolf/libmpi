@@ -67,6 +67,7 @@ int main(void)
                     BN_hex2bn(&r, val.c_str());
                     return true;
                 });
+                BencherCollection::GetInstance().mark_as_ref("from-string(ossl)");
             }
 
             {
@@ -74,6 +75,7 @@ int main(void)
                     free(BN_bn2hex(r));
                     return true;
                 });
+                BencherCollection::GetInstance().mark_as_ref("to-string(ossl)");
             }
 
             BN_free(r);
@@ -119,13 +121,15 @@ int main(void)
                     BN_bin2bn(buffer.data(), static_cast<int>(buffer.size()), r);
                     return true;
                 });
+                BencherCollection::GetInstance().mark_as_ref("from-octets(ossl)");
             }
 
             {
-                Bencher bench("to-octets(mpi)", [&]() -> bool {
+                Bencher bench("to-octets(ossl)", [&]() -> bool {
                     BN_bn2bin(r, buffer.data());
                     return true;
                 });
+                BencherCollection::GetInstance().mark_as_ref("to-octets(ossl)");
             }
 
             BN_free(r);
@@ -178,6 +182,7 @@ int main(void)
                 BN_add(r, a, b);
                 return true;
             });
+            BencherCollection::GetInstance().mark_as_ref("add(ossl)");
 
             BN_free(a);
             BN_free(b);
@@ -229,6 +234,7 @@ int main(void)
                 BN_add(r, r, b);
                 return true;
             });
+            BencherCollection::GetInstance().mark_as_ref("add-assign(ossl)");
 
             BN_free(b);
             BN_free(r);
@@ -280,6 +286,7 @@ int main(void)
                 BN_sub(r, a, b);
                 return true;
             });
+            BencherCollection::GetInstance().mark_as_ref("sub(ossl)");
 
             BN_free(a);
             BN_free(b);
@@ -331,6 +338,7 @@ int main(void)
                 BN_sub(r, r, b);
                 return true;
             });
+            BencherCollection::GetInstance().mark_as_ref("sub-assign(ossl)");
 
             BN_free(b);
             BN_free(r);
@@ -384,6 +392,7 @@ int main(void)
                 BN_mul(r, a, b, ctx);
                 return true;
             });
+            BencherCollection::GetInstance().mark_as_ref("mul(ossl)");
 
             BN_CTX_free(ctx);
 
@@ -432,6 +441,7 @@ int main(void)
                 BN_sqr(r, a, ctx);
                 return true;
             });
+            BencherCollection::GetInstance().mark_as_ref("sqr(ossl)");
 
             BN_CTX_free(ctx);
 
@@ -490,6 +500,7 @@ int main(void)
                 BN_div(q, r, a, b, ctx);
                 return true;
             });
+            BencherCollection::GetInstance().mark_as_ref("div(ossl)");
 
             BN_CTX_free(ctx);
 
@@ -566,6 +577,7 @@ int main(void)
                 BN_gcd(r, a, b, ctx);
                 return true;
             });
+            BencherCollection::GetInstance().mark_as_ref("gcd_consttime(ossl)");
 
             BN_CTX_free(ctx);
 
@@ -646,9 +658,19 @@ int main(void)
 
             BIGNUM *r = BN_new();
 
-            Bencher bench("montgomery-exp(ossl)", [&]() -> bool {
-                return BN_mod_exp_mont(r, g, e, n, ctx, mont) == 1;
-            });
+            {
+                Bencher bench("montgomery-exp(ossl)", [&]() -> bool {
+                    return BN_mod_exp_mont(r, g, e, n, ctx, mont) == 1;
+                });
+                BencherCollection::GetInstance().mark_as_ref("montgomery-exp(ossl)");
+            }
+
+            {
+                Bencher bench("montgomery-exp-consttime(ossl)", [&]() -> bool {
+                    return BN_mod_exp_mont_consttime(r, g, e, n, ctx, mont) == 1;
+                });
+                BencherCollection::GetInstance().mark_as_ref("montgomery-exp-consttime(ossl)");
+            }
 
             BN_CTX_free(ctx);
             BN_MONT_CTX_free(mont);
@@ -704,6 +726,7 @@ int main(void)
             Bencher bench("generate_prime(ossl)", [&]() -> bool {
                 return BN_generate_prime_ex(prime, bits, 0, NULL, NULL, NULL) == 1;
             });
+            BencherCollection::GetInstance().mark_as_ref("generate_prime(ossl)");
 
             BN_free(prime);
         }
@@ -745,6 +768,7 @@ int main(void)
             Bencher bench("is_prime(ossl)", [&]() -> bool {
                 return BN_is_prime_fasttest_ex(r, BN_prime_checks, NULL, 0, NULL) == 1;
             });
+            BencherCollection::GetInstance().mark_as_ref("is_prime(ossl)");
 
             BN_free(r);
         }
@@ -790,6 +814,7 @@ int main(void)
             Bencher bench("MUL2(a * 2 = a + a)", [&]() -> bool {
                 return mpi_add(r, a, a) == 0;
             });
+            BencherCollection::GetInstance().mark_as_ref("MUL2(a * 2 = a + a)");
         }
 
         {

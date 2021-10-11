@@ -44,9 +44,27 @@ inline void DoNotOptimize(Tp &value)
 }
 
 #include <string>
+#include <vector>
+#include <regex>
+#include <algorithm>
 #include <iostream>
 #include <functional>
-#include <unordered_map>
+#include "tabulate.h"
+
+struct value {
+    double avg;
+    double stddev;
+    std::string name;
+    std::vector<std::string> keys;
+    value(const std::string &name_, double avg_, double stddev_) : avg(avg_), stddev(stddev_), name(name_)
+    {
+        std::regex pattern("([\\w\\-]+)");
+        auto key_end = std::sregex_iterator();
+        auto key_begin = std::sregex_iterator(name_.begin(), name_.end(), pattern);
+
+        for (auto it = key_begin; it != key_end; ++it) { keys.push_back(it->str()); }
+    }
+};
 
 class BencherCollection {
   public:
@@ -56,32 +74,60 @@ class BencherCollection {
         return instance;
     }
 
-    void insert(const std::string &key, double avg, double stddev)
+    void insert(const std::string &name, double avg, double stddev)
     {
-        collections[key] = value(id++, avg, stddev);
+        collections.emplace_back(name, avg, stddev);
     }
 
-  private:
-    BencherCollection() : id(0) {}
-    ~BencherCollection()
+    void display()
     {
-        std::cout << std::endl << std::endl;
-        for (auto const &item : collections) {
-            std::cout << item.first << ": avg = " << item.second.avg << ", stddev = " << item.second.stddev
-                      << std::endl;
+        tabulate::Table table;
+        // avg: average time(ns)
+        // cv: coefficient of variation
+        table.add_row({"name", "avg", "cv", "diff"});
+        for (auto const &v : collections) {
+            table.add_row({v.name, std::to_string(v.avg), std::to_string(v.stddev / v.avg),
+                           std::to_string(get_ref(v.name).avg / v.avg)});
+        }
+        std::cout << table << std::endl;
+    }
+
+    void mark_as_ref(const std::string &s)
+    {
+        auto it = std::find_if(collections.begin(), collections.end(), [&](const value &another) {
+            return s == another.name;
+        });
+        if (it != collections.end()) {
+            references.emplace_back(it->keys[0], it->avg, it->stddev);
+        } else {
+            std::cout << "not found" << std::endl;
         }
     }
 
-    struct value {
-        int id;
-        double avg;
-        double stddev;
-        value() {}
-        value(int id_, double avg_, double stddev_) : id(id_), avg(avg_), stddev(stddev_) {}
-    };
+    value get_ref(const std::string &s)
+    {
+        std::regex pattern("([\\w\\-]+)");
+        auto key_begin = std::sregex_iterator(s.begin(), s.end(), pattern);
+        if (key_begin != std::sregex_iterator()) {
+            auto it = std::find_if(references.begin(), references.end(), [&](const value &another) {
+                return key_begin->str() == another.name;
+            });
+            if (it != references.end()) { return *it; }
+        }
 
-    int id = 0;
-    std::unordered_map<std::string, value> collections;
+        static const value notfound("not found", 0, 0);
+        return notfound;
+    }
+
+  private:
+    std::vector<value> references;
+    std::vector<value> collections;
+
+    BencherCollection() {}
+    ~BencherCollection()
+    {
+        display();
+    }
 };
 
 class Bencher {
@@ -124,11 +170,12 @@ class Bencher {
 #endif
         avg = _avg;
         stddev = _stddev;
+
+        BencherCollection::GetInstance().insert(title, avg, stddev);
     }
 
     ~Bencher()
     {
-        BencherCollection::GetInstance().insert(title, avg, stddev);
         std::cout << title << ": avg = " << avg << ", stddev = " << stddev << std::endl;
     }
 
