@@ -23,10 +23,10 @@ jobs:
       - name: Run Benchmark
         working-directory: ${{github.workspace}}/build
         run: |
-          ${{github.workspace}}/build/tests/benchmark > ${{github.workspace}}/resource/benchmark.data || true
+          ${{github.workspace}}/build/tests/benchmark > ${{github.workspace}}/benchmark.data || true
       
       - uses: actions/upload-artifact@v2
         with:
           name: benchmark
-          path: ${{github.workspace}}/resource/benchmark.data
+          path: ${{github.workspace}}/benchmark.data
 
