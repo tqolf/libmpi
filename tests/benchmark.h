@@ -97,7 +97,7 @@ class BencherCollection {
         for (auto const &v : collections) {
             double diff = get_ref(v.name).avg / v.avg;
 
-            if (isatty(fileno(stdout))) {
+            if (colorize_syntax == 0) {
                 table.add_row({v.name, std::to_string(v.avg), std::to_string(v.stddev / v.avg), std::to_string(diff)});
 
                 i++;
