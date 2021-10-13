@@ -3,7 +3,6 @@
 #include <cctype>
 #include <cassert>
 #include <sstream>
-#include <iostream>
 #include <optional>
 
 namespace tabulate
@@ -777,31 +776,14 @@ class Table {
 } // namespace tabulate
 
 #include <iostream>
-#include <unistd.h>
-#include <ctime>
-#include <cstdlib>
-
-static std::string randstr(const int len)
-{
-    std::string tmp_s;
-    static const char alphanum[] = "0123456789"
-                                   "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                                   "abcdefghijklmnopqrstuvwxyz"
-                                   " -\n";
-
-    tmp_s.reserve(len);
-
-    for (int i = 0; i < len; ++i) { tmp_s += alphanum[std::rand() % (sizeof(alphanum) - 1)]; }
-
-    return tmp_s;
-}
 
 int main()
 {
     using namespace tabulate;
     {
-        tabulate::Table movies("S/N", "Movie Name", "Director", "Estimated Budget", "Release Date");
+        tabulate::Table movies;
 
+        movies.add("S/N", "Movie Name", "Director", "Estimated Budget", "Release Date");
         movies.add("tt1979376", "Toy Story 4", "Josh Cooley", 200000000, "21 June 2019");
         movies.add("tt3263904", "Sully", "Clint Eastwood", 60000000, "9 September 2016");
         movies.add("tt1535109", "Captain Phillips", "Paul Greengrass", 55000000, " 11 October 2013");
@@ -823,6 +805,46 @@ int main()
 
         std::cout << "Console Table:\n" << movies.plaintext() << std::endl;
         std::cout << "Markdown Table:\n" << movies.markdown() << std::endl;
+    }
+
+    {
+        Table table;
+
+        table.add("Company", "Contact", "Country");
+        table.add("Alfreds Futterkiste", "Maria Anders", "Germany");
+        table.add("Centro comercial Moctezuma", "Francisco Chang", "Mexico");
+        table.add("Ernst Handel", "Roland Mendel", "Austria");
+        table.add("Island Trading", "Helen Bennett", "UK");
+        table.add("Laughing Bacchus Winecellars", "Yoshi Tannamuri", "Canada");
+        table.add("Magazzini Alimentari Riuniti", "Giovanni Rovelli", "Italy");
+
+        // Set width of cells in each column
+        table.column(0).format().width(40);
+        table.column(1).format().width(30);
+        table.column(2).format().width(30);
+
+        // Iterate over cells in the first row
+        // for (auto &cell : table[0]) { cell.format().font_style(Style::underline).align(Align::center); }
+
+        // Iterator over cells in the first column
+        for (auto &cell : table.column(0)) {
+            // if (cell.get() != "Company") { cell.format().align(Align::right); }
+        }
+
+        // Iterate over rows in the table
+        size_t index = 0;
+        for (auto &row : table) {
+            // row.format().font_style(Style::bold);
+
+            // Set blue background color for alternate rows
+            if (index > 0 && index % 2 == 0) {
+                // for (auto &cell : row) { cell.format().background_color(Color::blue); }
+            }
+            index += 1;
+        }
+
+        std::cout << "Console Table:\n" << table.plaintext() << std::endl;
+        std::cout << "Markdown Table:\n" << table.markdown() << std::endl;
     }
 
     return 0;
