@@ -449,7 +449,7 @@ class Cells {
         return cells[index];
     }
 
-    size_t size()
+    size_t size() const
     {
         return cells.size();
     }
@@ -566,6 +566,30 @@ class Column {
         return format_;
     }
 
+    /* iterator */
+    using iterator = std::vector<Cell *>::iterator;
+    using const_iterator = std::vector<Cell *>::const_iterator;
+
+    iterator begin()
+    {
+        return cells.begin();
+    }
+
+    iterator end()
+    {
+        return cells.end();
+    }
+
+    const_iterator begin() const
+    {
+        return cells.cbegin();
+    }
+
+    const_iterator end() const
+    {
+        return cells.cend();
+    }
+
   private:
     BatchFormat format_;
     std::vector<Cell *> cells;
@@ -576,8 +600,9 @@ class Table {
     Table() {}
 
     template <typename... Args>
-    Table(Args... args) : header(args...)
+    Table(Args... args)
     {
+        add(args...);
     }
 
     template <typename... Args>
@@ -587,17 +612,13 @@ class Table {
          * emplace_back return reference since c++17
          */
         rows.emplace_back(args...);
+        update_width();
         return rows[rows.size() - 1];
     }
 
     Cells &operator[](size_t index)
     {
         return rows[index];
-    }
-
-    bool has_header()
-    {
-        return header.size() != 0;
     }
 
     size_t size()
@@ -633,7 +654,6 @@ class Table {
     {
         Column column;
 
-        column.add(header[index]);
         for (auto &row : rows) {
             auto &cell = row[index];
             column.add(cell);
@@ -642,14 +662,36 @@ class Table {
         return column;
     }
 
-  public:
-    Cells header;
+    size_t column_size()
+    {
+        size_t max_size = 0;
+        for (auto const &row : rows) { max_size = std::max(max_size, row.size()); }
+        return max_size;
+    }
 
   private:
     std::vector<Cells> rows;
+
+    size_t max_width(const Column &column)
+    {
+        size_t max_width = 0;
+        for (auto const &cell : column) { max_width = std::max(max_width, cell->get().size()); }
+
+        return max_width;
+    }
+
+    void update_width()
+    {
+        for (size_t i = 0; i < column_size(); i++) {
+            Column col = column(i);
+
+            auto width = max_width(col);
+            col.format().width(width);
+        }
+    }
 };
 
-static std::string ExportToMarkdown(const Table &table)
+static std::string ExportToMarkdown(Table &table)
 {
     std::string exported;
     const std::string newline = "\n";
@@ -667,14 +709,14 @@ static std::string ExportToMarkdown(const Table &table)
     }
 
     // add header
-    exported += table.header.border_top(options) + newline;
-    for (auto const &line : table.header.dump(options)) { exported += line + newline; }
-    exported += table.header.border_bottom(options) + newline;
+    exported += table[0].border_top(options) + newline;
+    for (auto const &line : table[0].dump(options)) { exported += line + newline; }
+    exported += table[0].border_bottom(options) + newline;
 
     // add alignentment row
     {
         Cells alignment_row;
-        for (auto const &cell : table.header) {
+        for (auto const &cell : table[0]) {
             switch (cell.align()) {
                 case Align::left:
                     alignment_row.add(":----");
@@ -693,8 +735,8 @@ static std::string ExportToMarkdown(const Table &table)
         for (auto const &line : alignment_row.dump(options)) { exported += line + newline; }
     }
 
-    for (auto const &row : table) {
-        // add row
+    for (size_t i = 1; i < table.size(); i++) {
+        auto const &row = table[i];
         for (auto const &line : row.dump(options)) { exported += line + newline; }
         exported += row.border_bottom(options) + newline;
     }
@@ -702,7 +744,7 @@ static std::string ExportToMarkdown(const Table &table)
     return exported;
 }
 
-static std::string ExportToPlainText(const Table &table)
+static std::string ExportToPlainText(Table &table)
 {
     std::string exported;
     const std::string newline = "\n";
@@ -720,12 +762,12 @@ static std::string ExportToPlainText(const Table &table)
     }
 
     // add header
-    exported += table.header.border_top(options) + newline;
-    for (auto const &line : table.header.dump(options)) { exported += line + newline; }
-    exported += table.header.border_bottom(options) + newline;
+    exported += table[0].border_top(options) + newline;
+    for (auto const &line : table[0].dump(options)) { exported += line + newline; }
+    exported += table[0].border_bottom(options) + newline;
 
-    for (auto const &row : table) {
-        // add row
+    for (size_t i = 1; i < table.size(); i++) {
+        auto const &row = table[i];
         for (auto const &line : row.dump(options)) { exported += line + newline; }
         exported += row.border_bottom(options) + newline;
     }
@@ -756,80 +798,33 @@ static std::string randstr(const int len)
     return tmp_s;
 }
 
-#include "tabulate.h"
-
 int main()
 {
+    using namespace tabulate;
     {
-        tabulate::Table table("operation", "average time", "coefficient of variation", "perfermance ratio");
+        tabulate::Table movies("S/N", "Movie Name", "Director", "Estimated Budget", "Release Date");
 
-        table.add("from-string(ossl)", 30995.654200, 0.015039, 1.000000);
-        table.add("to-string(ossl)", 3086.637400, 0.059309, 1.000000);
-        table.add("montgomery-exp(mpi)", 10531662.111111, 0.042898, 12.235452);
-        table.add("montgomery-exp-consttime(mpi)", 14846253.000000, 0.027505, 9.229808);
+        movies.add("tt1979376", "Toy Story 4", "Josh Cooley", 200000000, "21 June 2019");
+        movies.add("tt3263904", "Sully", "Clint Eastwood", 60000000, "9 September 2016");
+        movies.add("tt1535109", "Captain Phillips", "Paul Greengrass", 55000000, " 11 October 2013");
 
-        table.column(0).format().width(20);
-        table.column(1).format().width(20);
-        table.column(2).format().width(20);
-        table.column(3).format().width(20);
+        // center align 'Director' column
+        movies.column(2).format().align(Align::center);
 
-        std::cout << ExportToPlainText(table);
+        // right align 'Estimated Budget' column
+        movies.column(3).format().align(Align::right);
 
-        // std::cout << ExportToMarkdown(table);
-    }
+        // right align 'Release Date' column
+        movies.column(4).format().align(Align::right);
 
-    {
-        tabulate_ooo::Table table;
-
-        table.add_row({"operation", "average time", "coefficient of variation", "perfermance ratio"});
-        table.add_row(
-            {"from-string(ossl)", std::to_string(30995.654200), std::to_string(0.015039), std::to_string(1.000000)});
-        table.add_row(
-            {"to-string(ossl)", std::to_string(3086.637400), std::to_string(0.059309), std::to_string(1.000000)});
-        table.add_row({"montgomery-exp(mpi)", std::to_string(10531662.111111), std::to_string(0.042898),
-                       std::to_string(12.235452)});
-        table.add_row({"montgomery-exp-consttime(mpi)", std::to_string(14846253.000000), std::to_string(0.027505),
-                       std::to_string(9.229808)});
-
-        table.column(0).format().font_align(tabulate_ooo::FontAlign::center);
-        table.column(1).format().font_align(tabulate_ooo::FontAlign::center);
-        table.column(2).format().font_align(tabulate_ooo::FontAlign::center);
-        table.column(3).format().font_align(tabulate_ooo::FontAlign::center);
-
-        table[0][0].format().width(20);
-        table[0][1].format().width(20);
-        table[0][2].format().width(20);
-        table[0][3].format().width(20);
-
-        std::cout << table << std::endl;
-    }
-
-    if (0) {
-#if 1
-        std::srand((unsigned)time(NULL) * getpid());
-
-        for (auto i = 0; i < 10; i++) {
-            size_t len = std::rand() % 20 + 15;
-            std::string str = randstr(len);
-
-            std::cout << "generated(" << i << "): \"" << str << "\"" << std::endl;
-            for (auto const &wrapped : tabulate::wrap_to_lines(str, 20)) {
-                auto aligned = tabulate::align_line_by(wrapped, 20, tabulate::Align::center);
-                std::cout << "wrapped: \"" << wrapped << "\"" << std::endl;
-                std::cout << "aligned: \"" << aligned << "\"" << std::endl;
-            }
-            std::cout << std::endl;
+        // Color header cells
+        for (size_t i = 0; i < 5; ++i) {
+            // header
+            // movies[0][i].format().color(Color::yellow).font_style(Style::bold);
         }
-#else
-        std::string str = "CcsXJFtrAZmVtvD ZgeJZbXIlLL  D";
-        std::cout << "generated: \"" << str << "\"" << std::endl;
-        for (auto const &wrapped : tabulate::wrap_to_lines(str, 20)) {
-            auto aligned = tabulate::align_line_by(wrapped, 20, tabulate::Align::center);
-            std::cout << "wrapped: \"" << wrapped << "\"" << std::endl;
-            std::cout << "aligned: \"" << aligned << "\"" << std::endl;
-        }
-        std::cout << std::endl;
-#endif
+
+        std::cout << "Console Table:\n" << ExportToPlainText(movies) << std::endl;
+        std::cout << "Markdown Table:\n" << ExportToMarkdown(movies) << std::endl;
     }
 
     return 0;
