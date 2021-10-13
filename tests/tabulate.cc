@@ -669,6 +669,90 @@ class Table {
         return max_size;
     }
 
+    std::string plaintext()
+    {
+        std::string exported;
+        const std::string newline = "\n";
+
+        FormatOptions options;
+        for (auto const &row : rows) {
+            for (auto const &cell : row) {
+                // hide border-top
+                // hide border-bottom
+                // border-left: "|"
+                // border-right: "|"
+                // column_separator: "|"
+                // corner: "|"
+            }
+        }
+
+        // add header
+        exported += rows[0].border_top(options) + newline;
+        for (auto const &line : rows[0].dump(options)) { exported += line + newline; }
+        exported += rows[0].border_bottom(options) + newline;
+
+        for (size_t i = 1; i < rows.size(); i++) {
+            auto const &row = rows[i];
+            for (auto const &line : row.dump(options)) { exported += line + newline; }
+            exported += row.border_bottom(options) + newline;
+        }
+
+        return exported;
+    }
+
+    std::string markdown() const
+    {
+        std::string exported;
+        const std::string newline = "\n";
+
+        FormatOptions options;
+        for (auto const &row : rows) {
+            for (auto const &cell : row) {
+                // hide border-top
+                // hide border-bottom
+                // border-left: "|"
+                // border-right: "|"
+                // column_separator: "|"
+                // corner: "|"
+            }
+        }
+
+        // add header
+        exported += rows[0].border_top(options) + newline;
+        for (auto const &line : rows[0].dump(options)) { exported += line + newline; }
+        exported += rows[0].border_bottom(options) + newline;
+
+        // add alignentment row
+        {
+            Cells alignment_row;
+            for (auto const &cell : rows[0]) {
+                switch (cell.align()) {
+                    case Align::left:
+                        alignment_row.add(":----");
+                        break;
+                    case Align::right:
+                        alignment_row.add("----:");
+                        break;
+                    case Align::center:
+                        alignment_row.add(":---:");
+                        break;
+                    default:
+                        alignment_row.add("-----");
+                        break;
+                }
+            }
+            for (auto const &line : alignment_row.dump(options)) { exported += line + newline; }
+        }
+
+        for (size_t i = 1; i < rows.size(); i++) {
+            auto const &row = rows[i];
+            for (auto const &line : row.dump(options)) { exported += line + newline; }
+            exported += row.border_bottom(options) + newline;
+        }
+
+        return exported;
+    }
+
   private:
     std::vector<Cells> rows;
 
@@ -690,92 +774,6 @@ class Table {
         }
     }
 };
-
-static std::string ExportToMarkdown(Table &table)
-{
-    std::string exported;
-    const std::string newline = "\n";
-
-    FormatOptions options;
-    for (auto const &row : table) {
-        for (auto const &cell : row) {
-            // hide border-top
-            // hide border-bottom
-            // border-left: "|"
-            // border-right: "|"
-            // column_separator: "|"
-            // corner: "|"
-        }
-    }
-
-    // add header
-    exported += table[0].border_top(options) + newline;
-    for (auto const &line : table[0].dump(options)) { exported += line + newline; }
-    exported += table[0].border_bottom(options) + newline;
-
-    // add alignentment row
-    {
-        Cells alignment_row;
-        for (auto const &cell : table[0]) {
-            switch (cell.align()) {
-                case Align::left:
-                    alignment_row.add(":----");
-                    break;
-                case Align::right:
-                    alignment_row.add("----:");
-                    break;
-                case Align::center:
-                    alignment_row.add(":---:");
-                    break;
-                default:
-                    alignment_row.add("-----");
-                    break;
-            }
-        }
-        for (auto const &line : alignment_row.dump(options)) { exported += line + newline; }
-    }
-
-    for (size_t i = 1; i < table.size(); i++) {
-        auto const &row = table[i];
-        for (auto const &line : row.dump(options)) { exported += line + newline; }
-        exported += row.border_bottom(options) + newline;
-    }
-
-    return exported;
-}
-
-static std::string ExportToPlainText(Table &table)
-{
-    std::string exported;
-    const std::string newline = "\n";
-
-    FormatOptions options;
-    for (auto const &row : table) {
-        for (auto const &cell : row) {
-            // hide border-top
-            // hide border-bottom
-            // border-left: "|"
-            // border-right: "|"
-            // column_separator: "|"
-            // corner: "|"
-        }
-    }
-
-    // add header
-    exported += table[0].border_top(options) + newline;
-    for (auto const &line : table[0].dump(options)) { exported += line + newline; }
-    exported += table[0].border_bottom(options) + newline;
-
-    for (size_t i = 1; i < table.size(); i++) {
-        auto const &row = table[i];
-        for (auto const &line : row.dump(options)) { exported += line + newline; }
-        exported += row.border_bottom(options) + newline;
-    }
-
-    return exported;
-}
-
-
 } // namespace tabulate
 
 #include <iostream>
@@ -823,8 +821,8 @@ int main()
             // movies[0][i].format().color(Color::yellow).font_style(Style::bold);
         }
 
-        std::cout << "Console Table:\n" << ExportToPlainText(movies) << std::endl;
-        std::cout << "Markdown Table:\n" << ExportToMarkdown(movies) << std::endl;
+        std::cout << "Console Table:\n" << movies.plaintext() << std::endl;
+        std::cout << "Markdown Table:\n" << movies.markdown() << std::endl;
     }
 
     return 0;
