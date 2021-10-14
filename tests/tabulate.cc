@@ -15,24 +15,26 @@ enum class Align { none, left, right, center, top, bottom };
 enum class Color { none, grey, red, green, yellow, blue, magenta, cyan, white };
 
 enum class Style { none, bold, dark, italic, underline, blink, reverse, concealed, crossed };
+} // namespace tabulate
 
+namespace tabulate
+{
 namespace termcolor
 {
 static const std::string reset = "\033[00m";
-static const std::string bold = "\033[1m";
-static const std::string dark = "\033[2m";
-static const std::string italic = "\033[3m";
-static const std::string underline = "\033[4m";
-static const std::string blink = "\033[5m";
-static const std::string reverse = "\033[7m";
-static const std::string concealed = "\033[8m";
-static const std::string crossed = "\033[9m";
 
-const std::string &get_style(Style style)
+std::string get_style(Style style)
 {
+    static const std::string bold = "\033[1m";
+    static const std::string dark = "\033[2m";
+    static const std::string italic = "\033[3m";
+    static const std::string underline = "\033[4m";
+    static const std::string blink = "\033[5m";
+    static const std::string reverse = "\033[7m";
+    static const std::string concealed = "\033[8m";
+    static const std::string crossed = "\033[9m";
     switch (style) {
         default:
-        case Style::none:
             return reset;
         case Style::bold:
             return bold;
@@ -53,21 +55,20 @@ const std::string &get_style(Style style)
     }
 }
 
-static const std::string grey = "\033[30m";
-static const std::string red = "\033[31m";
-static const std::string green = "\033[32m";
-static const std::string yellow = "\033[33m";
-static const std::string blue = "\033[34m";
-static const std::string magenta = "\033[35m";
-static const std::string cyan = "\033[36m";
-static const std::string white = "\033[37m";
-
-const std::string &get_color(Color color)
+std::string get_color(Color color)
 {
+    static const std::string grey = "\033[30m";
+    static const std::string red = "\033[31m";
+    static const std::string green = "\033[32m";
+    static const std::string yellow = "\033[33m";
+    static const std::string blue = "\033[34m";
+    static const std::string magenta = "\033[35m";
+    static const std::string cyan = "\033[36m";
+    static const std::string white = "\033[37m";
+
     switch (color) {
         default:
-        case Color::none:
-            return reset;
+            return "";
         case Color::grey:
             return grey;
         case Color::red:
@@ -87,21 +88,20 @@ const std::string &get_color(Color color)
     }
 }
 
-static const std::string background_grey = "\033[40m";
-static const std::string background_red = "\033[41m";
-static const std::string background_green = "\033[42m";
-static const std::string background_yellow = "\033[43m";
-static const std::string background_blue = "\033[44m";
-static const std::string background_magenta = "\033[45m";
-static const std::string background_cyan = "\033[46m";
-static const std::string background_white = "\033[47m";
-
-const std::string &get_background_color(Color color)
+std::string get_background_color(Color color)
 {
+    static const std::string background_grey = "\033[40m";
+    static const std::string background_red = "\033[41m";
+    static const std::string background_green = "\033[42m";
+    static const std::string background_yellow = "\033[43m";
+    static const std::string background_blue = "\033[44m";
+    static const std::string background_magenta = "\033[45m";
+    static const std::string background_cyan = "\033[46m";
+    static const std::string background_white = "\033[47m";
+
     switch (color) {
         default:
-        case Color::none:
-            return reset;
+            return "";
         case Color::grey:
             return background_grey;
         case Color::red:
@@ -120,7 +120,6 @@ const std::string &get_background_color(Color color)
             return background_white;
     }
 }
-
 } // namespace termcolor
 } // namespace tabulate
 
@@ -339,10 +338,7 @@ class FormatOptions {
         column_separator.backgroud_color = Color::none;
 
         // formatter
-        formatter.apply_color = [](const std::string &str, Color) {
-            return str;
-        };
-        formatter.apply_style = [](const std::string &str, Style) {
+        formatter.apply = [](const std::string &str, Color, Color, const std::vector<Style> &) {
             return str;
         };
     }
@@ -363,8 +359,7 @@ class FormatOptions {
     } column_separator;
 
     struct {
-        std::function<std::string(const std::string &, Color)> apply_color;
-        std::function<std::string(const std::string &, Style)> apply_style;
+        std::function<std::string(const std::string &, Color, Color, std::vector<Style> &)> apply;
     } formatter;
 };
 
@@ -414,14 +409,30 @@ class Format {
         return *this;
     }
 
-    auto &font_styles() const
+    auto &styles() const
     {
-        return font_styles_;
+        return styles_;
     }
 
-    Format &font_styles(Style value)
+    Format &styles(Style value)
     {
-        if (font_styles_.has_value()) { font_styles_.value().push_back(value); }
+        if (!styles_.has_value()) {
+            // initialize
+            styles_ = std::vector<Style>();
+        }
+        styles_.value().push_back(value);
+
+        return *this;
+    }
+
+    Format &styles(std::initializer_list<Style> values)
+    {
+        if (!styles_.has_value()) {
+            // initialize
+            styles_ = std::vector<Style>();
+        }
+        styles_.value().insert(styles_.value().end(), values.begin(), values.end());
+
         return *this;
     }
 
@@ -431,7 +442,7 @@ class Format {
     std::optional<Align> align_;
     std::optional<Color> color_;
     std::optional<Color> background_color_;
-    std::optional<std::vector<Style>> font_styles_;
+    std::optional<std::vector<Style>> styles_{};
 };
 
 class Cell {
@@ -476,6 +487,33 @@ class Cell {
         }
     }
 
+    Color color() const
+    {
+        if (m_format.color().has_value()) {
+            return m_format.color().value();
+        } else {
+            return Color::none;
+        }
+    }
+
+    Color background_color() const
+    {
+        if (m_format.background_color().has_value()) {
+            return m_format.background_color().value();
+        } else {
+            return Color::none;
+        }
+    }
+
+    std::vector<Style> styles() const
+    {
+        if (m_format.styles().has_value()) {
+            return m_format.styles().value();
+        } else {
+            return std::vector<Style>();
+        }
+    }
+
   private:
     Format m_format;
     std::string m_content;
@@ -508,9 +546,9 @@ class RowFormat : public Format {
         return *this;
     }
 
-    RowFormat &font_styles(Style value)
+    RowFormat &styles(Style value)
     {
-        for (auto &cell : cells_) { cell.format().font_styles(value); }
+        for (auto &cell : cells_) { cell.format().styles(value); }
         return *this;
     }
 
@@ -545,9 +583,9 @@ class ColumnFormat : public Format {
         return *this;
     }
 
-    ColumnFormat &font_styles(Style value)
+    ColumnFormat &styles(Style value)
     {
-        for (auto &cell : cells_) { cell->format().font_styles(value); }
+        for (auto &cell : cells_) { cell->format().styles(value); }
         return *this;
     }
 
@@ -679,12 +717,11 @@ class Cells {
                 if (dumplines[j].size() <= i) {
                     line += std::string(cells[j].width(), ' ');
                 } else {
-                    if (cells[j].format().color().has_value()) {
-                        auto apply_color = options.formatter.apply_color;
-                        line += apply_color(dumplines[j][i], cells[j].format().color().value());
-                    } else {
-                        line += dumplines[j][i];
-                    }
+                    auto apply = options.formatter.apply;
+                    auto foreground_color = cells[j].color();
+                    auto background_color = cells[j].background_color();
+                    auto styles = cells[j].styles();
+                    line += apply(dumplines[j][i], foreground_color, background_color, styles);
                 }
                 line += std::string(options.border.right.padding, ' ');
                 if (j == cells.size() - 1) {
@@ -867,10 +904,20 @@ class Table {
         const std::string newline = "\n";
 
         FormatOptions options;
-        auto apply_color = [](const std::string &str, Color color) -> std::string {
-            return termcolor::get_color(color) + str + termcolor::get_color(Color::none);
+        auto apply = [](const std::string &str, Color foreground_color, Color background_color,
+                        const std::vector<Style> &styles) -> std::string {
+            std::string applied = termcolor::reset;
+
+            applied += termcolor::get_color(foreground_color);
+            applied += termcolor::get_background_color(background_color);
+
+            for (auto const &style : styles) { applied += termcolor::get_style(style); }
+
+            applied += str + termcolor::reset;
+
+            return applied;
         };
-        options.formatter.apply_color = apply_color;
+        options.formatter.apply = apply;
 
         for (auto const &row : rows) {
             for (auto const &cell : row) {
@@ -1000,7 +1047,7 @@ int main()
 
         // Color header cells
         for (size_t i = 0; i < movies.column_size(); ++i) {
-            movies[0][i].format().color(Color::yellow).font_styles(Style::bold);
+            movies[0][i].format().color(Color::yellow).styles(Style::bold);
         }
 
         std::cout << "Console Table:\n" << movies.plaintext() << std::endl;
@@ -1024,7 +1071,7 @@ int main()
         table.column(2).format().width(30);
 
         // Iterate over cells in the first row
-        for (auto &cell : table[0]) { cell.format().font_styles(Style::underline).align(Align::center); }
+        for (auto &cell : table[0]) { cell.format().styles(Style::underline).align(Align::center); }
 
         // Iterator over cells in the first column
         for (auto &cell : table.column(0)) {
@@ -1034,7 +1081,7 @@ int main()
         // Iterate over rows in the table
         size_t index = 0;
         for (auto &row : table) {
-            // row.format().font_styles(Style::bold);
+            // row.format().styles(Style::bold);
 
             // Set blue background color for alternate rows
             if (index > 0 && index % 2 == 0) {
