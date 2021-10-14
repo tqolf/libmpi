@@ -5,6 +5,9 @@
 #include <sstream>
 #include <optional>
 #include <functional>
+#include <locale>
+#include <clocale>
+#include <wchar.h>
 
 namespace tabulate
 {
@@ -15,6 +18,43 @@ enum class Align { none, left, right, center, top, bottom };
 enum class Color { none, grey, red, green, yellow, blue, magenta, cyan, white };
 
 enum class Style { none, bold, dark, italic, underline, blink, reverse, concealed, crossed };
+} // namespace tabulate
+
+namespace tabulate
+{
+inline size_t sequence_length(const std::string &text, const std::string &locale, bool wchar_enabled)
+{
+    if (!wchar_enabled) return text.length();
+
+    if (text.size() == 0) { return 0; }
+
+#if defined(__unix__) || defined(__unix) || defined(__APPLE__)
+    {
+        // The behavior of wcswidth() depends on the LC_CTYPE category of the current locale.
+        // Set the current locale based on cell properties before computing width
+        auto old_locale = std::locale::global(std::locale(locale));
+
+        // Convert from narrow std::string to wide string
+        wchar_t *wide_string = new wchar_t[text.size()];
+        std::mbstowcs(wide_string, text.c_str(), text.size());
+
+        // Compute display width of wide string
+        int len = wcswidth(wide_string, text.size());
+        delete[] wide_string;
+
+        // Restore old locale
+        std::locale::global(old_locale);
+
+        if (len >= 0) { return len; }
+    }
+#endif
+
+    {
+        return (text.length() - std::count_if(text.begin(), text.end(), [](char c) -> bool {
+                    return (c & 0xC0) == 0x80;
+                }));
+    }
+}
 } // namespace tabulate
 
 namespace tabulate
@@ -1026,6 +1066,27 @@ class Table {
 int main()
 {
     using namespace tabulate;
+    {
+        // FIXME
+        Table universal_constants;
+
+        universal_constants.add("Quantity", "Value");
+        universal_constants.add("Characteristic impedance of vacuum", "376.730 313 461... Ω");
+        universal_constants.add("Electric constant (permittivity of free space)", "8.854 187 817... × 10⁻¹²F·m⁻¹");
+        universal_constants.add("Magnetic constant (permeability of free space)",
+                                "4π × 10⁻⁷ N·A⁻² = 1.2566 370 614... × 10⁻⁶ N·A⁻²");
+        universal_constants.add("Gravitational constant (Newtonian constant of gravitation)",
+                                "6.6742(10) × 10⁻¹¹m³·kg⁻¹·s⁻²");
+        universal_constants.add("Planck's constant", "6.626 0693(11) × 10⁻³⁴ J·s");
+        universal_constants.add("Dirac's constant", "1.054 571 68(18) × 10⁻³⁴ J·s");
+        universal_constants.add("Speed of light in vacuum", "299 792 458 m·s⁻¹");
+
+        universal_constants.column(0).format().width(20);
+
+        std::cout << "Console Table:\n" << universal_constants.plaintext() << std::endl;
+        std::cout << "Markdown Table:\n" << universal_constants.markdown() << std::endl;
+    }
+
     {
         tabulate::Table movies;
 
