@@ -386,7 +386,8 @@ class Format {
         // formatter
         formatter.width = 0;
     }
-    auto &width() const
+
+    size_t width() const
     {
         return formatter.width;
     }
@@ -397,7 +398,7 @@ class Format {
         return *this;
     }
 
-    auto &align() const
+    Align align() const
     {
         return font.align;
     }
@@ -408,7 +409,7 @@ class Format {
         return *this;
     }
 
-    auto &color() const
+    Color color() const
     {
         return font.color;
     }
@@ -419,7 +420,7 @@ class Format {
         return *this;
     }
 
-    auto &background_color() const
+    Color background_color() const
     {
         return font.background_color;
     }
@@ -430,7 +431,7 @@ class Format {
         return *this;
     }
 
-    auto &styles() const
+    const std::vector<Style> &styles() const
     {
         return font.styles;
     }
