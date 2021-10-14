@@ -691,14 +691,12 @@ class Cells {
 
     std::vector<std::string> dump(const FormatOptions &options) const
     {
-        Align align = Align::center;
-
         size_t max_height = 0;
         std::vector<std::vector<std::string>> dumplines;
         for (auto const &cell : cells) {
             std::vector<std::string> formatted;
             for (auto const &wrapped : tabulate::wrap_to_lines(cell.get(), cell.width())) {
-                auto aligned = align_line_by(wrapped, cell.width(), align);
+                auto aligned = align_line_by(wrapped, cell.width(), cell.align());
                 formatted.push_back(aligned);
             }
             dumplines.push_back(formatted);
@@ -1089,6 +1087,89 @@ int main()
             }
             index += 1;
         }
+
+        std::cout << "Console Table:\n" << table.plaintext() << std::endl;
+        std::cout << "Markdown Table:\n" << table.markdown() << std::endl;
+    }
+
+    {
+        Table styled_table;
+        styled_table.add("Bold", "Italic", "Bold & Italic", "Blinking");
+        styled_table.add("Underline", "Crossed", "Dark", "Bold, Italic & Underlined");
+
+        styled_table[0][0].format().styles({Style::bold});
+
+        styled_table[0][1].format().styles({Style::italic});
+
+        styled_table[0][2].format().styles({Style::bold, Style::italic});
+
+        styled_table[0][3].format().styles({Style::blink});
+
+        styled_table[1][0].format().styles({Style::underline});
+
+        styled_table[1][1].format().styles({Style::crossed});
+
+        styled_table[1][2].format().styles({Style::dark});
+
+        styled_table[1][3].format().styles({Style::bold, Style::italic, Style::underline});
+
+        std::cout << "Console Table:\n" << styled_table.plaintext() << std::endl;
+        std::cout << "Markdown Table:\n" << styled_table.markdown() << std::endl;
+    }
+
+    {
+        Table colors;
+
+        colors.add("Font Color is Red", "Font Color is Blue", "Font Color is Green");
+        colors.add("Everything is Red", "Everything is Blue", "Everything is Green");
+        colors.add("Font Background is Red", "Font Background is Blue", "Font Background is Green");
+
+        colors[0][0].format().color(Color::red).styles({Style::bold});
+        colors[0][1].format().color(Color::blue).styles({Style::bold});
+        colors[0][2].format().color(Color::green).styles({Style::bold});
+
+        colors[1][0]
+            .format()
+            // .border_left_color(Color::red)
+            // .border_left_background_color(Color::red)
+            .background_color(Color::red)
+            .color(Color::red);
+
+        colors[1][1]
+            .format()
+            // .border_left_color(Color::blue)
+            // .border_left_background_color(Color::blue)
+            .background_color(Color::blue)
+            .color(Color::blue);
+
+        colors[1][2]
+            .format()
+            // .border_left_color(Color::green)
+            // .border_left_background_color(Color::green)
+            .background_color(Color::green)
+            .color(Color::green)
+            // .border_right_color(Color::green)
+            // .border_right_background_color(Color::green)
+            ;
+
+        colors[2][0].format().background_color(Color::red).styles({Style::bold});
+        colors[2][1].format().background_color(Color::blue).styles({Style::bold});
+        colors[2][2].format().background_color(Color::green).styles({Style::bold});
+
+        std::cout << "Console Table:\n" << colors.plaintext() << std::endl;
+        std::cout << "Markdown Table:\n" << colors.markdown() << std::endl;
+    }
+
+    {
+        Table table;
+
+        table.add("This paragraph contains a veryveryveryveryveryverylong word. The long word will "
+                  "break and word wrap to the next line.",
+                  "This paragraph \nhas embedded '\\n' \ncharacters and\n will break\n exactly "
+                  "where\n you want it\n to\n break.");
+
+        table[0][0].format().width(20);
+        table[0][1].format().width(50);
 
         std::cout << "Console Table:\n" << table.plaintext() << std::endl;
         std::cout << "Markdown Table:\n" << table.markdown() << std::endl;
