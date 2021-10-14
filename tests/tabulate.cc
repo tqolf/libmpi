@@ -240,6 +240,7 @@ static std::string align_line_by(const std::string &line, size_t width, Align al
                                  bool multi_bytes_character)
 {
     size_t linesize = display_length(line, locale, multi_bytes_character);
+    if (linesize >= width) { return line; }
     switch (align) {
         default:
         case Align::left: {
@@ -980,341 +981,385 @@ class Cell {
     std::string m_content;
 };
 
+class CellIterator {
+  public:
+    explicit CellIterator(std::vector<std::shared_ptr<Cell>>::iterator ptr) : ptr(ptr) {}
+
+    CellIterator operator++()
+    {
+        ++ptr;
+        return *this;
+    }
+    bool operator!=(const CellIterator &other) const
+    {
+        return ptr != other.ptr;
+    }
+    Cell &operator*()
+    {
+        return **ptr;
+    }
+
+  private:
+    std::vector<std::shared_ptr<Cell>>::iterator ptr;
+};
+
+class CellConstIterator {
+  public:
+    explicit CellConstIterator(std::vector<std::shared_ptr<Cell>>::const_iterator ptr) : ptr(ptr) {}
+
+    CellConstIterator operator++()
+    {
+        ++ptr;
+        return *this;
+    }
+    bool operator!=(const CellConstIterator &other) const
+    {
+        return ptr != other.ptr;
+    }
+    const Cell &operator*()
+    {
+        return **ptr;
+    }
+
+  private:
+    std::vector<std::shared_ptr<Cell>>::const_iterator ptr;
+};
+
 class BatchFormat {
   public:
     BatchFormat(std::vector<std::shared_ptr<Cell>> &cells) : cells(cells) {}
 
-    BatchFormat &width(size_t value)
+    inline BatchFormat &width(size_t value)
     {
         for (auto &cell : cells) { cell->format().width(value); }
         return *this;
     }
 
-    BatchFormat &align(Align value)
+    inline BatchFormat &align(Align value)
     {
         for (auto &cell : cells) { cell->format().align(value); }
         return *this;
     }
 
-    BatchFormat &color(Color value)
+    inline BatchFormat &color(Color value)
     {
         for (auto &cell : cells) { cell->format().color(value); }
         return *this;
     }
 
-    BatchFormat &background_color(Color value)
+    inline BatchFormat &background_color(Color value)
     {
         for (auto &cell : cells) { cell->format().background_color(value); }
         return *this;
     }
 
-    BatchFormat &styles(Style value)
+    inline BatchFormat &styles(Style value)
     {
         for (auto &cell : cells) { cell->format().styles(value); }
         return *this;
     }
 
-    BatchFormat &styles(std::initializer_list<Style> values)
+    inline BatchFormat &styles(std::initializer_list<Style> values)
     {
         for (auto &cell : cells) { cell->format().styles(values); }
         return *this;
     }
 
-    BatchFormat &padding(size_t value)
+    inline BatchFormat &padding(size_t value)
     {
         for (auto &cell : cells) { cell->format().padding(value); }
         return *this;
     }
 
-    BatchFormat &padding_left(size_t value)
+    inline BatchFormat &padding_left(size_t value)
     {
         for (auto &cell : cells) { cell->format().padding_left(value); }
         return *this;
     }
 
-    BatchFormat &padding_right(size_t value)
+    inline BatchFormat &padding_right(size_t value)
     {
         for (auto &cell : cells) { cell->format().padding_right(value); }
         return *this;
     }
 
-    BatchFormat &padding_top(size_t value)
+    inline BatchFormat &padding_top(size_t value)
     {
         for (auto &cell : cells) { cell->format().padding_top(value); }
         return *this;
     }
 
-    BatchFormat &padding_bottom(size_t value)
+    inline BatchFormat &padding_bottom(size_t value)
     {
         for (auto &cell : cells) { cell->format().padding_bottom(value); }
         return *this;
     }
 
-    BatchFormat &border(const std::string &value)
+    inline BatchFormat &border(const std::string &value)
     {
         for (auto &cell : cells) { cell->format().border(value); }
         return *this;
     }
 
-    BatchFormat &border_color(Color value)
+    inline BatchFormat &border_color(Color value)
     {
         for (auto &cell : cells) { cell->format().border_color(value); }
         return *this;
     }
 
-    BatchFormat &border_background_color(Color value)
+    inline BatchFormat &border_background_color(Color value)
     {
         for (auto &cell : cells) { cell->format().border_background_color(value); }
         return *this;
     }
 
-    BatchFormat &border_left(const std::string &value)
+    inline BatchFormat &border_left(const std::string &value)
     {
         for (auto &cell : cells) { cell->format().border_left(value); }
         return *this;
     }
 
-    BatchFormat &border_left_color(Color value)
+    inline BatchFormat &border_left_color(Color value)
     {
         for (auto &cell : cells) { cell->format().border_left_color(value); }
         return *this;
     }
 
-    BatchFormat &border_left_background_color(Color value)
+    inline BatchFormat &border_left_background_color(Color value)
     {
         for (auto &cell : cells) { cell->format().border_left_background_color(value); }
         return *this;
     }
 
-    BatchFormat &border_right(const std::string &value)
+    inline BatchFormat &border_right(const std::string &value)
     {
         for (auto &cell : cells) { cell->format().border_right(value); }
         return *this;
     }
 
-    BatchFormat &border_right_color(Color value)
+    inline BatchFormat &border_right_color(Color value)
     {
         for (auto &cell : cells) { cell->format().border_right_color(value); }
         return *this;
     }
 
-    BatchFormat &border_right_background_color(Color value)
+    inline BatchFormat &border_right_background_color(Color value)
     {
         for (auto &cell : cells) { cell->format().border_right_background_color(value); }
         return *this;
     }
 
-    BatchFormat &border_top(const std::string &value)
+    inline BatchFormat &border_top(const std::string &value)
     {
         for (auto &cell : cells) { cell->format().border_top(value); }
         return *this;
     }
 
-    BatchFormat &border_top_color(Color value)
+    inline BatchFormat &border_top_color(Color value)
     {
         for (auto &cell : cells) { cell->format().border_top_color(value); }
         return *this;
     }
 
-    BatchFormat &border_top_background_color(Color value)
+    inline BatchFormat &border_top_background_color(Color value)
     {
         for (auto &cell : cells) { cell->format().border_top_background_color(value); }
         return *this;
     }
 
-    BatchFormat &border_bottom(const std::string &value)
+    inline BatchFormat &border_bottom(const std::string &value)
     {
         for (auto &cell : cells) { cell->format().border_bottom(value); }
         return *this;
     }
 
-    BatchFormat &border_bottom_color(Color value)
+    inline BatchFormat &border_bottom_color(Color value)
     {
         for (auto &cell : cells) { cell->format().border_bottom_color(value); }
         return *this;
     }
 
-    BatchFormat &border_bottom_background_color(Color value)
+    inline BatchFormat &border_bottom_background_color(Color value)
     {
         for (auto &cell : cells) { cell->format().border_bottom_background_color(value); }
         return *this;
     }
 
-    BatchFormat &show_border()
+    inline BatchFormat &show_border()
     {
         for (auto &cell : cells) { cell->format().show_border(); }
         return *this;
     }
 
-    BatchFormat &hide_border()
+    inline BatchFormat &hide_border()
     {
         for (auto &cell : cells) { cell->format().hide_border(); }
         return *this;
     }
 
-    BatchFormat &show_border_top()
+    inline BatchFormat &show_border_top()
     {
         for (auto &cell : cells) { cell->format().show_border_top(); }
         return *this;
     }
 
-    BatchFormat &hide_border_top()
+    inline BatchFormat &hide_border_top()
     {
         for (auto &cell : cells) { cell->format().hide_border_top(); }
         return *this;
     }
 
-    BatchFormat &show_border_bottom()
+    inline BatchFormat &show_border_bottom()
     {
         for (auto &cell : cells) { cell->format().show_border_bottom(); }
         return *this;
     }
 
-    BatchFormat &hide_border_bottom()
+    inline BatchFormat &hide_border_bottom()
     {
         for (auto &cell : cells) { cell->format().hide_border_bottom(); }
         return *this;
     }
 
-    BatchFormat &show_border_left()
+    inline BatchFormat &show_border_left()
     {
         for (auto &cell : cells) { cell->format().show_border_left(); }
         return *this;
     }
 
-    BatchFormat &hide_border_left()
+    inline BatchFormat &hide_border_left()
     {
         for (auto &cell : cells) { cell->format().hide_border_left(); }
         return *this;
     }
 
-    BatchFormat &show_border_right()
+    inline BatchFormat &show_border_right()
     {
         for (auto &cell : cells) { cell->format().show_border_right(); }
         return *this;
     }
 
-    BatchFormat &hide_border_right()
+    inline BatchFormat &hide_border_right()
     {
         for (auto &cell : cells) { cell->format().hide_border_right(); }
         return *this;
     }
 
-    BatchFormat &corner(const std::string &value)
+    inline BatchFormat &corner(const std::string &value)
     {
         for (auto &cell : cells) { cell->format().corner(value); }
         return *this;
     }
 
-    BatchFormat &corner_color(Color value)
+    inline BatchFormat &corner_color(Color value)
     {
         for (auto &cell : cells) { cell->format().corner_color(value); }
         return *this;
     }
 
-    BatchFormat &corner_background_color(Color value)
+    inline BatchFormat &corner_background_color(Color value)
     {
         for (auto &cell : cells) { cell->format().corner_background_color(value); }
         return *this;
     }
 
-    BatchFormat &corner_top_left(const std::string &value)
+    inline BatchFormat &corner_top_left(const std::string &value)
     {
         for (auto &cell : cells) { cell->format().corner_top_left(value); }
         return *this;
     }
 
-    BatchFormat &corner_top_left_color(Color value)
+    inline BatchFormat &corner_top_left_color(Color value)
     {
         for (auto &cell : cells) { cell->format().corner_top_left_color(value); }
         return *this;
     }
 
-    BatchFormat &corner_top_left_background_color(Color value)
+    inline BatchFormat &corner_top_left_background_color(Color value)
     {
         for (auto &cell : cells) { cell->format().corner_top_left_background_color(value); }
         return *this;
     }
 
-    BatchFormat &corner_top_right(const std::string &value)
+    inline BatchFormat &corner_top_right(const std::string &value)
     {
         for (auto &cell : cells) { cell->format().corner_top_right(value); }
         return *this;
     }
 
-    BatchFormat &corner_top_right_color(Color value)
+    inline BatchFormat &corner_top_right_color(Color value)
     {
         for (auto &cell : cells) { cell->format().corner_top_right_color(value); }
         return *this;
     }
 
-    BatchFormat &corner_top_right_background_color(Color value)
+    inline BatchFormat &corner_top_right_background_color(Color value)
     {
         for (auto &cell : cells) { cell->format().corner_top_right_background_color(value); }
         return *this;
     }
 
-    BatchFormat &corner_bottom_left(const std::string &value)
+    inline BatchFormat &corner_bottom_left(const std::string &value)
     {
         for (auto &cell : cells) { cell->format().corner_bottom_left(value); }
         return *this;
     }
 
-    BatchFormat &corner_bottom_left_color(Color value)
+    inline BatchFormat &corner_bottom_left_color(Color value)
     {
         for (auto &cell : cells) { cell->format().corner_bottom_left_color(value); }
         return *this;
     }
 
-    BatchFormat &corner_bottom_left_background_color(Color value)
+    inline BatchFormat &corner_bottom_left_background_color(Color value)
     {
         for (auto &cell : cells) { cell->format().corner_bottom_left_background_color(value); }
         return *this;
     }
 
-    BatchFormat &corner_bottom_right(const std::string &value)
+    inline BatchFormat &corner_bottom_right(const std::string &value)
     {
         for (auto &cell : cells) { cell->format().corner_bottom_right(value); }
         return *this;
     }
 
-    BatchFormat &corner_bottom_right_color(Color value)
+    inline BatchFormat &corner_bottom_right_color(Color value)
     {
         for (auto &cell : cells) { cell->format().corner_bottom_right_color(value); }
         return *this;
     }
 
-    BatchFormat &corner_bottom_right_background_color(Color value)
+    inline BatchFormat &corner_bottom_right_background_color(Color value)
     {
         for (auto &cell : cells) { cell->format().corner_bottom_right_background_color(value); }
         return *this;
     }
 
-    BatchFormat &column_separator(const std::string &value)
+    inline BatchFormat &column_separator(const std::string &value)
     {
         for (auto &cell : cells) { cell->format().column_separator(value); }
         return *this;
     }
 
-    BatchFormat &column_separator_color(Color value)
+    inline BatchFormat &column_separator_color(Color value)
     {
         for (auto &cell : cells) { cell->format().column_separator_color(value); }
         return *this;
     }
 
-    BatchFormat &column_separator_background_color(Color value)
+    inline BatchFormat &column_separator_background_color(Color value)
     {
         for (auto &cell : cells) { cell->format().column_separator_background_color(value); }
         return *this;
     }
 
-    BatchFormat &locale(const std::string &value)
+    inline BatchFormat &locale(const std::string &value)
     {
         for (auto &cell : cells) { cell->format().locale(value); }
         return *this;
     }
 
-    BatchFormat &multi_bytes_character(bool value)
+    inline BatchFormat &multi_bytes_character(bool value)
     {
         for (auto &cell : cells) { cell->format().multi_bytes_character(value); }
         return *this;
@@ -1454,27 +1499,27 @@ class Row {
     }
 
     /* iterator */
-    using iterator = std::vector<std::shared_ptr<Cell>>::iterator;
-    using const_iterator = std::vector<std::shared_ptr<Cell>>::const_iterator;
+    using iterator = CellIterator;
+    using const_iterator = CellConstIterator;
 
     iterator begin()
     {
-        return cells.begin();
+        return CellIterator(cells.begin());
     }
 
     iterator end()
     {
-        return cells.end();
+        return CellIterator(cells.end());
     }
 
     const_iterator begin() const
     {
-        return cells.cbegin();
+        return CellConstIterator(cells.cbegin());
     }
 
     const_iterator end() const
     {
-        return cells.cend();
+        return CellConstIterator(cells.cend());
     }
 
     BatchFormat &format()
@@ -1527,27 +1572,27 @@ class Column {
     }
 
     /* iterator */
-    using iterator = std::vector<std::shared_ptr<Cell>>::iterator;
-    using const_iterator = std::vector<std::shared_ptr<Cell>>::const_iterator;
+    using iterator = CellIterator;
+    using const_iterator = CellConstIterator;
 
     iterator begin()
     {
-        return cells.begin();
+        return CellIterator(cells.begin());
     }
 
     iterator end()
     {
-        return cells.end();
+        return CellIterator(cells.end());
     }
 
     const_iterator begin() const
     {
-        return cells.cbegin();
+        return CellConstIterator(cells.cbegin());
     }
 
     const_iterator end() const
     {
-        return cells.cend();
+        return CellConstIterator(cells.cend());
     }
 
   private:
@@ -1568,6 +1613,17 @@ class Table {
     BatchFormat &format()
     {
         return formats;
+    }
+
+    template <typename T>
+    Row &add(T arg)
+    {
+        /**
+         * emplace_back return reference since c++17
+         */
+        rows.emplace_back(arg);
+        __on_add_auto_update();
+        return rows[rows.size() - 1];
     }
 
     template <typename... Args>
@@ -1689,7 +1745,7 @@ class Table {
         {
             Row alignment_row;
             for (auto const &cell : rows[0]) {
-                switch (cell->align()) {
+                switch (cell.align()) {
                     case Align::left:
                         alignment_row.add(":----");
                         break;
@@ -1947,11 +2003,11 @@ int main()
         table.column(2).format().width(30);
 
         // Iterate over cells in the first row
-        for (auto &cell : table[0]) { cell->format().styles(Style::underline).align(Align::center); }
+        for (auto &cell : table[0]) { cell.format().styles(Style::underline).align(Align::center); }
 
         // Iterator over cells in the first column
         for (auto &cell : table.column(0)) {
-            if (cell->get() != "Company") { cell->format().align(Align::right); }
+            if (cell.get() != "Company") { cell.format().align(Align::right); }
         }
 
         // Iterate over rows in the table
@@ -1961,7 +2017,7 @@ int main()
 
             // Set blue background color for alternate rows
             if (index > 0 && index % 2 == 0) {
-                for (auto &cell : row) { cell->format().background_color(Color::blue); }
+                for (auto &cell : row) { cell.format().background_color(Color::blue); }
             }
             index += 1;
         }
@@ -1974,67 +2030,85 @@ int main()
     {
         Table class_diagram;
 
-        // Global styling
-        class_diagram.format().styles({Style::bold}).align(Align::center).width(60);
-
         // Animal class
-        Table animal;
-        animal.add("Animal");
-        animal[0].format().align(Align::center);
+        {
+            Table animal;
+            animal.add("Animal");
+            animal[0].format().align(Align::center);
 
-        // Animal properties nested table
-        Table animal_properties;
-        animal_properties.format().width(20);
-        animal_properties.add("+age: Int");
-        animal_properties.add("+gender: String");
-        animal_properties[1].format().hide_border_top();
+            // Animal properties nested table
+            {
+                Table animal_properties;
+                animal_properties.add("+age: Int");
+                animal_properties.add("+gender: String");
+                animal_properties.format().width(20);
+                animal_properties[1].format().hide_border_top();
 
-        // Animal methods nested table
-        Table animal_methods;
-        animal_methods.format().width(20);
-        animal_methods.add("+isMammal()");
-        animal_methods.add("+mate()");
-        animal_methods[1].format().hide_border_top();
+                animal.add(animal_properties);
+            }
 
-        animal.add(animal_properties);
-        animal.add(animal_methods);
-        animal[2].format().hide_border_top();
+            // Animal methods nested table
+            {
+                Table animal_methods;
+                animal_methods.add("+isMammal()");
+                animal_methods.add("+mate()");
+                animal_methods.format().width(20);
+                animal_methods[1].format().hide_border_top();
 
-        class_diagram.add(animal);
+                animal.add(animal_methods);
+            }
+            animal[2].format().hide_border_top();
+
+            // std::cout << "Animal:\n" << animal.plaintext() << std::endl;
+
+            class_diagram.add(animal);
+        }
 
         // Add rows in the class diagram for the up-facing arrow
         // THanks to center alignment, these will align just fine
         class_diagram.add("▲");
-        class_diagram[1][0].format().hide_border_top(); // .multi_bytes_character(true); // ▲ is multi-byte
+        class_diagram[1][0].format().hide_border_top().multi_bytes_character(true); // ▲ is multi-byte
 
         class_diagram.add("|");
-        class_diagram[2].format().hide_border_top();
         class_diagram.add("|");
-        class_diagram[3].format().hide_border_top();
 
         // Duck class
-        Table duck;
-        duck.add("Duck");
-        duck[0].format().align(Align::center);
+        {
+            Table duck;
+            duck.add("Duck");
 
-        // Duck proeperties nested table
-        Table duck_properties;
-        duck_properties.format().width(40);
-        duck_properties.add("+beakColor: String = \"yellow\"");
+            // Duck proeperties nested table
+            {
+                Table duck_properties;
+                duck_properties.add("+beakColor: String = \"yellow\"");
+                duck_properties.format().width(40);
 
-        // Duck methods nested table
-        Table duck_methods;
-        duck_methods.format().width(40);
-        duck_methods.add("+swim()");
-        duck_methods.add("+quack()");
-        duck_methods[1].format().hide_border_top();
+                duck.add(duck_properties);
+            }
 
-        duck.add(duck_properties);
-        duck.add(duck_methods);
-        duck[2].format().hide_border_top();
+            // Duck methods nested table
+            {
+                Table duck_methods;
+                duck_methods.add("+swim()");
+                duck_methods.add("+quack()");
+                duck_methods.format().width(40);
+                duck_methods[1].format().hide_border_top();
 
-        class_diagram.add(duck);
-        class_diagram[4].format().hide_border_top();
+                duck.add(duck_methods);
+            }
+
+            // duck[0].format().align(Align::center);
+            duck[2].format().hide_border_top();
+
+            class_diagram.add(duck);
+        }
+
+        // class_diagram[2].format().hide_border_top();
+        // class_diagram[3].format().hide_border_top();
+        // class_diagram[4].format().hide_border_top();
+
+        // Global styling
+        // class_diagram.format().styles({Style::bold}).align(Align::center).width(60);
 
         std::cout << "Console Table:\n" << class_diagram.plaintext() << std::endl;
     }
@@ -2042,8 +2116,6 @@ int main()
     // UTF-8 Support
     {
         Table table;
-
-        table.format().corner("♥").styles({Style::bold}).corner_color(Color::magenta).border_color(Color::magenta);
 
         table.add("English", "I love you");
         table.add("French", "Je t’aime");
@@ -2059,6 +2131,7 @@ int main()
 
         // Column 1 is using mult-byte characters
         table.column(1).format().multi_bytes_character(true);
+        table.format().corner("♥").styles({Style::bold}).corner_color(Color::magenta).border_color(Color::magenta);
 
         std::cout << "Console Table:\n" << table.plaintext() << std::endl;
     }
