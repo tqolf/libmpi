@@ -1451,6 +1451,12 @@ class Table {
         }
     }
 };
+
+template <>
+inline std::string to_string<Table>(const Table &v)
+{
+    return v.plaintext();
+}
 } // namespace tabulate
 
 #include <iostream>
@@ -1672,7 +1678,6 @@ int main()
         // std::cout << "Markdown Table:\n" << table.markdown() << std::endl;
     }
 
-#if 0
     // Nested Tables
     {
         Table class_diagram;
@@ -1690,30 +1695,30 @@ int main()
         // animal_properties.format().width(20);
         animal_properties.add("+age: Int");
         animal_properties.add("+gender: String");
-        // animal_properties[1].format().hide_border_top();
+        animal_properties[1].format().hide_border_top();
 
         // Animal methods nested table
         Table animal_methods;
         // animal_methods.format().width(20);
         animal_methods.add("+isMammal()");
         animal_methods.add("+mate()");
-        // animal_methods[1].format().hide_border_top();
+        animal_methods[1].format().hide_border_top();
 
         animal.add(animal_properties);
         animal.add(animal_methods);
-        // animal[2].format().hide_border_top();
+        animal[2].format().hide_border_top();
 
         class_diagram.add(animal);
 
         // Add rows in the class diagram for the up-facing arrow
         // THanks to center alignment, these will align just fine
         class_diagram.add("▲");
-        // class_diagram[1][0].format().hide_border_top().multi_byte_characters(true); // ▲ is multi-byte
+        class_diagram[1][0].format().hide_border_top(); // .multi_byte_characters(true); // ▲ is multi-byte
 
         class_diagram.add("|");
-        // class_diagram[2].format().hide_border_top();
+        class_diagram[2].format().hide_border_top();
         class_diagram.add("|");
-        // class_diagram[3].format().hide_border_top();
+        class_diagram[3].format().hide_border_top();
 
         // Duck class
         Table duck;
@@ -1730,21 +1735,47 @@ int main()
         // duck_methods.format().width(40);
         duck_methods.add("+swim()");
         duck_methods.add("+quack()");
-        // duck_methods[1].format().hide_border_top();
+        duck_methods[1].format().hide_border_top();
 
         duck.add(duck_properties);
         duck.add(duck_methods);
-        // duck[2].format().hide_border_top();
+        duck[2].format().hide_border_top();
 
         class_diagram.add(duck);
-        // class_diagram[4].format().hide_border_top();
+        class_diagram[4].format().hide_border_top();
 
         std::cout << "Console Table:\n" << class_diagram.plaintext() << std::endl;
     }
+
+    // UTF-8 Support
+    {
+        Table table;
+
+#if 0
+        table.format()
+            .corner("♥")
+            .font_style({FontStyle::bold})
+            .corner_color(Color::magenta)
+            .border_color(Color::magenta);
 #endif
 
-    std::string str = "8.854 187 817... × 10⁻¹²F·m⁻¹";
-    std::cout << "size = " << str.size() << ", sequence_size = " << sequence_length(str, "", true) << std::endl;
+        table.add("English", "I love you");
+        table.add("French", "Je t’aime");
+        table.add("Spanish", "Te amo");
+        table.add("German", "Ich liebe Dich");
+        table.add("Mandarin Chinese", "我爱你");
+        table.add("Japanese", "愛してる");
+        table.add("Korean", "사랑해 (Saranghae)");
+        table.add("Greek", "Σ΄αγαπώ (Se agapo)");
+        table.add("Italian", "Ti amo");
+        table.add("Russian", "Я тебя люблю (Ya tebya liubliu)");
+        table.add("Hebrew", "אני אוהב אותך (Ani ohev otakh)");
+
+        // Column 1 is using mult-byte characters
+        // table.column(1).format().multi_byte_characters(true);
+
+        std::cout << "Console Table:\n" << table.plaintext() << std::endl;
+    }
 
     return 0;
 }
