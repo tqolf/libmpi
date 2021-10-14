@@ -259,16 +259,17 @@ static std::vector<std::string> wrap_to_lines(const std::string &str, size_t wid
 
 static std::string align_line_by(const std::string &line, size_t width, Align align)
 {
+    size_t linesize = sequence_length(line, "", true);
     switch (align) {
         default:
         case Align::left: {
-            return line + std::string(width - line.size(), ' ');
+            return line + std::string(width - linesize, ' ');
         } break;
         case Align::right: {
-            return std::string(width - line.size(), ' ') + line;
+            return std::string(width - linesize, ' ') + line;
         } break;
         case Align::center: {
-            size_t remains = width - line.size();
+            size_t remains = width - linesize;
             return std::string(remains / 2, ' ') + line + std::string((remains + 1) / 2, ' ');
         } break;
     }
@@ -1134,9 +1135,13 @@ class Cells {
         std::vector<std::vector<std::string>> dumplines;
         for (auto const &cell : cells) {
             std::vector<std::string> formatted;
-            for (auto const &wrapped : tabulate::wrap_to_lines(cell.get(), cell.width())) {
-                auto aligned = align_line_by(wrapped, cell.width(), cell.align());
-                formatted.push_back(aligned);
+            if (cell.format().width() == 0) {
+                formatted.push_back(align_line_by(cell.get(), cell.width(), cell.align()));
+            } else {
+                for (auto const &wrapped : tabulate::wrap_to_lines(cell.get(), cell.width())) {
+                    auto aligned = align_line_by(wrapped, cell.width(), cell.align());
+                    formatted.push_back(aligned);
+                }
             }
             dumplines.push_back(formatted);
             max_height = std::max(formatted.size(), max_height);
@@ -1231,6 +1236,16 @@ class Column {
         return format_;
     }
 
+    size_t size()
+    {
+        return cells.size();
+    }
+
+    Cell *operator[](size_t index)
+    {
+        return cells[index];
+    }
+
     /* iterator */
     using iterator = std::vector<Cell *>::iterator;
     using const_iterator = std::vector<Cell *>::const_iterator;
@@ -1277,7 +1292,7 @@ class Table {
          * emplace_back return reference since c++17
          */
         rows.emplace_back(args...);
-        update_width();
+        __on_add_auto_update_width();
         return rows[rows.size() - 1];
     }
 
@@ -1418,21 +1433,21 @@ class Table {
     Format m_format;
     std::vector<Cells> rows;
 
-    size_t max_width(const Column &column)
-    {
-        size_t max_width = 0;
-        for (auto const &cell : column) { max_width = std::max(max_width, cell->get().size()); }
-
-        return max_width;
-    }
-
-    void update_width()
+    void __on_add_auto_update_width()
     {
         for (size_t i = 0; i < column_size(); i++) {
             Column col = column(i);
 
-            auto width = max_width(col);
-            col.format().width(width);
+            size_t oldwidth = col.size() == 0 ? 0 : col[0]->width();
+            size_t newwidth = col[col.size() - 1]->width();
+
+            if (newwidth != oldwidth) {
+                if (newwidth > oldwidth) {
+                    col.format().width(newwidth);
+                } else {
+                    col[col.size() - 1]->format().width(oldwidth);
+                }
+            }
         }
     }
 };
@@ -1446,7 +1461,6 @@ int main()
 
     // 0. Quick Start
     {
-        // FIXME
         Table universal_constants;
 
         universal_constants.add("Quantity", "Value");
@@ -1728,6 +1742,9 @@ int main()
         std::cout << "Console Table:\n" << class_diagram.plaintext() << std::endl;
     }
 #endif
+
+    std::string str = "8.854 187 817... × 10⁻¹²F·m⁻¹";
+    std::cout << "size = " << str.size() << ", sequence_size = " << sequence_length(str, "", true) << std::endl;
 
     return 0;
 }
