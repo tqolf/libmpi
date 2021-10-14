@@ -172,26 +172,43 @@ static std::string strip(const std::string &s)
     return lstrip(rstrip(s));
 }
 
-static std::vector<std::string> split_words(const std::string &str, const std::string &delimiters)
+static std::vector<std::string> explode_string(const std::string &input, const std::vector<std::string> &separators)
 {
-    std::vector<std::string> words;
-
-    size_t start = 0, end;
-    while ((end = str.find_first_of(delimiters, start)) != std::string::npos) {
-        if (end > start) {
-            if (std::isspace(str[end])) {
-                words.push_back(str.substr(start, end - start));
-                words.push_back(std::string(1, str[end]));
-            } else {
-                words.push_back(str.substr(start, end - start + 1));
-            }
+    auto first_of = [](const std::string &input, size_t start, const std::vector<std::string> &separators) -> size_t {
+        std::vector<size_t> indices;
+        for (auto &c : separators) {
+            auto index = input.find(c, start);
+            if (index != std::string::npos) { indices.push_back(index); }
         }
-        start = end + 1;
+        if (indices.size() > 0) {
+            return *std::min_element(indices.begin(), indices.end());
+        } else {
+            return std::string::npos;
+        }
+    };
+
+    std::vector<std::string> segments;
+
+    size_t start = 0;
+    while (true) {
+        auto index = first_of(input, start, separators);
+
+        if (index == std::string::npos) {
+            segments.push_back(input.substr(start));
+            return segments;
+        }
+
+        std::string word = input.substr(start, index - start);
+        char next_character = input.substr(index, 1)[0];
+        // Unlike whitespace, dashes and the like should stick to the word occurring before it.
+        if (isspace(next_character)) {
+            segments.push_back(word);
+            segments.push_back(std::string(1, next_character));
+        } else {
+            segments.push_back(word + next_character);
+        }
+        start = index + 1;
     }
-
-    if (start < str.length()) { words.push_back(str.substr(start)); }
-
-    return words;
 }
 
 static std::vector<std::string> wrap_to_lines(const std::string &str, size_t width, const std::string &locale,
@@ -207,7 +224,7 @@ static std::vector<std::string> wrap_to_lines(const std::string &str, size_t wid
     std::vector<std::string> wrapped_lines;
     for (auto const &line : lines) {
         std::string wrapped;
-        std::vector<std::string> words = split_words(line, " \t");
+        std::vector<std::string> words = explode_string(line, {" ", "-", "\t"});
 
         for (auto &word : words) {
             if (display_length(wrapped, locale, multi_bytes_character)
@@ -2044,6 +2061,8 @@ int main()
                 animal_properties.format().width(20);
                 animal_properties[1].format().hide_border_top();
 
+                std::cout << "Animal Properties:\n" << animal_properties.plaintext() << std::endl;
+
                 animal.add(animal_properties);
             }
 
@@ -2059,7 +2078,7 @@ int main()
             }
             animal[2].format().hide_border_top();
 
-            // std::cout << "Animal:\n" << animal.plaintext() << std::endl;
+            std::cout << "Animal:\n" << animal.plaintext() << std::endl;
 
             class_diagram.add(animal);
         }
@@ -2103,12 +2122,12 @@ int main()
             class_diagram.add(duck);
         }
 
-        // class_diagram[2].format().hide_border_top();
-        // class_diagram[3].format().hide_border_top();
+        class_diagram[2].format().hide_border_top();
+        class_diagram[3].format().hide_border_top();
         // class_diagram[4].format().hide_border_top();
 
         // Global styling
-        // class_diagram.format().styles({Style::bold}).align(Align::center).width(60);
+        class_diagram.format().styles({Style::bold}).align(Align::center).width(60);
 
         std::cout << "Console Table:\n" << class_diagram.plaintext() << std::endl;
     }
