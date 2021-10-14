@@ -867,7 +867,19 @@ class Cell {
         if (m_format.width() != 0) {
             return m_format.width();
         } else {
-            return sequence_length(m_content, "", true);
+            if (m_content.empty()) {
+                return 0;
+            } else {
+                std::string line;
+                std::stringstream ss(m_content.c_str());
+
+                size_t max_width = 0;
+                while (std::getline(ss, line, '\n')) {
+                    max_width = std::max(max_width, sequence_length(m_content, "", true));
+                }
+
+                return max_width;
+            }
         }
     }
 
