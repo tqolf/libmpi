@@ -18,7 +18,7 @@ enum class Color { none, grey, red, green, yellow, blue, magenta, cyan, white };
 
 enum class Style { none, bold, dark, italic, underline, blink, reverse, concealed, crossed };
 
-using Applier = std::function<std::string(const std::string &, Color, Color, std::vector<Style> &)>;
+using Applier = std::function<std::string(const std::string &, Color, Color, const std::vector<Style> &)>;
 } // namespace tabulate
 
 namespace tabulate
@@ -1434,12 +1434,17 @@ class Row {
     {
         std::string seperator;
 
-        if (cells.size() > 0) { seperator += cells[0]->format().corners.top_left.content; }
+        if (cells.size() > 0) {
+            auto &corner = cells[0]->format().corners.top_left;
+            seperator += apply(corner.content, corner.color, corner.backgroud_color, {});
+        }
         for (auto const &cell : cells) {
-            Format &format = cell->format();
-            seperator += repeate_to_size(format.borders.top.content,
-                                         format.borders.left.padding + cell->width() + format.borders.right.padding);
-            seperator += format.corners.top_right.content;
+            auto &borders = cell->format().borders;
+            auto &corner = cell->format().corners.top_right;
+
+            size_t size = borders.left.padding + cell->width() + borders.right.padding;
+            seperator += repeate_to_size(borders.top.content, size);
+            seperator += apply(corner.content, corner.color, corner.backgroud_color, {});
         }
 
         return seperator;
@@ -1449,12 +1454,17 @@ class Row {
     {
         std::string seperator;
 
-        if (cells.size() > 0) { seperator += cells[0]->format().corners.bottom_left.content; }
+        if (cells.size() > 0) {
+            auto &corner = cells[0]->format().corners.bottom_left;
+            seperator += apply(corner.content, corner.color, corner.backgroud_color, {});
+        }
         for (auto const &cell : cells) {
-            Format &format = cell->format();
-            seperator += repeate_to_size(format.borders.bottom.content,
-                                         format.borders.left.padding + cell->width() + format.borders.right.padding);
-            seperator += format.corners.bottom_right.content;
+            auto &borders = cell->format().borders;
+            auto &corner = cell->format().corners.bottom_right;
+
+            size_t size = borders.left.padding + cell->width() + borders.right.padding;
+            seperator += repeate_to_size(borders.bottom.content, size);
+            seperator += apply(corner.content, corner.color, corner.backgroud_color, {});
         }
 
         return seperator;
@@ -1487,25 +1497,31 @@ class Row {
         for (size_t i = 0; i < max_height; i++) {
             std::string line;
 
-            if (cells.size() > 0) { line += cells[0]->format().borders.left.content; }
+            if (cells.size() > 0) {
+                auto const &border = cells[0]->format().borders.left;
+                line += apply(border.content, border.color, border.backgroud_color, {});
+            }
             for (size_t j = 0; j < cells.size(); j++) {
                 Cell &cell = *cells[j];
-                Format &format = cell.format();
-                line += std::string(format.borders.left.padding, ' ');
+                auto &bl = cell.format().borders.left;
+                auto &br = cell.format().borders.right;
+                auto &sp = cell.format().separators;
+                auto foreground_color = cell.color();
+                auto background_color = cell.background_color();
+                auto styles = cell.styles();
+
+                line += apply(std::string(bl.padding, ' '), bl.color, bl.backgroud_color, {});
                 if (dumplines[j].size() <= i) {
-                    line += std::string(cell.width(), ' ');
+                    line += apply(std::string(cell.width(), ' '), foreground_color, background_color, styles);
                 } else {
-                    auto foreground_color = cell.color();
-                    auto background_color = cell.background_color();
-                    auto styles = cell.styles();
                     line += apply(dumplines[j][i], foreground_color, background_color, styles);
                 }
 
-                line += std::string(format.borders.right.padding, ' ');
+                line += apply(std::string(br.padding, ' '), foreground_color, background_color, {});
                 if (j == cells.size() - 1) {
-                    line += format.borders.right.content;
+                    line += apply(br.content, br.color, br.backgroud_color, {});
                 } else {
-                    line += format.separators.column;
+                    line += apply(sp.column, sp.color, sp.backgroud_color, {});
                 }
             }
 
@@ -1733,9 +1749,10 @@ class Table {
 
         for (size_t i = 1; i < rows.size(); i++) {
             auto const &row = rows[i];
-            const Format &format = row[0].format();
             for (auto const &line : row.dump(apply)) { exported += line + newline; }
-            if (format.borders.bottom.visiable) { exported += row.border_bottom(apply) + newline; }
+
+            auto const &border = row[0].format().borders.bottom;
+            if (border.visiable) { exported += row.border_bottom(apply) + newline; }
         }
 
         return exported;
@@ -1830,6 +1847,7 @@ int main()
 {
     using namespace tabulate;
 
+#if 0
     // 0. Quick Start
     {
         Table universal_constants;
@@ -1919,6 +1937,7 @@ int main()
         std::cout << "Console Table:\n" << styled_table.plaintext() << std::endl;
         // std::cout << "Markdown Table:\n" << styled_table.markdown() << std::endl;
     }
+#endif
 
     // Cell Colors
     {
@@ -2000,6 +2019,9 @@ int main()
             .border_right_color(Color::green)
             .border_top_color(Color::cyan)
             .border_bottom_color(Color::red);
+
+        std::cout << "Console Table:\n" << table.plaintext() << std::endl;
+        // std::cout << "Markdown Table:\n" << table.markdown() << std::endl;
     }
 
     // Range-based Iteration
@@ -2043,6 +2065,7 @@ int main()
         // std::cout << "Markdown Table:\n" << table.markdown() << std::endl;
     }
 
+#if 0
     // Nested Tables
     {
         Table class_diagram;
@@ -2117,13 +2140,13 @@ int main()
             }
 
             // duck[0].format().align(Align::center);
-            duck[2].format().hide_border_top();
+            // duck[2].format().hide_border_top();
 
             class_diagram.add(duck);
         }
 
-        class_diagram[2].format().hide_border_top();
-        class_diagram[3].format().hide_border_top();
+        // class_diagram[2].format().hide_border_top();
+        // class_diagram[3].format().hide_border_top();
         // class_diagram[4].format().hide_border_top();
 
         // Global styling
@@ -2131,6 +2154,7 @@ int main()
 
         std::cout << "Console Table:\n" << class_diagram.plaintext() << std::endl;
     }
+#endif
 
     // UTF-8 Support
     {
