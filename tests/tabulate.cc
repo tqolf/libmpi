@@ -194,7 +194,8 @@ static std::vector<std::string> split_words(const std::string &str, const std::s
     return words;
 }
 
-static std::vector<std::string> wrap_to_lines(const std::string &str, size_t width)
+static std::vector<std::string> wrap_to_lines(const std::string &str, size_t width, const std::string &locale,
+                                              bool multi_bytes_character)
 {
     std::vector<std::string> lines;
     {
@@ -209,13 +210,15 @@ static std::vector<std::string> wrap_to_lines(const std::string &str, size_t wid
         std::vector<std::string> words = split_words(line, " \t");
 
         for (auto &word : words) {
-            if (display_length(wrapped, "", true) + display_length(word, "", true) > width) {
-                if (display_length(wrapped, "", true) > 0) {
+            if (display_length(wrapped, locale, multi_bytes_character)
+                    + display_length(word, locale, multi_bytes_character)
+                > width) {
+                if (display_length(wrapped, locale, multi_bytes_character) > 0) {
                     wrapped_lines.push_back(wrapped);
                     wrapped = "";
                 }
 
-                while (display_length(word, "", true) > width) {
+                while (display_length(word, locale, multi_bytes_character) > width) {
                     wrapped = word.substr(0, width - 1) + "-";
                     wrapped_lines.push_back(wrapped);
                     wrapped = "";
@@ -233,9 +236,10 @@ static std::vector<std::string> wrap_to_lines(const std::string &str, size_t wid
     return wrapped_lines;
 }
 
-static std::string align_line_by(const std::string &line, size_t width, Align align)
+static std::string align_line_by(const std::string &line, size_t width, Align align, const std::string &locale,
+                                 bool multi_bytes_character)
 {
-    size_t linesize = display_length(line, "", true);
+    size_t linesize = display_length(line, locale, multi_bytes_character);
     switch (align) {
         default:
         case Align::left: {
@@ -444,18 +448,22 @@ class Format {
         separators.color = Color::none;
         separators.backgroud_color = Color::none;
 
-        // formatter
-        formatter.width = 0;
+        // shape
+        shape.width = 0;
+
+        // internationlization
+        internationlization.locale = "";
+        internationlization.multi_bytes_character = true;
     }
 
     size_t width() const
     {
-        return formatter.width;
+        return shape.width;
     }
 
     Format &width(size_t value)
     {
-        formatter.width = value;
+        shape.width = value;
         return *this;
     }
 
@@ -500,14 +508,12 @@ class Format {
     Format &styles(Style value)
     {
         font.styles.push_back(value);
-
         return *this;
     }
 
     Format &styles(std::initializer_list<Style> values)
     {
         font.styles.insert(font.styles.end(), values.begin(), values.end());
-
         return *this;
     }
 
@@ -550,7 +556,6 @@ class Format {
         borders.right.content = value;
         borders.top.content = value;
         borders.bottom.content = value;
-
         return *this;
     }
 
@@ -560,7 +565,6 @@ class Format {
         borders.right.color = value;
         borders.top.color = value;
         borders.bottom.color = value;
-
         return *this;
     }
 
@@ -570,91 +574,78 @@ class Format {
         borders.right.backgroud_color = value;
         borders.top.backgroud_color = value;
         borders.bottom.backgroud_color = value;
-
         return *this;
     }
 
     Format &border_left(const std::string &value)
     {
         borders.left.content = value;
-
         return *this;
     }
 
     Format &border_left_color(Color value)
     {
         borders.left.color = value;
-
         return *this;
     }
 
     Format &border_left_background_color(Color value)
     {
         borders.left.backgroud_color = value;
-
         return *this;
     }
 
     Format &border_right(const std::string &value)
     {
         borders.right.content = value;
-
         return *this;
     }
 
     Format &border_right_color(Color value)
     {
         borders.right.color = value;
-
         return *this;
     }
 
     Format &border_right_background_color(Color value)
     {
         borders.right.backgroud_color = value;
-
         return *this;
     }
 
     Format &border_top(const std::string &value)
     {
         borders.top.content = value;
-
         return *this;
     }
 
     Format &border_top_color(Color value)
     {
         borders.top.color = value;
-
         return *this;
     }
 
     Format &border_top_background_color(Color value)
     {
         borders.top.backgroud_color = value;
-
         return *this;
     }
 
     Format &border_bottom(const std::string &value)
     {
         borders.bottom.content = value;
-
         return *this;
     }
 
     Format &border_bottom_color(Color value)
     {
         borders.bottom.color = value;
-
         return *this;
     }
 
     Format &border_bottom_background_color(Color value)
     {
         borders.bottom.backgroud_color = value;
-
         return *this;
     }
 
@@ -664,7 +655,6 @@ class Format {
         borders.right.visiable = true;
         borders.top.visiable = true;
         borders.bottom.visiable = true;
-
         return *this;
     }
 
@@ -674,35 +664,30 @@ class Format {
         borders.right.visiable = false;
         borders.top.visiable = false;
         borders.bottom.visiable = false;
-
         return *this;
     }
 
     Format &show_border_top()
     {
         borders.top.visiable = true;
-
         return *this;
     }
 
     Format &hide_border_top()
     {
         borders.top.visiable = false;
-
         return *this;
     }
 
     Format &show_border_bottom()
     {
         borders.bottom.visiable = true;
-
         return *this;
     }
 
     Format &hide_border_bottom()
     {
         borders.bottom.visiable = false;
-
         return *this;
     }
 
@@ -715,21 +700,18 @@ class Format {
     Format &hide_border_left()
     {
         borders.left.visiable = false;
-
         return *this;
     }
 
     Format &show_border_right()
     {
         borders.right.visiable = true;
-
         return *this;
     }
 
     Format &hide_border_right()
     {
         borders.right.visiable = false;
-
         return *this;
     }
 
@@ -739,7 +721,6 @@ class Format {
         corners.top_right.content = value;
         corners.bottom_left.content = value;
         corners.bottom_right.content = value;
-
         return *this;
     }
 
@@ -749,7 +730,6 @@ class Format {
         corners.top_right.color = value;
         corners.bottom_left.color = value;
         corners.bottom_right.color = value;
-
         return *this;
     }
 
@@ -759,91 +739,78 @@ class Format {
         corners.top_right.backgroud_color = value;
         corners.bottom_left.backgroud_color = value;
         corners.bottom_right.backgroud_color = value;
-
         return *this;
     }
 
     Format &corner_top_left(const std::string &value)
     {
         corners.top_left.content = value;
-
         return *this;
     }
 
     Format &corner_top_left_color(Color value)
     {
         corners.top_left.color = value;
-
         return *this;
     }
 
     Format &corner_top_left_background_color(Color value)
     {
         corners.top_left.backgroud_color = value;
-
         return *this;
     }
 
     Format &corner_top_right(const std::string &value)
     {
         corners.top_right.content = value;
-
         return *this;
     }
 
     Format &corner_top_right_color(Color value)
     {
         corners.top_right.color = value;
-
         return *this;
     }
 
     Format &corner_top_right_background_color(Color value)
     {
         corners.top_right.backgroud_color = value;
-
         return *this;
     }
 
     Format &corner_bottom_left(const std::string &value)
     {
         corners.bottom_left.content = value;
-
         return *this;
     }
 
     Format &corner_bottom_left_color(Color value)
     {
         corners.bottom_left.color = value;
-
         return *this;
     }
 
     Format &corner_bottom_left_background_color(Color value)
     {
         corners.bottom_left.backgroud_color = value;
-
         return *this;
     }
 
     Format &corner_bottom_right(const std::string &value)
     {
         corners.bottom_right.content = value;
-
         return *this;
     }
 
     Format &corner_bottom_right_color(Color value)
     {
         corners.bottom_right.color = value;
-
         return *this;
     }
 
     Format &corner_bottom_right_background_color(Color value)
     {
         corners.bottom_right.backgroud_color = value;
-
         return *this;
     }
 
@@ -865,7 +832,34 @@ class Format {
         return *this;
     }
 
-  public:
+    const std::string &locale() const
+    {
+        return internationlization.locale;
+    }
+
+    Format &locale(const std::string &value)
+    {
+        internationlization.locale = value;
+        return *this;
+    }
+
+    bool multi_bytes_character() const
+    {
+        return internationlization.multi_bytes_character;
+    }
+
+    Format &multi_bytes_character(bool value)
+    {
+        internationlization.multi_bytes_character = value;
+        return *this;
+    }
+
+  private:
+    friend class Cell;
+    friend class Row;
+    friend class Column;
+    friend class Table;
+
     // Element padding and Border
     struct {
         struct Border {
@@ -895,9 +889,13 @@ class Format {
 
     struct {
         size_t width; // width limitation
-    } formatter;
+    } shape;
 
-  private:
+    struct {
+        std::string locale;
+        bool multi_bytes_character;
+    } internationlization;
+
     struct {
         Align align;
         Color color;
@@ -922,7 +920,7 @@ class Cell {
 
     size_t size()
     {
-        return display_length(m_content, "", true);
+        return display_length(m_content, m_format.locale(), m_format.multi_bytes_character());
     }
 
     Format &format()
@@ -948,7 +946,8 @@ class Cell {
 
                 size_t max_width = 0;
                 while (std::getline(ss, line, '\n')) {
-                    max_width = std::max(max_width, display_length(line, "", true));
+                    max_width =
+                        std::max(max_width, display_length(line, m_format.locale(), m_format.multi_bytes_character()));
                 }
 
                 return max_width;
@@ -1309,6 +1308,18 @@ class BatchFormat {
         return *this;
     }
 
+    BatchFormat &locale(const std::string &value)
+    {
+        for (auto &cell : cells) { cell->format().locale(value); }
+        return *this;
+    }
+
+    BatchFormat &multi_bytes_character(bool value)
+    {
+        for (auto &cell : cells) { cell->format().multi_bytes_character(value); }
+        return *this;
+    }
+
   private:
     std::vector<std::shared_ptr<Cell>> &cells;
 };
@@ -1394,10 +1405,13 @@ class Row {
         for (auto const &cell : cells) {
             std::vector<std::string> formatted;
             if (cell->format().width() == 0) {
-                formatted.push_back(align_line_by(cell->get(), cell->width(), cell->align()));
+                formatted.push_back(align_line_by(cell->get(), cell->width(), cell->align(), cell->format().locale(),
+                                                  cell->format().multi_bytes_character()));
             } else {
-                for (auto const &wrapped : tabulate::wrap_to_lines(cell->get(), cell->width())) {
-                    auto aligned = align_line_by(wrapped, cell->width(), cell->align());
+                for (auto const &wrapped : tabulate::wrap_to_lines(cell->get(), cell->width(), cell->format().locale(),
+                                                                   cell->format().multi_bytes_character())) {
+                    auto aligned = align_line_by(wrapped, cell->width(), cell->align(), cell->format().locale(),
+                                                 cell->format().multi_bytes_character());
                     formatted.push_back(aligned);
                 }
             }
@@ -1889,7 +1903,7 @@ int main()
 
         table[0][0]
             .format()
-            // .multi_byte_characters(true)
+            .multi_bytes_character(true)
             // Font styling
             .styles({Style::bold, Style::dark})
             .align(Align::center)
@@ -1943,7 +1957,7 @@ int main()
         // Iterate over rows in the table
         size_t index = 0;
         for (auto &row : table) {
-            // FIXME row.format().styles(Style::bold);
+            // row.format().styles(Style::bold);
 
             // Set blue background color for alternate rows
             if (index > 0 && index % 2 == 0) {
@@ -1991,7 +2005,7 @@ int main()
         // Add rows in the class diagram for the up-facing arrow
         // THanks to center alignment, these will align just fine
         class_diagram.add("▲");
-        class_diagram[1][0].format().hide_border_top(); // .multi_byte_characters(true); // ▲ is multi-byte
+        class_diagram[1][0].format().hide_border_top(); // .multi_bytes_character(true); // ▲ is multi-byte
 
         class_diagram.add("|");
         class_diagram[2].format().hide_border_top();
@@ -2044,7 +2058,7 @@ int main()
         table.add("Hebrew", "אני אוהב אותך (Ani ohev otakh)");
 
         // Column 1 is using mult-byte characters
-        // table.column(1).format().multi_byte_characters(true);
+        table.column(1).format().multi_bytes_character(true);
 
         std::cout << "Console Table:\n" << table.plaintext() << std::endl;
     }
