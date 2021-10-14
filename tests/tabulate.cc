@@ -875,7 +875,7 @@ class Cell {
 
                 size_t max_width = 0;
                 while (std::getline(ss, line, '\n')) {
-                    max_width = std::max(max_width, sequence_length(m_content, "", true));
+                    max_width = std::max(max_width, sequence_length(line, "", true));
                 }
 
                 return max_width;
