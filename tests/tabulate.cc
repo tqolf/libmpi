@@ -9,22 +9,104 @@
 #include <wchar.h>
 #include <iostream>
 
+// https://www.w3schools.com/css/default.asp
 namespace tabulate
 {
-// https://www.w3schools.com/css/default.asp
-
 enum class Align { none, left, right, center, top, bottom };
 
 enum class Color { none, grey, red, green, yellow, blue, magenta, cyan, white };
 
 enum class Style { none, bold, dark, italic, underline, blink, reverse, concealed, crossed };
 
-using applier = std::function<std::string(const std::string &, Color, Color, std::vector<Style> &)>;
+using Applier = std::function<std::string(const std::string &, Color, Color, std::vector<Style> &)>;
 } // namespace tabulate
 
 namespace tabulate
 {
-inline size_t sequence_length(const std::string &text, const std::string &locale, bool wchar_enabled)
+template <typename T>
+inline std::string to_string(const T &v)
+{
+    /**
+     * float/double/long double
+     * [unsigned] int/long/long long
+     *
+     * since c++11
+     */
+    return std::to_string(v);
+}
+
+template <>
+inline std::string to_string<bool>(const bool &v)
+{
+    return v ? "true" : "false";
+}
+
+template <>
+inline std::string to_string<const char *>(const char *const &v)
+{
+    return std::string(v);
+}
+
+template <>
+inline std::string to_string<std::string>(const std::string &v)
+{
+    return v;
+}
+
+template <>
+inline std::string to_string<Color>(const Color &v)
+{
+    switch (v) {
+        default:
+            return "";
+        case Color::grey:
+            return "grey";
+        case Color::red:
+            return "red";
+        case Color::green:
+            return "green";
+        case Color::yellow:
+            return "yellow";
+        case Color::blue:
+            return "blue";
+        case Color::magenta:
+            return "magenta";
+        case Color::cyan:
+            return "cyan";
+        case Color::white:
+            return "white";
+    }
+}
+
+template <>
+inline std::string to_string<Style>(const Style &v)
+{
+    switch (v) {
+        default:
+            return "reset";
+        case Style::bold:
+            return "bold";
+        case Style::dark:
+            return "dark";
+        case Style::italic:
+            return "italic";
+        case Style::underline:
+            return "underline";
+        case Style::blink:
+            return "blink";
+        case Style::reverse:
+            return "reverse";
+        case Style::concealed:
+            return "concealed";
+        case Style::crossed:
+            return "crossed";
+    }
+}
+} // namespace tabulate
+
+namespace tabulate
+{
+inline size_t display_length(const std::string &text, const std::string &locale, bool wchar_enabled)
 {
     if (!wchar_enabled) return text.length();
 
@@ -56,6 +138,131 @@ inline size_t sequence_length(const std::string &text, const std::string &locale
                     return (c & 0xC0) == 0x80;
                 }));
     }
+}
+} // namespace tabulate
+
+namespace tabulate
+{
+// trim white spaces from the left end of an input string
+static std::string lstrip(const std::string &s)
+{
+    std::string trimed = s;
+    trimed.erase(trimed.begin(), std::find_if(trimed.begin(), trimed.end(), [](int ch) {
+                     return !std::isspace(ch);
+                 }));
+    return trimed;
+}
+
+// trim white spaces from right end of an input string
+static std::string rstrip(const std::string &s)
+{
+    std::string trimed = s;
+    trimed.erase(std::find_if(trimed.rbegin(), trimed.rend(),
+                              [](int ch) {
+                                  return !std::isspace(ch);
+                              })
+                     .base(),
+                 trimed.end());
+    return trimed;
+}
+
+// trim white spaces from either end of an input string
+static std::string strip(const std::string &s)
+{
+    return lstrip(rstrip(s));
+}
+
+static std::vector<std::string> split_words(const std::string &str, const std::string &delimiters)
+{
+    std::vector<std::string> words;
+
+    size_t start = 0, end;
+    while ((end = str.find_first_of(delimiters, start)) != std::string::npos) {
+        if (end > start) {
+            if (std::isspace(str[end])) {
+                words.push_back(str.substr(start, end - start));
+                words.push_back(std::string(1, str[end]));
+            } else {
+                words.push_back(str.substr(start, end - start + 1));
+            }
+        }
+        start = end + 1;
+    }
+
+    if (start < str.length()) { words.push_back(str.substr(start)); }
+
+    return words;
+}
+
+static std::vector<std::string> wrap_to_lines(const std::string &str, size_t width)
+{
+    std::vector<std::string> lines;
+    {
+        std::string line;
+        std::stringstream ss(str);
+        while (std::getline(ss, line, '\n')) { lines.push_back(line); }
+    }
+
+    std::vector<std::string> wrapped_lines;
+    for (auto const &line : lines) {
+        std::string wrapped;
+        std::vector<std::string> words = split_words(line, " \t");
+
+        for (auto &word : words) {
+            if (display_length(wrapped, "", true) + display_length(word, "", true) > width) {
+                if (display_length(wrapped, "", true) > 0) {
+                    wrapped_lines.push_back(wrapped);
+                    wrapped = "";
+                }
+
+                while (display_length(word, "", true) > width) {
+                    wrapped = word.substr(0, width - 1) + "-";
+                    wrapped_lines.push_back(wrapped);
+                    wrapped = "";
+                    word = word.substr(width - 1);
+                }
+
+                word = lstrip(word);
+            }
+
+            wrapped += word;
+        }
+        wrapped_lines.push_back(wrapped);
+    }
+
+    return wrapped_lines;
+}
+
+static std::string align_line_by(const std::string &line, size_t width, Align align)
+{
+    size_t linesize = display_length(line, "", true);
+    switch (align) {
+        default:
+        case Align::left: {
+            return line + std::string(width - linesize, ' ');
+        } break;
+        case Align::right: {
+            return std::string(width - linesize, ' ') + line;
+        } break;
+        case Align::center: {
+            size_t remains = width - linesize;
+            return std::string(remains / 2, ' ') + line + std::string((remains + 1) / 2, ' ');
+        } break;
+    }
+}
+
+static std::string repeate_to_size(const std::string &s, size_t len)
+{
+    std::string r;
+    for (size_t i = 0; i < len;) {
+        if (s.size() > len - i) {
+            r += s.substr(0, len - i);
+        } else {
+            r += s;
+        }
+        i += s.size();
+    }
+    return r;
 }
 } // namespace tabulate
 
@@ -165,156 +372,9 @@ std::string get_background_color(Color color)
 } // namespace termcolor
 } // namespace tabulate
 
-namespace tabulate
-{
-// trim white spaces from the left end of an input string
-static std::string lstrip(const std::string &s)
-{
-    std::string trimed = s;
-    trimed.erase(trimed.begin(), std::find_if(trimed.begin(), trimed.end(), [](int ch) {
-                     return !std::isspace(ch);
-                 }));
-    return trimed;
-}
-
-// trim white spaces from right end of an input string
-static std::string rstrip(const std::string &s)
-{
-    std::string trimed = s;
-    trimed.erase(std::find_if(trimed.rbegin(), trimed.rend(),
-                              [](int ch) {
-                                  return !std::isspace(ch);
-                              })
-                     .base(),
-                 trimed.end());
-    return trimed;
-}
-
-// trim white spaces from either end of an input string
-static std::string strip(const std::string &s)
-{
-    return lstrip(rstrip(s));
-}
-
-static std::vector<std::string> split_words(const std::string &str, const std::string &delimiters)
-{
-    std::vector<std::string> words;
-
-    size_t start = 0, end;
-    while ((end = str.find_first_of(delimiters, start)) != std::string::npos) {
-        if (end > start) {
-            if (std::isspace(str[end])) {
-                words.push_back(str.substr(start, end - start));
-                words.push_back(std::string(1, str[end]));
-            } else {
-                words.push_back(str.substr(start, end - start + 1));
-            }
-        }
-        start = end + 1;
-    }
-
-    if (start < str.length()) { words.push_back(str.substr(start)); }
-
-    return words;
-}
-
-static std::vector<std::string> wrap_to_lines(const std::string &str, size_t width)
-{
-    std::vector<std::string> lines;
-    {
-        std::string line;
-        std::stringstream ss(str);
-        while (std::getline(ss, line, '\n')) { lines.push_back(line); }
-    }
-
-    std::vector<std::string> wrapped_lines;
-    for (auto const &line : lines) {
-        std::string wrapped;
-        std::vector<std::string> words = split_words(line, " \t");
-
-        for (auto &word : words) {
-            if (sequence_length(wrapped, "", true) + sequence_length(word, "", true) > width) {
-                if (sequence_length(wrapped, "", true) > 0) {
-                    wrapped_lines.push_back(wrapped);
-                    wrapped = "";
-                }
-
-                while (sequence_length(word, "", true) > width) {
-                    wrapped = word.substr(0, width - 1) + "-";
-                    wrapped_lines.push_back(wrapped);
-                    wrapped = "";
-                    word = word.substr(width - 1);
-                }
-
-                word = lstrip(word);
-            }
-
-            wrapped += word;
-        }
-        wrapped_lines.push_back(wrapped);
-    }
-
-    return wrapped_lines;
-}
-
-static std::string align_line_by(const std::string &line, size_t width, Align align)
-{
-    size_t linesize = sequence_length(line, "", true);
-    switch (align) {
-        default:
-        case Align::left: {
-            return line + std::string(width - linesize, ' ');
-        } break;
-        case Align::right: {
-            return std::string(width - linesize, ' ') + line;
-        } break;
-        case Align::center: {
-            size_t remains = width - linesize;
-            return std::string(remains / 2, ' ') + line + std::string((remains + 1) / 2, ' ');
-        } break;
-    }
-}
-
-static std::string repeate(const std::string &s, size_t len)
-{
-    std::string r;
-    for (size_t i = 0; i < len;) {
-        if (s.size() > len - i) {
-            r += s.substr(0, len - i);
-        } else {
-            r += s;
-        }
-        i += s.size();
-    }
-    return r;
-}
-} // namespace tabulate
 
 namespace tabulate
 {
-class Border {
-  public:
-    Border() {}
-
-    bool visiable;
-    size_t padding;
-
-    std::string content;
-
-    Color color;
-    Color backgroud_color;
-};
-
-// Outline
-
-class Corner {
-  public:
-    std::string content;
-
-    Color color;
-    Color backgroud_color;
-};
-
 class Format {
   public:
     Format()
@@ -380,7 +440,7 @@ class Format {
         corners.bottom_right.backgroud_color = Color::none;
 
         // separators
-        separators.separator = "|";
+        separators.column = "|";
         separators.color = Color::none;
         separators.backgroud_color = Color::none;
 
@@ -789,7 +849,7 @@ class Format {
 
     Format &column_separator(const std::string &value)
     {
-        separators.separator = value;
+        separators.column = value;
         return *this;
     }
 
@@ -808,16 +868,28 @@ class Format {
   public:
     // Element padding and Border
     struct {
-        Border left, right, top, bottom;
+        struct Border {
+            bool visiable;
+            size_t padding;
+
+            Color color;
+            std::string content;
+            Color backgroud_color;
+        } left, right, top, bottom;
     } borders;
 
+    // Element Corner
     struct {
-        Corner top_left, top_right, bottom_left, bottom_right;
+        struct Corner {
+            Color color;
+            std::string content;
+            Color backgroud_color;
+        } top_left, top_right, bottom_left, bottom_right;
     } corners;
 
-    // Element column separator
+    // Element separator
     struct {
-        std::string separator;
+        std::string column;
         Color color, backgroud_color;
     } separators;
 
@@ -850,7 +922,7 @@ class Cell {
 
     size_t size()
     {
-        return sequence_length(m_content, "", true);
+        return display_length(m_content, "", true);
     }
 
     Format &format()
@@ -876,7 +948,7 @@ class Cell {
 
                 size_t max_width = 0;
                 while (std::getline(ss, line, '\n')) {
-                    max_width = std::max(max_width, sequence_length(line, "", true));
+                    max_width = std::max(max_width, display_length(line, "", true));
                 }
 
                 return max_width;
@@ -909,180 +981,352 @@ class Cell {
     std::string m_content;
 };
 
-class RowFormat : public Format {
+class BatchFormat {
   public:
-    RowFormat(std::vector<Cell> &cells) : cells_(cells) {}
-    RowFormat &width(size_t value)
+    BatchFormat(std::vector<std::shared_ptr<Cell>> &cells) : cells(cells) {}
+
+    BatchFormat &width(size_t value)
     {
-        for (auto &cell : cells_) { cell.format().width(value); }
+        for (auto &cell : cells) { cell->format().width(value); }
         return *this;
     }
 
-    RowFormat &align(Align value)
+    BatchFormat &align(Align value)
     {
-        for (auto &cell : cells_) { cell.format().align(value); }
+        for (auto &cell : cells) { cell->format().align(value); }
         return *this;
     }
 
-    RowFormat &color(Color value)
+    BatchFormat &color(Color value)
     {
-        for (auto &cell : cells_) { cell.format().color(value); }
+        for (auto &cell : cells) { cell->format().color(value); }
         return *this;
     }
 
-    RowFormat &background_color(Color value)
+    BatchFormat &background_color(Color value)
     {
-        for (auto &cell : cells_) { cell.format().background_color(value); }
+        for (auto &cell : cells) { cell->format().background_color(value); }
         return *this;
     }
 
-    RowFormat &styles(Style value)
+    BatchFormat &styles(Style value)
     {
-        for (auto &cell : cells_) { cell.format().styles(value); }
+        for (auto &cell : cells) { cell->format().styles(value); }
+        return *this;
+    }
+
+    BatchFormat &styles(std::initializer_list<Style> values)
+    {
+        for (auto &cell : cells) { cell->format().styles(values); }
+        return *this;
+    }
+
+    BatchFormat &padding(size_t value)
+    {
+        for (auto &cell : cells) { cell->format().padding(value); }
+        return *this;
+    }
+
+    BatchFormat &padding_left(size_t value)
+    {
+        for (auto &cell : cells) { cell->format().padding_left(value); }
+        return *this;
+    }
+
+    BatchFormat &padding_right(size_t value)
+    {
+        for (auto &cell : cells) { cell->format().padding_right(value); }
+        return *this;
+    }
+
+    BatchFormat &padding_top(size_t value)
+    {
+        for (auto &cell : cells) { cell->format().padding_top(value); }
+        return *this;
+    }
+
+    BatchFormat &padding_bottom(size_t value)
+    {
+        for (auto &cell : cells) { cell->format().padding_bottom(value); }
+        return *this;
+    }
+
+    BatchFormat &border(const std::string &value)
+    {
+        for (auto &cell : cells) { cell->format().border(value); }
+        return *this;
+    }
+
+    BatchFormat &border_color(Color value)
+    {
+        for (auto &cell : cells) { cell->format().border_color(value); }
+        return *this;
+    }
+
+    BatchFormat &border_background_color(Color value)
+    {
+        for (auto &cell : cells) { cell->format().border_background_color(value); }
+        return *this;
+    }
+
+    BatchFormat &border_left(const std::string &value)
+    {
+        for (auto &cell : cells) { cell->format().border_left(value); }
+        return *this;
+    }
+
+    BatchFormat &border_left_color(Color value)
+    {
+        for (auto &cell : cells) { cell->format().border_left_color(value); }
+        return *this;
+    }
+
+    BatchFormat &border_left_background_color(Color value)
+    {
+        for (auto &cell : cells) { cell->format().border_left_background_color(value); }
+        return *this;
+    }
+
+    BatchFormat &border_right(const std::string &value)
+    {
+        for (auto &cell : cells) { cell->format().border_right(value); }
+        return *this;
+    }
+
+    BatchFormat &border_right_color(Color value)
+    {
+        for (auto &cell : cells) { cell->format().border_right_color(value); }
+        return *this;
+    }
+
+    BatchFormat &border_right_background_color(Color value)
+    {
+        for (auto &cell : cells) { cell->format().border_right_background_color(value); }
+        return *this;
+    }
+
+    BatchFormat &border_top(const std::string &value)
+    {
+        for (auto &cell : cells) { cell->format().border_top(value); }
+        return *this;
+    }
+
+    BatchFormat &border_top_color(Color value)
+    {
+        for (auto &cell : cells) { cell->format().border_top_color(value); }
+        return *this;
+    }
+
+    BatchFormat &border_top_background_color(Color value)
+    {
+        for (auto &cell : cells) { cell->format().border_top_background_color(value); }
+        return *this;
+    }
+
+    BatchFormat &border_bottom(const std::string &value)
+    {
+        for (auto &cell : cells) { cell->format().border_bottom(value); }
+        return *this;
+    }
+
+    BatchFormat &border_bottom_color(Color value)
+    {
+        for (auto &cell : cells) { cell->format().border_bottom_color(value); }
+        return *this;
+    }
+
+    BatchFormat &border_bottom_background_color(Color value)
+    {
+        for (auto &cell : cells) { cell->format().border_bottom_background_color(value); }
+        return *this;
+    }
+
+    BatchFormat &show_border()
+    {
+        for (auto &cell : cells) { cell->format().show_border(); }
+        return *this;
+    }
+
+    BatchFormat &hide_border()
+    {
+        for (auto &cell : cells) { cell->format().hide_border(); }
+        return *this;
+    }
+
+    BatchFormat &show_border_top()
+    {
+        for (auto &cell : cells) { cell->format().show_border_top(); }
+        return *this;
+    }
+
+    BatchFormat &hide_border_top()
+    {
+        for (auto &cell : cells) { cell->format().hide_border_top(); }
+        return *this;
+    }
+
+    BatchFormat &show_border_bottom()
+    {
+        for (auto &cell : cells) { cell->format().show_border_bottom(); }
+        return *this;
+    }
+
+    BatchFormat &hide_border_bottom()
+    {
+        for (auto &cell : cells) { cell->format().hide_border_bottom(); }
+        return *this;
+    }
+
+    BatchFormat &show_border_left()
+    {
+        for (auto &cell : cells) { cell->format().show_border_left(); }
+        return *this;
+    }
+
+    BatchFormat &hide_border_left()
+    {
+        for (auto &cell : cells) { cell->format().hide_border_left(); }
+        return *this;
+    }
+
+    BatchFormat &show_border_right()
+    {
+        for (auto &cell : cells) { cell->format().show_border_right(); }
+        return *this;
+    }
+
+    BatchFormat &hide_border_right()
+    {
+        for (auto &cell : cells) { cell->format().hide_border_right(); }
+        return *this;
+    }
+
+    BatchFormat &corner(const std::string &value)
+    {
+        for (auto &cell : cells) { cell->format().corner(value); }
+        return *this;
+    }
+
+    BatchFormat &corner_color(Color value)
+    {
+        for (auto &cell : cells) { cell->format().corner_color(value); }
+        return *this;
+    }
+
+    BatchFormat &corner_background_color(Color value)
+    {
+        for (auto &cell : cells) { cell->format().corner_background_color(value); }
+        return *this;
+    }
+
+    BatchFormat &corner_top_left(const std::string &value)
+    {
+        for (auto &cell : cells) { cell->format().corner_top_left(value); }
+        return *this;
+    }
+
+    BatchFormat &corner_top_left_color(Color value)
+    {
+        for (auto &cell : cells) { cell->format().corner_top_left_color(value); }
+        return *this;
+    }
+
+    BatchFormat &corner_top_left_background_color(Color value)
+    {
+        for (auto &cell : cells) { cell->format().corner_top_left_background_color(value); }
+        return *this;
+    }
+
+    BatchFormat &corner_top_right(const std::string &value)
+    {
+        for (auto &cell : cells) { cell->format().corner_top_right(value); }
+        return *this;
+    }
+
+    BatchFormat &corner_top_right_color(Color value)
+    {
+        for (auto &cell : cells) { cell->format().corner_top_right_color(value); }
+        return *this;
+    }
+
+    BatchFormat &corner_top_right_background_color(Color value)
+    {
+        for (auto &cell : cells) { cell->format().corner_top_right_background_color(value); }
+        return *this;
+    }
+
+    BatchFormat &corner_bottom_left(const std::string &value)
+    {
+        for (auto &cell : cells) { cell->format().corner_bottom_left(value); }
+        return *this;
+    }
+
+    BatchFormat &corner_bottom_left_color(Color value)
+    {
+        for (auto &cell : cells) { cell->format().corner_bottom_left_color(value); }
+        return *this;
+    }
+
+    BatchFormat &corner_bottom_left_background_color(Color value)
+    {
+        for (auto &cell : cells) { cell->format().corner_bottom_left_background_color(value); }
+        return *this;
+    }
+
+    BatchFormat &corner_bottom_right(const std::string &value)
+    {
+        for (auto &cell : cells) { cell->format().corner_bottom_right(value); }
+        return *this;
+    }
+
+    BatchFormat &corner_bottom_right_color(Color value)
+    {
+        for (auto &cell : cells) { cell->format().corner_bottom_right_color(value); }
+        return *this;
+    }
+
+    BatchFormat &corner_bottom_right_background_color(Color value)
+    {
+        for (auto &cell : cells) { cell->format().corner_bottom_right_background_color(value); }
+        return *this;
+    }
+
+    BatchFormat &column_separator(const std::string &value)
+    {
+        for (auto &cell : cells) { cell->format().column_separator(value); }
+        return *this;
+    }
+
+    BatchFormat &column_separator_color(Color value)
+    {
+        for (auto &cell : cells) { cell->format().column_separator_color(value); }
+        return *this;
+    }
+
+    BatchFormat &column_separator_background_color(Color value)
+    {
+        for (auto &cell : cells) { cell->format().column_separator_background_color(value); }
         return *this;
     }
 
   private:
-    std::vector<Cell> &cells_;
+    std::vector<std::shared_ptr<Cell>> &cells;
 };
 
-class ColumnFormat : public Format {
+class Row {
   public:
-    ColumnFormat(std::vector<Cell *> &cells) : cells_(cells) {}
-    ColumnFormat &width(size_t value)
-    {
-        for (auto &cell : cells_) { cell->format().width(value); }
-        return *this;
-    }
-
-    ColumnFormat &align(Align value)
-    {
-        for (auto &cell : cells_) { cell->format().align(value); }
-        return *this;
-    }
-
-    ColumnFormat &color(Color value)
-    {
-        for (auto &cell : cells_) { cell->format().color(value); }
-        return *this;
-    }
-
-    ColumnFormat &background_color(Color value)
-    {
-        for (auto &cell : cells_) { cell->format().background_color(value); }
-        return *this;
-    }
-
-    ColumnFormat &styles(Style value)
-    {
-        for (auto &cell : cells_) { cell->format().styles(value); }
-        return *this;
-    }
-
-  private:
-    std::vector<Cell *> &cells_;
-};
-
-template <typename T>
-inline std::string to_string(const T &v)
-{
-    /**
-     * float/double/long double
-     * [unsigned] int/long/long long
-     *
-     * since c++11
-     */
-    return std::to_string(v);
-}
-
-template <>
-inline std::string to_string<bool>(const bool &v)
-{
-    return v ? "true" : "false";
-}
-
-template <>
-inline std::string to_string<const char *>(const char *const &v)
-{
-    return std::string(v);
-}
-
-template <>
-inline std::string to_string<std::string>(const std::string &v)
-{
-    return v;
-}
-
-template <>
-inline std::string to_string<Color>(const Color &v)
-{
-    switch (v) {
-        default:
-            return "";
-        case Color::grey:
-            return "grey";
-        case Color::red:
-            return "red";
-        case Color::green:
-            return "green";
-        case Color::yellow:
-            return "yellow";
-        case Color::blue:
-            return "blue";
-        case Color::magenta:
-            return "magenta";
-        case Color::cyan:
-            return "cyan";
-        case Color::white:
-            return "white";
-    }
-}
-
-template <>
-inline std::string to_string<Style>(const Style &v)
-{
-    switch (v) {
-        default:
-            return "reset";
-        case Style::bold:
-            return "bold";
-        case Style::dark:
-            return "dark";
-        case Style::italic:
-            return "italic";
-        case Style::underline:
-            return "underline";
-        case Style::blink:
-            return "blink";
-        case Style::reverse:
-            return "reverse";
-        case Style::concealed:
-            return "concealed";
-        case Style::crossed:
-            return "crossed";
-    }
-}
-
-class Cells {
-  public:
-    Cells() : m_format(cells) {}
+    Row() : m_format(cells) {}
 
     template <typename... Args>
-    Cells(Args... args) : m_format(cells)
+    Row(Args... args) : m_format(cells)
     {
         add(args...);
-    }
-
-    template <typename T, template <class> class Container = std::vector>
-    explicit Cells(const Container<T> &args) : m_format(cells)
-    {
-        for (auto const &arg : args) { add(arg); }
     }
 
     template <typename T>
     void add(const T v)
     {
-        cells.push_back(Cell(to_string(v)));
+        cells.push_back(std::shared_ptr<Cell>(new Cell(to_string(v))));
     }
 
     template <typename T, typename... Args>
@@ -1094,6 +1338,16 @@ class Cells {
 
     Cell &operator[](size_t index)
     {
+        return *cells[index];
+    }
+
+    const Cell &operator[](size_t index) const
+    {
+        return *cells[index];
+    }
+
+    std::shared_ptr<Cell> &cell(size_t index)
+    {
         return cells[index];
     }
 
@@ -1103,43 +1357,47 @@ class Cells {
     }
 
     // corner padding words padding  corner   padding words padding  corner
-    std::string border_top(applier apply) const
+    std::string border_top(Applier apply) const
     {
         std::string seperator;
-        seperator += m_format.corners.top_left.content;
+
+        if (cells.size() > 0) { seperator += cells[0]->format().corners.top_left.content; }
         for (auto const &cell : cells) {
-            seperator += repeate(m_format.borders.top.content,
-                                 m_format.borders.left.padding + cell.width() + m_format.borders.right.padding);
-            seperator += m_format.corners.top_right.content;
+            Format &format = cell->format();
+            seperator += repeate_to_size(format.borders.top.content,
+                                         format.borders.left.padding + cell->width() + format.borders.right.padding);
+            seperator += format.corners.top_right.content;
         }
 
         return seperator;
     }
 
-    std::string border_bottom(applier apply) const
+    std::string border_bottom(Applier apply) const
     {
         std::string seperator;
-        seperator += m_format.corners.bottom_left.content;
+
+        if (cells.size() > 0) { seperator += cells[0]->format().corners.bottom_left.content; }
         for (auto const &cell : cells) {
-            seperator += repeate(m_format.borders.bottom.content,
-                                 m_format.borders.left.padding + cell.width() + m_format.borders.right.padding);
-            seperator += m_format.corners.bottom_right.content;
+            Format &format = cell->format();
+            seperator += repeate_to_size(format.borders.bottom.content,
+                                         format.borders.left.padding + cell->width() + format.borders.right.padding);
+            seperator += format.corners.bottom_right.content;
         }
 
         return seperator;
     }
 
-    std::vector<std::string> dump(applier apply) const
+    std::vector<std::string> dump(Applier apply) const
     {
         size_t max_height = 0;
         std::vector<std::vector<std::string>> dumplines;
         for (auto const &cell : cells) {
             std::vector<std::string> formatted;
-            if (cell.format().width() == 0) {
-                formatted.push_back(align_line_by(cell.get(), cell.width(), cell.align()));
+            if (cell->format().width() == 0) {
+                formatted.push_back(align_line_by(cell->get(), cell->width(), cell->align()));
             } else {
-                for (auto const &wrapped : tabulate::wrap_to_lines(cell.get(), cell.width())) {
-                    auto aligned = align_line_by(wrapped, cell.width(), cell.align());
+                for (auto const &wrapped : tabulate::wrap_to_lines(cell->get(), cell->width())) {
+                    auto aligned = align_line_by(wrapped, cell->width(), cell->align());
                     formatted.push_back(aligned);
                 }
             }
@@ -1153,22 +1411,25 @@ class Cells {
         for (size_t i = 0; i < max_height; i++) {
             std::string line;
 
-            line += m_format.borders.left.content;
+            if (cells.size() > 0) { line += cells[0]->format().borders.left.content; }
             for (size_t j = 0; j < cells.size(); j++) {
-                line += std::string(m_format.borders.left.padding, ' ');
+                Cell &cell = *cells[j];
+                Format &format = cell.format();
+                line += std::string(format.borders.left.padding, ' ');
                 if (dumplines[j].size() <= i) {
-                    line += std::string(cells[j].width(), ' ');
+                    line += std::string(cell.width(), ' ');
                 } else {
-                    auto foreground_color = cells[j].color();
-                    auto background_color = cells[j].background_color();
-                    auto styles = cells[j].styles();
+                    auto foreground_color = cell.color();
+                    auto background_color = cell.background_color();
+                    auto styles = cell.styles();
                     line += apply(dumplines[j][i], foreground_color, background_color, styles);
                 }
-                line += std::string(m_format.borders.right.padding, ' ');
+
+                line += std::string(format.borders.right.padding, ' ');
                 if (j == cells.size() - 1) {
-                    line += m_format.borders.right.content;
+                    line += format.borders.right.content;
                 } else {
-                    line += m_format.separators.separator;
+                    line += format.separators.column;
                 }
             }
 
@@ -1179,8 +1440,8 @@ class Cells {
     }
 
     /* iterator */
-    using iterator = std::vector<Cell>::iterator;
-    using const_iterator = std::vector<Cell>::const_iterator;
+    using iterator = std::vector<std::shared_ptr<Cell>>::iterator;
+    using const_iterator = std::vector<std::shared_ptr<Cell>>::const_iterator;
 
     iterator begin()
     {
@@ -1202,38 +1463,38 @@ class Cells {
         return cells.cend();
     }
 
-    RowFormat &format()
+    BatchFormat &format()
     {
         return m_format;
     }
 
-    const RowFormat &format() const
+    const BatchFormat &format() const
     {
         return m_format;
     }
 
   private:
-    RowFormat m_format;
-    std::vector<Cell> cells;
+    BatchFormat m_format;
+    std::vector<std::shared_ptr<Cell>> cells;
 };
 
 class Column {
   public:
-    Column() : format_(cells) {}
+    Column() : formats(cells) {}
 
-    void add(Cell &cell)
+    void add(std::shared_ptr<Cell> cell)
     {
-        cells.push_back(&cell);
+        cells.push_back(cell);
     }
 
-    ColumnFormat &format()
+    BatchFormat &format()
     {
-        return format_;
+        return formats;
     }
 
-    const ColumnFormat &format() const
+    const BatchFormat &format() const
     {
-        return format_;
+        return formats;
     }
 
     size_t size()
@@ -1241,14 +1502,19 @@ class Column {
         return cells.size();
     }
 
-    Cell *operator[](size_t index)
+    Cell &operator[](size_t index)
     {
-        return cells[index];
+        return *cells[index];
+    }
+
+    const Cell &operator[](size_t index) const
+    {
+        return *cells[index];
     }
 
     /* iterator */
-    using iterator = std::vector<Cell *>::iterator;
-    using const_iterator = std::vector<Cell *>::const_iterator;
+    using iterator = std::vector<std::shared_ptr<Cell>>::iterator;
+    using const_iterator = std::vector<std::shared_ptr<Cell>>::const_iterator;
 
     iterator begin()
     {
@@ -1271,32 +1537,37 @@ class Column {
     }
 
   private:
-    ColumnFormat format_;
-    std::vector<Cell *> cells;
+    BatchFormat formats;
+    std::vector<std::shared_ptr<Cell>> cells;
 };
 
 class Table {
   public:
-    Table() {}
+    Table() : formats(cells) {}
 
     template <typename... Args>
-    Table(Args... args)
+    Table(Args... args) : formats(cells)
     {
         add(args...);
     }
 
+    BatchFormat &format()
+    {
+        return formats;
+    }
+
     template <typename... Args>
-    Cells &add(Args... args)
+    Row &add(Args... args)
     {
         /**
          * emplace_back return reference since c++17
          */
         rows.emplace_back(args...);
-        __on_add_auto_update_width();
+        __on_add_auto_update();
         return rows[rows.size() - 1];
     }
 
-    Cells &operator[](size_t index)
+    Row &operator[](size_t index)
     {
         return rows[index];
     }
@@ -1307,8 +1578,8 @@ class Table {
     }
 
     /* iterator */
-    using iterator = std::vector<Cells>::iterator;
-    using const_iterator = std::vector<Cells>::const_iterator;
+    using iterator = std::vector<Row>::iterator;
+    using const_iterator = std::vector<Row>::const_iterator;
 
     iterator begin()
     {
@@ -1333,11 +1604,7 @@ class Table {
     Column column(size_t index)
     {
         Column column;
-
-        for (auto &row : rows) {
-            auto &cell = row[index];
-            column.add(cell);
-        }
+        for (auto &row : rows) { column.add(row.cell(index)); }
 
         return column;
     }
@@ -1369,14 +1636,19 @@ class Table {
         };
 
         // add header
-        if (m_format.borders.top.visiable) { exported += rows[0].border_top(apply) + newline; }
-        for (auto const &line : rows[0].dump(apply)) { exported += line + newline; }
-        if (m_format.borders.bottom.visiable) { exported += rows[0].border_bottom(apply) + newline; }
+        if (rows.size() > 0) {
+            const auto &header = rows[0];
+            const Format &format = header[0].format();
+            if (format.borders.top.visiable) { exported += header.border_top(apply) + newline; }
+            for (auto const &line : header.dump(apply)) { exported += line + newline; }
+            if (format.borders.bottom.visiable) { exported += header.border_bottom(apply) + newline; }
+        }
 
         for (size_t i = 1; i < rows.size(); i++) {
             auto const &row = rows[i];
+            const Format &format = row[0].format();
             for (auto const &line : row.dump(apply)) { exported += line + newline; }
-            if (m_format.borders.bottom.visiable) { exported += row.border_bottom(apply) + newline; }
+            if (format.borders.bottom.visiable) { exported += row.border_bottom(apply) + newline; }
         }
 
         return exported;
@@ -1387,10 +1659,10 @@ class Table {
         std::string exported;
         const std::string newline = "\n";
 
-        m_format.borders.left.content = "|";
-        m_format.borders.right.content = "|";
+        // m_format.borders.left.content = "|";
+        // m_format.borders.right.content = "|";
 
-        m_format.separators.separator = "|";
+        // m_format.separators.column = "|";
 
         auto apply = [](const std::string &str, Color, Color, const std::vector<Style> &) -> std::string {
             return str;
@@ -1401,9 +1673,9 @@ class Table {
 
         // add alignentment row
         {
-            Cells alignment_row;
+            Row alignment_row;
             for (auto const &cell : rows[0]) {
-                switch (cell.align()) {
+                switch (cell->align()) {
                     case Align::left:
                         alignment_row.add(":----");
                         break;
@@ -1430,25 +1702,31 @@ class Table {
     }
 
   private:
-    Format m_format;
-    std::vector<Cells> rows;
+    BatchFormat formats;
+    std::vector<Row> rows;
+    std::vector<std::shared_ptr<Cell>> cells; // for batch format
 
-    void __on_add_auto_update_width()
+    void __on_add_auto_update()
     {
+        // auto update width
         for (size_t i = 0; i < column_size(); i++) {
             Column col = column(i);
 
-            size_t oldwidth = col.size() == 0 ? 0 : col[0]->width();
-            size_t newwidth = col[col.size() - 1]->width();
+            size_t oldwidth = col.size() == 0 ? 0 : col[0].width();
+            size_t newwidth = col[col.size() - 1].width();
 
             if (newwidth != oldwidth) {
                 if (newwidth > oldwidth) {
                     col.format().width(newwidth);
                 } else {
-                    col[col.size() - 1]->format().width(oldwidth);
+                    col[col.size() - 1].format().width(oldwidth);
                 }
             }
         }
+
+        // append new cells
+        Row &last_row = rows[rows.size() - 1];
+        for (size_t i = 0; i < last_row.size(); i++) { cells.push_back(last_row.cell(i)); }
     }
 };
 
@@ -1655,7 +1933,7 @@ int main()
         table.column(2).format().width(30);
 
         // Iterate over cells in the first row
-        for (auto &cell : table[0]) { cell.format().styles(Style::underline).align(Align::center); }
+        for (auto &cell : table[0]) { cell->format().styles(Style::underline).align(Align::center); }
 
         // Iterator over cells in the first column
         for (auto &cell : table.column(0)) {
@@ -1665,11 +1943,11 @@ int main()
         // Iterate over rows in the table
         size_t index = 0;
         for (auto &row : table) {
-            // row.format().styles(Style::bold);
+            // FIXME row.format().styles(Style::bold);
 
             // Set blue background color for alternate rows
             if (index > 0 && index % 2 == 0) {
-                for (auto &cell : row) { cell.format().background_color(Color::blue); }
+                for (auto &cell : row) { cell->format().background_color(Color::blue); }
             }
             index += 1;
         }
@@ -1683,7 +1961,7 @@ int main()
         Table class_diagram;
 
         // Global styling
-        // class_diagram.format().styles({Style::bold}).align(Align::center).width(60);
+        class_diagram.format().styles({Style::bold}).align(Align::center).width(60);
 
         // Animal class
         Table animal;
@@ -1692,14 +1970,14 @@ int main()
 
         // Animal properties nested table
         Table animal_properties;
-        // animal_properties.format().width(20);
+        animal_properties.format().width(20);
         animal_properties.add("+age: Int");
         animal_properties.add("+gender: String");
         animal_properties[1].format().hide_border_top();
 
         // Animal methods nested table
         Table animal_methods;
-        // animal_methods.format().width(20);
+        animal_methods.format().width(20);
         animal_methods.add("+isMammal()");
         animal_methods.add("+mate()");
         animal_methods[1].format().hide_border_top();
@@ -1727,12 +2005,12 @@ int main()
 
         // Duck proeperties nested table
         Table duck_properties;
-        // duck_properties.format().width(40);
+        duck_properties.format().width(40);
         duck_properties.add("+beakColor: String = \"yellow\"");
 
         // Duck methods nested table
         Table duck_methods;
-        // duck_methods.format().width(40);
+        duck_methods.format().width(40);
         duck_methods.add("+swim()");
         duck_methods.add("+quack()");
         duck_methods[1].format().hide_border_top();
@@ -1751,13 +2029,7 @@ int main()
     {
         Table table;
 
-#if 0
-        table.format()
-            .corner("♥")
-            .font_style({FontStyle::bold})
-            .corner_color(Color::magenta)
-            .border_color(Color::magenta);
-#endif
+        table.format().corner("♥").styles({Style::bold}).corner_color(Color::magenta).border_color(Color::magenta);
 
         table.add("English", "I love you");
         table.add("French", "Je t’aime");
