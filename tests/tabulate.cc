@@ -416,45 +416,45 @@ class Format {
         borders.left.visiable = true;
         borders.left.content = "|";
         borders.left.color = Color::none;
-        borders.left.backgroud_color = Color::none;
+        borders.left.background_color = Color::none;
 
         // border-right
         borders.right.visiable = true;
         borders.right.content = "|";
         borders.right.color = Color::none;
-        borders.right.backgroud_color = Color::none;
+        borders.right.background_color = Color::none;
 
         // border-top
         borders.top.visiable = true;
         borders.top.content = "-";
         borders.top.color = Color::none;
-        borders.top.backgroud_color = Color::none;
+        borders.top.background_color = Color::none;
 
         // border-bottom
         borders.bottom.visiable = true;
         borders.bottom.content = "-";
         borders.bottom.color = Color::none;
-        borders.bottom.backgroud_color = Color::none;
+        borders.bottom.background_color = Color::none;
 
         // corner-top_left
         corners.top_left.content = "+";
         corners.top_left.color = Color::none;
-        corners.top_left.backgroud_color = Color::none;
+        corners.top_left.background_color = Color::none;
 
         // corner-top_right
         corners.top_right.content = "+";
         corners.top_right.color = Color::none;
-        corners.top_right.backgroud_color = Color::none;
+        corners.top_right.background_color = Color::none;
 
         // corner-bottom_left
         corners.bottom_left.content = "+";
         corners.bottom_left.color = Color::none;
-        corners.bottom_left.backgroud_color = Color::none;
+        corners.bottom_left.background_color = Color::none;
 
         // corner-bottom_right
         corners.bottom_right.content = "+";
         corners.bottom_right.color = Color::none;
-        corners.bottom_right.backgroud_color = Color::none;
+        corners.bottom_right.background_color = Color::none;
 
         // shape
         shape.width = 0;
@@ -578,10 +578,10 @@ class Format {
 
     Format &border_background_color(Color value)
     {
-        borders.left.backgroud_color = value;
-        borders.right.backgroud_color = value;
-        borders.top.backgroud_color = value;
-        borders.bottom.backgroud_color = value;
+        borders.left.background_color = value;
+        borders.right.background_color = value;
+        borders.top.background_color = value;
+        borders.bottom.background_color = value;
         return *this;
     }
 
@@ -599,7 +599,7 @@ class Format {
 
     Format &border_left_background_color(Color value)
     {
-        borders.left.backgroud_color = value;
+        borders.left.background_color = value;
         return *this;
     }
 
@@ -617,7 +617,7 @@ class Format {
 
     Format &border_right_background_color(Color value)
     {
-        borders.right.backgroud_color = value;
+        borders.right.background_color = value;
         return *this;
     }
 
@@ -635,7 +635,7 @@ class Format {
 
     Format &border_top_background_color(Color value)
     {
-        borders.top.backgroud_color = value;
+        borders.top.background_color = value;
         return *this;
     }
 
@@ -653,7 +653,7 @@ class Format {
 
     Format &border_bottom_background_color(Color value)
     {
-        borders.bottom.backgroud_color = value;
+        borders.bottom.background_color = value;
         return *this;
     }
 
@@ -743,10 +743,10 @@ class Format {
 
     Format &corner_background_color(Color value)
     {
-        corners.top_left.backgroud_color = value;
-        corners.top_right.backgroud_color = value;
-        corners.bottom_left.backgroud_color = value;
-        corners.bottom_right.backgroud_color = value;
+        corners.top_left.background_color = value;
+        corners.top_right.background_color = value;
+        corners.bottom_left.background_color = value;
+        corners.bottom_right.background_color = value;
         return *this;
     }
 
@@ -764,7 +764,7 @@ class Format {
 
     Format &corner_top_left_background_color(Color value)
     {
-        corners.top_left.backgroud_color = value;
+        corners.top_left.background_color = value;
         return *this;
     }
 
@@ -782,7 +782,7 @@ class Format {
 
     Format &corner_top_right_background_color(Color value)
     {
-        corners.top_right.backgroud_color = value;
+        corners.top_right.background_color = value;
         return *this;
     }
 
@@ -800,7 +800,7 @@ class Format {
 
     Format &corner_bottom_left_background_color(Color value)
     {
-        corners.bottom_left.backgroud_color = value;
+        corners.bottom_left.background_color = value;
         return *this;
     }
 
@@ -818,7 +818,7 @@ class Format {
 
     Format &corner_bottom_right_background_color(Color value)
     {
-        corners.bottom_right.backgroud_color = value;
+        corners.bottom_right.background_color = value;
         return *this;
     }
 
@@ -863,7 +863,7 @@ class Format {
 
             Color color;
             std::string content;
-            Color backgroud_color;
+            Color background_color;
         } left, right, top, bottom;
     } borders;
 
@@ -872,7 +872,7 @@ class Format {
         struct Corner {
             Color color;
             std::string content;
-            Color backgroud_color;
+            Color background_color;
         } top_left, top_right, bottom_left, bottom_right;
     } corners;
 
@@ -969,53 +969,60 @@ class Cell {
     std::string m_content;
 };
 
-class CellIterator {
+template <typename T>
+class PtrIterator {
   public:
-    explicit CellIterator(std::vector<std::shared_ptr<Cell>>::iterator ptr) : ptr(ptr) {}
+    explicit PtrIterator(typename std::vector<std::shared_ptr<T>>::iterator ptr) : ptr(ptr) {}
 
-    CellIterator operator++()
+    PtrIterator operator++()
     {
         ++ptr;
         return *this;
     }
-    bool operator!=(const CellIterator &other) const
+    bool operator!=(const PtrIterator &other) const
     {
         return ptr != other.ptr;
     }
-    Cell &operator*()
+    T &operator*()
     {
         return **ptr;
     }
 
   private:
-    std::vector<std::shared_ptr<Cell>>::iterator ptr;
+    typename std::vector<std::shared_ptr<T>>::iterator ptr;
 };
 
-class CellConstIterator {
+template <typename T>
+class PtrConstIterator {
   public:
-    explicit CellConstIterator(std::vector<std::shared_ptr<Cell>>::const_iterator ptr) : ptr(ptr) {}
+    explicit PtrConstIterator(typename std::vector<std::shared_ptr<T>>::const_iterator ptr) : ptr(ptr) {}
 
-    CellConstIterator operator++()
+    PtrConstIterator operator++()
     {
         ++ptr;
         return *this;
     }
-    bool operator!=(const CellConstIterator &other) const
+    bool operator!=(const PtrConstIterator &other) const
     {
         return ptr != other.ptr;
     }
-    const Cell &operator*()
+    const T &operator*()
     {
         return **ptr;
     }
 
   private:
-    std::vector<std::shared_ptr<Cell>>::const_iterator ptr;
+    typename std::vector<std::shared_ptr<T>>::const_iterator ptr;
 };
 
 class BatchFormat {
   public:
     BatchFormat(std::vector<std::shared_ptr<Cell>> &cells) : cells(cells) {}
+
+    inline size_t size()
+    {
+        return cells.size();
+    }
 
     inline BatchFormat &width(size_t value)
     {
@@ -1389,7 +1396,7 @@ class Row {
 
         if (cells.size() > 0) {
             auto &corner = cells[0]->format().corners.top_left;
-            seperator += apply(corner.content, corner.color, corner.backgroud_color, {});
+            seperator += apply(corner.content, corner.color, corner.background_color, {});
         }
         for (auto const &cell : cells) {
             auto &borders = cell->format().borders;
@@ -1398,7 +1405,26 @@ class Row {
 
             size_t size = paddings.left.size + cell->width() + paddings.right.size;
             seperator += repeate_to_size(borders.top.content, size);
-            seperator += apply(corner.content, corner.color, corner.backgroud_color, {});
+            seperator += apply(corner.content, corner.color, corner.background_color, {});
+        }
+
+        // padding top
+        if (cells[0]->format().paddings.top.size > 0) {
+            std::string padline;
+            {
+                auto &corner = cells[0]->format().corners.top_left;
+                padline += apply(corner.content, corner.color, corner.background_color, {});
+
+                for (auto const &cell : cells) {
+                    auto &paddings = cell->format().paddings;
+                    auto &corner = cell->format().corners.top_right;
+                    size_t size = paddings.left.size + cell->width() + paddings.right.size;
+                    padline += apply(std::string(size, ' '), cell->color(), cell->background_color(), {});
+                    padline += apply(corner.content, corner.color, corner.background_color, {});
+                }
+            }
+            // std::cout << "padline: \"" << padline << "\"" << std::endl;
+            for (size_t i = 0; i < cells[0]->format().paddings.top.size; i++) { seperator += "\n" + padline; }
         }
 
         return seperator;
@@ -1408,9 +1434,28 @@ class Row {
     {
         std::string seperator;
 
+        // padding top
+        if (cells[0]->format().paddings.top.size > 0) {
+            std::string padline;
+            {
+                auto &corner = cells[0]->format().corners.bottom_left;
+                padline += apply(corner.content, corner.color, corner.background_color, {});
+
+                for (auto const &cell : cells) {
+                    auto &paddings = cell->format().paddings;
+                    auto &corner = cell->format().corners.bottom_right;
+                    size_t size = paddings.left.size + cell->width() + paddings.right.size;
+                    padline += apply(std::string(size, ' '), cell->color(), cell->background_color(), {});
+                    padline += apply(corner.content, corner.color, corner.background_color, {});
+                }
+            }
+            // std::cout << "padline: \"" << padline << "\"" << std::endl;
+            for (size_t i = 0; i < cells[0]->format().paddings.top.size; i++) { seperator += padline + "\n"; }
+        }
+
         if (cells.size() > 0) {
             auto &corner = cells[0]->format().corners.bottom_left;
-            seperator += apply(corner.content, corner.color, corner.backgroud_color, {});
+            seperator += apply(corner.content, corner.color, corner.background_color, {});
         }
         for (auto const &cell : cells) {
             auto &borders = cell->format().borders;
@@ -1419,7 +1464,7 @@ class Row {
 
             size_t size = paddings.left.size + cell->width() + paddings.right.size;
             seperator += repeate_to_size(borders.bottom.content, size);
-            seperator += apply(corner.content, corner.color, corner.backgroud_color, {});
+            seperator += apply(corner.content, corner.color, corner.background_color, {});
         }
 
         return seperator;
@@ -1467,7 +1512,7 @@ class Row {
 
             if (cells.size() > 0) {
                 auto const &border = cells[0]->format().borders.left;
-                line += apply(border.content, border.color, border.backgroud_color, {});
+                line += apply(border.content, border.color, border.background_color, {});
             }
             for (size_t j = 0; j < cells.size(); j++) {
                 Cell &cell = *cells[j];
@@ -1479,7 +1524,7 @@ class Row {
                 auto background_color = cell.background_color();
                 auto styles = cell.styles();
 
-                line += apply(std::string(pl.size, ' '), bl.color, bl.backgroud_color, {});
+                line += apply(std::string(pl.size, ' '), foreground_color, background_color, {});
                 if (dumplines[j].size() <= i) {
                     line += apply(std::string(cell.width(), ' '), foreground_color, background_color, styles);
                 } else {
@@ -1487,7 +1532,7 @@ class Row {
                 }
 
                 line += apply(std::string(pr.size, ' '), foreground_color, background_color, {});
-                line += apply(br.content, br.color, br.backgroud_color, {});
+                line += apply(br.content, br.color, br.background_color, {});
             }
 
             lines.push_back(line);
@@ -1497,27 +1542,27 @@ class Row {
     }
 
     /* iterator */
-    using iterator = CellIterator;
-    using const_iterator = CellConstIterator;
+    using iterator = PtrIterator<Cell>;
+    using const_iterator = PtrConstIterator<Cell>;
 
     iterator begin()
     {
-        return CellIterator(cells.begin());
+        return iterator(cells.begin());
     }
 
     iterator end()
     {
-        return CellIterator(cells.end());
+        return iterator(cells.end());
     }
 
     const_iterator begin() const
     {
-        return CellConstIterator(cells.cbegin());
+        return const_iterator(cells.cbegin());
     }
 
     const_iterator end() const
     {
-        return CellConstIterator(cells.cend());
+        return const_iterator(cells.cend());
     }
 
     BatchFormat &format()
@@ -1570,27 +1615,27 @@ class Column {
     }
 
     /* iterator */
-    using iterator = CellIterator;
-    using const_iterator = CellConstIterator;
+    using iterator = PtrIterator<Cell>;
+    using const_iterator = PtrConstIterator<Cell>;
 
     iterator begin()
     {
-        return CellIterator(cells.begin());
+        return iterator(cells.begin());
     }
 
     iterator end()
     {
-        return CellIterator(cells.end());
+        return iterator(cells.end());
     }
 
     const_iterator begin() const
     {
-        return CellConstIterator(cells.cbegin());
+        return const_iterator(cells.cbegin());
     }
 
     const_iterator end() const
     {
-        return CellConstIterator(cells.cend());
+        return const_iterator(cells.cend());
     }
 
   private:
@@ -1616,28 +1661,28 @@ class Table {
     template <typename T>
     Row &add(T arg)
     {
-        /**
-         * emplace_back return reference since c++17
-         */
-        rows.emplace_back(arg);
+        auto row = std::make_shared<Row>();
+        row->add(arg);
+        rows.push_back(row);
         __on_add_auto_update();
-        return rows[rows.size() - 1];
+
+        return *row;
     }
 
     template <typename... Args>
     Row &add(Args... args)
     {
-        /**
-         * emplace_back return reference since c++17
-         */
-        rows.emplace_back(args...);
+        auto row = std::make_shared<Row>();
+        row->add(args...);
+        rows.push_back(row);
         __on_add_auto_update();
-        return rows[rows.size() - 1];
+
+        return *row;
     }
 
     Row &operator[](size_t index)
     {
-        return rows[index];
+        return *rows[index];
     }
 
     size_t size()
@@ -1646,33 +1691,33 @@ class Table {
     }
 
     /* iterator */
-    using iterator = std::vector<Row>::iterator;
-    using const_iterator = std::vector<Row>::const_iterator;
+    using iterator = PtrIterator<Row>;
+    using const_iterator = PtrConstIterator<Row>;
 
     iterator begin()
     {
-        return rows.begin();
+        return iterator(rows.begin());
     }
 
     iterator end()
     {
-        return rows.end();
+        return iterator(rows.end());
     }
 
     const_iterator begin() const
     {
-        return rows.cbegin();
+        return const_iterator(rows.cbegin());
     }
 
     const_iterator end() const
     {
-        return rows.cend();
+        return const_iterator(rows.cend());
     }
 
     Column column(size_t index)
     {
         Column column;
-        for (auto &row : rows) { column.add(row.cell(index)); }
+        for (auto &row : rows) { column.add(row->cell(index)); }
 
         return column;
     }
@@ -1680,7 +1725,7 @@ class Table {
     size_t column_size()
     {
         size_t max_size = 0;
-        for (auto const &row : rows) { max_size = std::max(max_size, row.size()); }
+        for (auto const &row : rows) { max_size = std::max(max_size, row->size()); }
         return max_size;
     }
 
@@ -1705,7 +1750,7 @@ class Table {
 
         // add header
         if (rows.size() > 0) {
-            const auto &header = rows[0];
+            const auto &header = *rows[0];
             const Format &format = header[0].format();
             if (format.borders.top.visiable) { exported += header.border_top(apply) + newline; }
             for (auto const &line : header.dump(apply)) { exported += line + newline; }
@@ -1713,7 +1758,7 @@ class Table {
         }
 
         for (size_t i = 1; i < rows.size(); i++) {
-            auto const &row = rows[i];
+            auto const &row = *rows[i];
             for (auto const &line : row.dump(apply)) { exported += line + newline; }
 
             auto const &border = row[0].format().borders.bottom;
@@ -1728,20 +1773,20 @@ class Table {
         std::string exported;
         const std::string newline = "\n";
 
-        // m_format.borders.left.content = "|";
-        // m_format.borders.right.content = "|";
+        // format().border_left("|");
+        // format().border_right("|");
 
         auto apply = [](const std::string &str, Color, Color, const std::vector<Style> &) -> std::string {
             return str;
         };
 
         // add header
-        for (auto const &line : rows[0].dump(apply)) { exported += line + newline; }
+        for (auto const &line : rows[0]->dump(apply)) { exported += line + newline; }
 
         // add alignentment row
         {
             Row alignment_row;
-            for (auto const &cell : rows[0]) {
+            for (auto const &cell : *rows[0]) {
                 switch (cell.align()) {
                     case Align::left:
                         alignment_row.add(":----");
@@ -1761,7 +1806,7 @@ class Table {
         }
 
         for (size_t i = 1; i < rows.size(); i++) {
-            auto const &row = rows[i];
+            auto const &row = *rows[i];
             for (auto const &line : row.dump(apply)) { exported += line + newline; }
         }
 
@@ -1770,7 +1815,7 @@ class Table {
 
   private:
     BatchFormat formats;
-    std::vector<Row> rows;
+    std::vector<std::shared_ptr<Row>> rows;
     std::vector<std::shared_ptr<Cell>> cells; // for batch format
 
     void __on_add_auto_update()
@@ -1792,7 +1837,7 @@ class Table {
         }
 
         // append new cells
-        Row &last_row = rows[rows.size() - 1];
+        Row &last_row = *rows[rows.size() - 1];
         for (size_t i = 0; i < last_row.size(); i++) { cells.push_back(last_row.cell(i)); }
     }
 };
@@ -1848,8 +1893,6 @@ int main()
         std::cout << "Console Table:\n" << universal_constants.plaintext() << std::endl;
         // std::cout << "Markdown Table:\n" << universal_constants.markdown() << std::endl;
     }
-
-    return 0;
 
     // 1.1 Word Wrapping
     {
