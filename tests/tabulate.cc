@@ -106,9 +106,9 @@ inline std::string to_string<Style>(const Style &v)
 
 namespace tabulate
 {
-inline size_t display_length(const std::string &text, const std::string &locale, bool wchar_enabled)
+inline size_t calculate_width(const std::string &text, const std::string &locale, bool wchar_enabled)
 {
-    if (!wchar_enabled) return text.length();
+    if (!wchar_enabled) { return text.length(); }
 
     if (text.size() == 0) { return 0; }
 
@@ -227,15 +227,15 @@ static std::vector<std::string> wrap_to_lines(const std::string &str, size_t wid
         std::vector<std::string> words = explode_string(line, {" ", "-", "\t"});
 
         for (auto &word : words) {
-            if (display_length(wrapped, locale, multi_bytes_character)
-                    + display_length(word, locale, multi_bytes_character)
+            if (calculate_width(wrapped, locale, multi_bytes_character)
+                    + calculate_width(word, locale, multi_bytes_character)
                 > width) {
-                if (display_length(wrapped, locale, multi_bytes_character) > 0) {
+                if (calculate_width(wrapped, locale, multi_bytes_character) > 0) {
                     wrapped_lines.push_back(wrapped);
                     wrapped = "";
                 }
 
-                while (display_length(word, locale, multi_bytes_character) > width) {
+                while (calculate_width(word, locale, multi_bytes_character) > width) {
                     wrapped = word.substr(0, width - 1) + "-";
                     wrapped_lines.push_back(wrapped);
                     wrapped = "";
@@ -256,7 +256,7 @@ static std::vector<std::string> wrap_to_lines(const std::string &str, size_t wid
 static std::string repeate_to_size(const std::string &s, size_t len)
 {
     std::string r;
-    size_t swidth = display_length(s, "", true);
+    size_t swidth = calculate_width(s, "", true);
     for (size_t i = 0; i < len;) {
         if (swidth > len - i) {
             r += s.substr(0, len - i);
@@ -378,17 +378,13 @@ std::string apply(const std::string &str, Color foreground_color, Color backgrou
 {
     std::string applied;
 
-    if (foreground_color != Color::none && background_color != Color::none && styles.size() != 0) {
-        applied += xterm::reset;
-    }
-
     applied += xterm::get_color(foreground_color);
     applied += xterm::get_background_color(background_color);
     for (auto const &style : styles) { applied += xterm::get_style(style); }
 
     applied += str;
 
-    if (foreground_color != Color::none && background_color != Color::none && styles.size() != 0) {
+    if (foreground_color != Color::none || background_color != Color::none || styles.size() != 0) {
         applied += xterm::reset;
     }
 
@@ -918,7 +914,7 @@ class Cell {
 
     size_t size()
     {
-        return display_length(m_content, m_format.locale(), m_format.multi_bytes_character());
+        return calculate_width(m_content, m_format.locale(), m_format.multi_bytes_character());
     }
 
     Format &format()
@@ -944,8 +940,12 @@ class Cell {
 
                 size_t max_width = 0;
                 while (std::getline(ss, line, '\n')) {
+#ifdef __DEBUG__
+                    std::cout << "line(" << calculate_width(line, m_format.locale(), m_format.multi_bytes_character())
+                              << "): " << line << std::endl;
+#endif
                     max_width =
-                        std::max(max_width, display_length(line, m_format.locale(), m_format.multi_bytes_character()));
+                        std::max(max_width, calculate_width(line, m_format.locale(), m_format.multi_bytes_character()));
                 }
 
                 return max_width;
@@ -1428,7 +1428,7 @@ class Row {
                     auto &paddings = cell->format().paddings;
                     auto &corner = cell->format().corners.top_right;
                     size_t size = paddings.left.size + cell->width() + paddings.right.size;
-                    padline += apply(std::string(size, ' '), cell->color(), cell->background_color(), {});
+                    padline += apply(std::string(size, ' '), Color::none, cell->background_color(), {});
                     padline += apply(corner.content, corner.color, corner.background_color, {});
                 }
             }
@@ -1454,7 +1454,7 @@ class Row {
                     auto &paddings = cell->format().paddings;
                     auto &corner = cell->format().corners.bottom_right;
                     size_t size = paddings.left.size + cell->width() + paddings.right.size;
-                    padline += apply(std::string(size, ' '), cell->color(), cell->background_color(), {});
+                    padline += apply(std::string(size, ' '), Color::none, cell->background_color(), {});
                     padline += apply(corner.content, corner.color, corner.background_color, {});
                 }
             }
@@ -1484,7 +1484,7 @@ class Row {
         size_t max_height = 0;
         std::vector<std::vector<std::string>> dumplines;
         for (auto const &cell : cells) {
-#ifdef __DEBUG__
+#if 0 // def __DEBUG__
             std::cout << "cell: " << cell->get() << std::endl;
             std::cout << "\tcolor: " << to_string(cell->color()) << std::endl;
             std::cout << "\tbackground_color: " << to_string(cell->background_color()) << std::endl;
@@ -1526,31 +1526,29 @@ class Row {
                 auto background_color = cell.background_color();
                 auto styles = cell.styles();
 
-                line += apply(std::string(pl.size, ' '), foreground_color, background_color, {});
+                line += apply(std::string(pl.size, ' '), Color::none, background_color, {});
                 if (dumplines[j].size() <= i) {
-                    line += apply(std::string(cell.width(), ' '), foreground_color, background_color, styles);
+                    line += apply(std::string(cell.width(), ' '), Color::none, background_color, styles);
                 } else {
                     auto align_line_by = [&](const std::string &str, size_t width, Align align,
                                              const std::string &locale, bool multi_bytes_character) -> std::string {
-                        size_t linesize = display_length(str, locale, multi_bytes_character);
+                        size_t linesize = calculate_width(str, locale, multi_bytes_character);
                         if (linesize >= width) { return apply(str, foreground_color, background_color, styles); }
                         switch (align) {
                             default:
                             case Align::left: {
                                 return apply(str, foreground_color, background_color, styles)
-                                       + apply(std::string(width - linesize, ' '), foreground_color, background_color,
-                                               {});
+                                       + apply(std::string(width - linesize, ' '), Color::none, background_color, {});
                             } break;
                             case Align::right: {
-                                return apply(std::string(width - linesize, ' '), foreground_color, background_color, {})
+                                return apply(std::string(width - linesize, ' '), Color::none, background_color, {})
                                        + apply(str, foreground_color, background_color, styles);
                             } break;
                             case Align::center: {
                                 size_t remains = width - linesize;
-                                return apply(std::string(remains / 2, ' '), foreground_color, background_color, {})
+                                return apply(std::string(remains / 2, ' '), Color::none, background_color, {})
                                        + apply(str, foreground_color, background_color, styles)
-                                       + apply(std::string((remains + 1) / 2, ' '), foreground_color, background_color,
-                                               {});
+                                       + apply(std::string((remains + 1) / 2, ' '), Color::none, background_color, {});
                             } break;
                         }
                     };
@@ -1559,7 +1557,7 @@ class Row {
                                           cell.format().multi_bytes_character());
                 }
 
-                line += apply(std::string(pr.size, ' '), foreground_color, background_color, {});
+                line += apply(std::string(pr.size, ' '), Color::none, background_color, {});
                 line += apply(br.content, br.color, br.background_color, {});
             }
 
@@ -1842,6 +1840,10 @@ class Table {
             size_t newwidth = col[col.size() - 1].width();
 
             if (newwidth != oldwidth) {
+#ifdef __DEBUG__
+                std::cout << "newcell: " << col[col.size() - 1].get() << std::endl;
+                std::cout << "width upadte: old = " << oldwidth << ", new = " << newwidth << std::endl;
+#endif
                 if (newwidth > oldwidth) {
                     col.format().width(newwidth);
                 } else {
@@ -1861,8 +1863,9 @@ inline std::string to_string<Row>(const Row &v)
 {
     auto lines = v.dump(xterm::apply);
     std::string ret;
+    ret += v.border_top(xterm::apply);
     for (auto &line : lines) { ret += line + "\n"; }
-    ret.pop_back();
+    ret += v.border_bottom(xterm::apply);
     return ret;
 }
 
@@ -1875,6 +1878,50 @@ inline std::string to_string<Table>(const Table &v)
 
 #include <iostream>
 
+#if defined(__unix__) || defined(__unix) || defined(__APPLE__)
+inline int get_wcswidth(const std::string &string, const std::string &locale, size_t max_column_width)
+{
+    if (string.size() == 0) return 0;
+
+    // The behavior of wcswidth() depends on the LC_CTYPE category of the current locale.
+    // Set the current locale based on cell properties before computing width
+    auto old_locale = std::locale::global(std::locale(locale));
+
+    // Convert from narrow std::string to wide string
+    wchar_t *wide_string = new wchar_t[string.size()];
+    std::mbstowcs(wide_string, string.c_str(), string.size());
+
+    // Compute display width of wide string
+    int result = wcswidth(wide_string, max_column_width);
+    delete[] wide_string;
+
+    // Restore old locale
+    std::locale::global(old_locale);
+
+    return result;
+}
+#endif
+
+inline size_t get_sequence_length(const std::string &text, const std::string &locale,
+                                  bool is_multi_byte_character_support_enabled)
+{
+    if (!is_multi_byte_character_support_enabled) return text.length();
+
+#if defined(_WIN32) || defined(_WIN64)
+    return (text.length() - std::count_if(text.begin(), text.end(), [](char c) -> bool {
+                return (c & 0xC0) == 0x80;
+            }));
+#elif defined(__unix__) || defined(__unix) || defined(__APPLE__)
+    auto result = get_wcswidth(text, locale, text.size());
+    if (result >= 0)
+        return result;
+    else
+        return (text.length() - std::count_if(text.begin(), text.end(), [](char c) -> bool {
+                    return (c & 0xC0) == 0x80;
+                }));
+#endif
+}
+
 int main()
 {
     using namespace tabulate;
@@ -1882,58 +1929,71 @@ int main()
     // Readme
     {
         Table readme;
-        readme.format().border_color(Color::yellow);
+        // readme.format().border_color(Color::yellow);
+        {
+            readme.add("tabulate for Modern C++");
+            readme[0].format().align(Align::center).color(Color::yellow);
+        }
 
-        readme.add("tabulate for Modern C++");
-        readme[0].format().align(Align::center).color(Color::yellow);
+        {
+            readme.add("https://github.com/p-ranav/tabulate");
+            readme[1]
+                .format()
+                .align(Align::center)
+                .styles({Style::underline, Style::italic})
+                .color(Color::white)
+                .hide_border_top();
+        }
 
-        readme.add("https://github.com/p-ranav/tabulate");
-        readme[1]
-            .format()
-            .align(Align::center)
-            .styles({Style::underline, Style::italic})
-            .color(Color::white)
-            .hide_border_top();
+        {
+            readme.add("Tabulate is a header-only library for printing aligned, formatted, and "
+                       "colorized tables in Modern C++");
+            readme[2].format().styles({Style::italic}).color(Color::magenta);
+        }
 
-        readme.add("Tabulate is a header-only library for printing aligned, formatted, and "
-                   "colorized tables in Modern C++");
-        readme[2].format().styles({Style::italic}).color(Color::magenta);
-
-        Table highlights;
-        highlights.add("Header-only Library", "Requires C++17", "MIT License");
-        readme.add(highlights);
-        readme[3].format().align(Align::center).hide_border_top();
+        {
+            Table highlights;
+            highlights.add("Header-only Library", "Requires C++17", "MIT License");
+            readme.add(highlights);
+            readme[3].format().align(Align::center).hide_border_top();
+        }
 
         Table empty_row;
         empty_row.format().hide_border();
-        readme.add(empty_row);
-        readme[4].format().hide_border_left().hide_border_right();
 
-        readme.add("Easily format and align content within cells");
-        readme[5].format().align(Align::center);
+        {
+            readme.add(empty_row);
+            readme[4].format().hide_border_left().hide_border_right();
+        }
 
-        Table format;
-        format.add("Horizontal Alignment", "Left aligned", "Center aligned", "Right aligned");
-        format[0].format().align(Align::center);
-        format[0][0].format().color(Color::green); //.column_separator(":")
+        {
+            readme.add("Easily format and align content within cells");
+            readme[5].format().align(Align::center);
+        }
 
-        format.column(1).format().width(25).align(Align::left);
-        format.column(2).format().width(25).align(Align::center);
-        format.column(3).format().width(25).align(Align::right);
+        {
+            Table format;
+            format.add("Horizontal Alignment", "Left aligned", "Center aligned", "Right aligned");
+            format[0].format().align(Align::center);
+            // FIXME: format[0][0].format().color(Color::green); //.column_separator(":")
 
-        format.add("Word-Wrapping algorithm taking shamelessly from StackOverflow",
-                   "Long sentences automatically word-wrap based on the width of the column",
-                   "Word-wrapping also plays nicely with alignment rules. For instance, this cell is center "
-                   "aligned.",
-                   "Enforce \ncustom word-wrapping \nby embedding '\\n' \ncharacters in your cell\n content.");
-        format[1][0].format().align(Align::center);
-        format[1][2].format().align(Align::center);
-        format[1][3].format().align(Align::right);
+            format.add("Word-Wrapping algorithm taking shamelessly from StackOverflow",
+                       "Long sentences automatically word-wrap based on the width of the column",
+                       "Word-wrapping also plays nicely with alignment rules. For instance, this cell is center "
+                       "aligned.",
+                       "Enforce \ncustom word-wrapping \nby embedding '\\n' \ncharacters in your cell\n content.");
+            format.column(1).format().width(25).align(Align::left);
+            format.column(2).format().width(25).align(Align::center);
+            format.column(3).format().width(25).align(Align::right);
 
-        format.column(0).format().width(23);
-        format.column(1).format().border_left(":");
+            format[1][0].format().align(Align::center);
+            format[1][2].format().align(Align::center);
+            format[1][3].format().align(Align::right);
+            format.column(0).format().width(23);
+            format.column(1).format().border_left(":");
 
-        readme.add(format);
+            readme.add(format);
+        }
 
         readme[5]
             .format()
@@ -1948,124 +2008,142 @@ int main()
         readme.add(empty_row);
         readme[7].format().hide_border_left().hide_border_right();
 
-#if 0
-        Table embedded_table;
-        embedded_table.add(
-            "You can even\n embed tables...",
-            Table().add("within tables",
-                        Table().add("within tables", Table().add("within tables", Table().add("within tables.. ")))));
+        {
+            // clang-format off
+            Table embedded_table(
+                "You can even\n embed tables...",
+                Table(
+                    "within tables",
+                    Table(
+                        "within tables",
+                        Table(
+                            "within tables",
+                            Table("within tables ...")
+                        )
+                    )
+                )
+            );
+            // clang-format on
 
-        readme.add("Nested Representations");
-        readme[8].format().align(Align::center);
+            readme.add("Nested Representations");
+            readme[8].format().align(Align::center);
 
-        readme.add(embedded_table);
-#else
-        readme.add("");
-#endif
-
+            readme.add(embedded_table);
+        }
         readme[9].format().hide_border_top().border_color(Color::white).color(Color::yellow);
 
-        readme.add("ᚠ ᚡ ᚢ ᚣ ᚤ ᚥ ᚦ ᚧ ᚨ ᚩ ᚪ ᚫ ᚬ ᚭ ᚮ ᚯ ᚰ ᚱ ᚲ ᚳ ᚴ ᚵ ᚶ ᚷ ᚸ ᚹ ᚺ ᚻ ᚼ ᚽ ᚾ ᚿ ᛀ ᛁ ᛂ ᛃ ᛄ ᛅ ᛆ ᛇ "
-                   "ᛈ ᛉ ᛊ ᛋ ᛌ ᛍ ᛎ ᛏ ᛐ ᛑ ᛒ ᛓ");
-        readme[10].format().background_color(Color::red).hide_border_top().multi_bytes_character(true);
+        {
+            readme.add("ᚠ ᚡ ᚢ ᚣ ᚤ ᚥ ᚦ ᚧ ᚨ ᚩ ᚪ ᚫ ᚬ ᚭ ᚮ ᚯ ᚰ ᚱ ᚲ ᚳ ᚴ ᚵ ᚶ ᚷ ᚸ ᚹ ᚺ ᚻ ᚼ ᚽ ᚾ ᚿ ᛀ ᛁ ᛂ ᛃ ᛄ ᛅ ᛆ ᛇ "
+                       "ᛈ ᛉ ᛊ ᛋ ᛌ ᛍ ᛎ ᛏ ᛐ ᛑ ᛒ ᛓ");
+            readme[10].format().background_color(Color::red).hide_border_top().multi_bytes_character(true);
+        }
 
         // Print the table
-        std::cout << readme.plaintext() << "\n\n";
+        readme.format().border_color(Color::yellow);
+        std::cout << readme.plaintext() << std::endl;
 
-        Table chart;
-        chart.format().color(Color::white).padding_left(0).padding_right(0).hide_border(); // .column_separator("")
+        {
+            Table chart;
+            chart.format().color(Color::white).padding_left(0).padding_right(0).hide_border(); // .column_separator("")
 
-        for (size_t i = 0; i < 9; ++i) {
-            Row row;
-            row.add(std::to_string(90 - i * 10));
-            for (size_t j = 0; j <= 50; ++j) { row.add(" "); }
-            chart.add(row);
-        }
-
-        Row row;
-        for (int i = 0; i <= 12; ++i) {
-            if ((i + 1) % 4 == 0) {
-                row.add(std::to_string(i + 1));
-            } else {
-                row.add(" ");
+            for (size_t i = 0; i < 9; ++i) {
+                Row row;
+                row.add(std::to_string(90 - i * 10));
+                for (size_t j = 0; j <= 50; ++j) { row.add(" "); }
+                chart.add(row);
             }
+
+            {
+                Row row;
+                for (int i = 0; i <= 12; ++i) {
+                    if ((i + 1) % 4 == 0) {
+                        row.add(std::to_string(i + 1));
+                    } else {
+                        row.add(" ");
+                    }
+                }
+                chart.add(row);
+            }
+            chart.add("");
+
+            // std::cout << chart.plaintext() << std::endl;
+            // return 0;
+
+            chart.column(0).format().padding_left(1).padding_right(1).border_left(" ");
+
+            for (size_t i = 1; i <= 18; ++i) { chart.column(i).format().width(2); }
+            
+
+            // chart.column(2).format().border_color(Color::white).border_left("|").border_top("-");
+            // chart.column(2)[8].format().background_color(Color::red);
+            // chart.column(2)[7].format().background_color(Color::red);
+
+            // chart.column(3)[8].format().background_color(Color::yellow);
+            // chart.column(3)[7].format().background_color(Color::yellow);
+            // chart.column(3)[6].format().background_color(Color::yellow);
+
+            // chart.column(6)[8].format().background_color(Color::red);
+            // chart.column(6)[7].format().background_color(Color::red);
+            // chart.column(6)[6].format().background_color(Color::red);
+            // chart.column(6)[5].format().background_color(Color::red);
+
+            // chart.column(7)[8].format().background_color(Color::yellow);
+            // chart.column(7)[7].format().background_color(Color::yellow);
+            // chart.column(7)[6].format().background_color(Color::yellow);
+            // chart.column(7)[5].format().background_color(Color::yellow);
+            // chart.column(7)[4].format().background_color(Color::yellow);
+
+            // chart.column(10)[8].format().background_color(Color::red);
+            // chart.column(10)[7].format().background_color(Color::red);
+            // chart.column(10)[6].format().background_color(Color::red);
+            // chart.column(10)[5].format().background_color(Color::red);
+            // chart.column(10)[4].format().background_color(Color::red);
+            // chart.column(10)[3].format().background_color(Color::red);
+
+            // chart.column(11)[8].format().background_color(Color::yellow);
+            // chart.column(11)[7].format().background_color(Color::yellow);
+            // chart.column(11)[6].format().background_color(Color::yellow);
+            // chart.column(11)[5].format().background_color(Color::yellow);
+            // chart.column(11)[4].format().background_color(Color::yellow);
+            // chart.column(11)[3].format().background_color(Color::yellow);
+            // chart.column(11)[2].format().background_color(Color::yellow);
+            // chart.column(11)[1].format().background_color(Color::yellow);
+
+            // chart[2][15].format().background_color(Color::red);
+            chart[2][16].set("Batch 1");
+            // chart.column(16).format().padding_left(1).width(20);
+
+            // chart[4][15].format().background_color(Color::yellow);
+            chart[4][16].set("Batch 2");
+
+            Table legend;
+            legend.add("Batch 1", "10", "40", "50", "20", "10", "50");
+            legend.add("Batch 2", "30", "60", "(70)", "50", "40", "30");
+
+            // legend[0].format().align(Align::center);
+            // legend[1].format().align(Align::center);
+
+            // legend.column(0).format().align(Align::right).color(Color::green).background_color(Color::grey);
+
+            // legend.column(2).format().color(Color::white).background_color(Color::red);
+
+            // legend[1][3].format().styles({Style::italic}).color(Color::yellow);
+
+            // chart.column(17).format().width(50);
+
+            chart[4][17].set("Cells, rows, and columns");
+            chart[5][17].set("can be independently formatted.");
+            chart[7][17].set("This cell is green and italic");
+            // chart[7][17].format().color(Color::green).styles({Style::italic});
+
+            chart[8][17].set("This one's yellow and right-aligned");
+            // chart[8][17].format().color(Color::yellow).align(Align::right);
+
+            chart[9][17].set("This one's on 🔥🔥🔥");
+
+            std::cout << chart.plaintext();
+            std::cout << legend.plaintext() << "\n\n";
         }
-        chart.add(row);
-        chart.add("");
-
-        chart.column(0).format().padding_left(1).padding_right(1).border_left(" ");
-
-        for (size_t i = 1; i <= 18; ++i) { chart.column(i).format().width(2); }
-
-        chart.column(2).format().border_color(Color::white).border_left("|").border_top("-");
-        chart.column(2)[8].format().background_color(Color::red);
-        chart.column(2)[7].format().background_color(Color::red);
-
-        chart.column(3)[8].format().background_color(Color::yellow);
-        chart.column(3)[7].format().background_color(Color::yellow);
-        chart.column(3)[6].format().background_color(Color::yellow);
-
-        chart.column(6)[8].format().background_color(Color::red);
-        chart.column(6)[7].format().background_color(Color::red);
-        chart.column(6)[6].format().background_color(Color::red);
-        chart.column(6)[5].format().background_color(Color::red);
-
-        chart.column(7)[8].format().background_color(Color::yellow);
-        chart.column(7)[7].format().background_color(Color::yellow);
-        chart.column(7)[6].format().background_color(Color::yellow);
-        chart.column(7)[5].format().background_color(Color::yellow);
-        chart.column(7)[4].format().background_color(Color::yellow);
-
-        chart.column(10)[8].format().background_color(Color::red);
-        chart.column(10)[7].format().background_color(Color::red);
-        chart.column(10)[6].format().background_color(Color::red);
-        chart.column(10)[5].format().background_color(Color::red);
-        chart.column(10)[4].format().background_color(Color::red);
-        chart.column(10)[3].format().background_color(Color::red);
-
-        chart.column(11)[8].format().background_color(Color::yellow);
-        chart.column(11)[7].format().background_color(Color::yellow);
-        chart.column(11)[6].format().background_color(Color::yellow);
-        chart.column(11)[5].format().background_color(Color::yellow);
-        chart.column(11)[4].format().background_color(Color::yellow);
-        chart.column(11)[3].format().background_color(Color::yellow);
-        chart.column(11)[2].format().background_color(Color::yellow);
-        chart.column(11)[1].format().background_color(Color::yellow);
-
-        chart[2][15].format().background_color(Color::red);
-        chart[2][16].set("Batch 1");
-        chart.column(16).format().padding_left(1).width(20);
-
-        chart[4][15].format().background_color(Color::yellow);
-        chart[4][16].set("Batch 2");
-
-        Table legend;
-        legend.add("Batch 1", "10", "40", "50", "20", "10", "50");
-        legend.add("Batch 2", "30", "60", "(70)", "50", "40", "30");
-
-        legend[0].format().align(Align::center);
-        legend[1].format().align(Align::center);
-
-        legend.column(0).format().align(Align::right).color(Color::green).background_color(Color::grey);
-
-        legend.column(2).format().color(Color::white).background_color(Color::red);
-
-        legend[1][3].format().styles({Style::italic}).color(Color::yellow);
-
-        chart.column(17).format().width(50);
-
-        chart[4][17].set("Cells, rows, and columns");
-        chart[5][17].set("can be independently formatted.");
-        chart[7][17].set("This cell is green and italic");
-        chart[7][17].format().color(Color::green).styles({Style::italic});
-
-        chart[8][17].set("This one's yellow and right-aligned");
-        chart[8][17].format().color(Color::yellow).align(Align::right);
-
-        chart[9][17].set("This one's on 🔥🔥🔥");
-
-        std::cout << chart.plaintext();
-        std::cout << legend.plaintext() << "\n\n";
     }
 
 #if 0
