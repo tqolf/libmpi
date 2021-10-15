@@ -253,26 +253,6 @@ static std::vector<std::string> wrap_to_lines(const std::string &str, size_t wid
     return wrapped_lines;
 }
 
-static std::string align_line_by(const std::string &line, size_t width, Align align, const std::string &locale,
-                                 bool multi_bytes_character)
-{
-    size_t linesize = display_length(line, locale, multi_bytes_character);
-    if (linesize >= width) { return line; }
-    switch (align) {
-        default:
-        case Align::left: {
-            return line + std::string(width - linesize, ' ');
-        } break;
-        case Align::right: {
-            return std::string(width - linesize, ' ') + line;
-        } break;
-        case Align::center: {
-            size_t remains = width - linesize;
-            return std::string(remains / 2, ' ') + line + std::string((remains + 1) / 2, ' ');
-        } break;
-    }
-}
-
 static std::string repeate_to_size(const std::string &s, size_t len)
 {
     std::string r;
@@ -1488,37 +1468,30 @@ class Row {
                 std::cout << std::endl;
             }
 #endif
-            std::vector<std::string> formatted;
-            if (cell->format().width() == 0) {
-                formatted.push_back(align_line_by(cell->get(), cell->width(), cell->align(), cell->format().locale(),
-                                                  cell->format().multi_bytes_character()));
+            std::vector<std::string> wrapped;
+            if (cell->width() == 0) {
+                wrapped.push_back(cell->get());
             } else {
-                for (auto const &wrapped : tabulate::wrap_to_lines(cell->get(), cell->width(), cell->format().locale(),
-                                                                   cell->format().multi_bytes_character())) {
-                    auto aligned = align_line_by(wrapped, cell->width(), cell->align(), cell->format().locale(),
-                                                 cell->format().multi_bytes_character());
-                    formatted.push_back(aligned);
-                }
+                wrapped = wrap_to_lines(cell->get(), cell->width(), cell->format().locale(),
+                                        cell->format().multi_bytes_character());
             }
-            dumplines.push_back(formatted);
-            max_height = std::max(formatted.size(), max_height);
+            dumplines.push_back(wrapped);
+            max_height = std::max(wrapped.size(), max_height);
         }
 
         std::vector<std::string> lines;
-
         // border padding words padding sepeartor padding words padding sepeartor border
         for (size_t i = 0; i < max_height; i++) {
             std::string line;
 
             if (cells.size() > 0) {
-                auto const &border = cells[0]->format().borders.left;
-                line += apply(border.content, border.color, border.background_color, {});
+                auto const &bl = cells[0]->format().borders.left;
+                line += apply(bl.content, bl.color, bl.background_color, {});
             }
             for (size_t j = 0; j < cells.size(); j++) {
                 Cell &cell = *cells[j];
                 auto &pl = cell.format().paddings.left;
                 auto &pr = cell.format().paddings.right;
-                auto &bl = cell.format().borders.left;
                 auto &br = cell.format().borders.right;
                 auto foreground_color = cell.color();
                 auto background_color = cell.background_color();
@@ -1528,7 +1501,33 @@ class Row {
                 if (dumplines[j].size() <= i) {
                     line += apply(std::string(cell.width(), ' '), foreground_color, background_color, styles);
                 } else {
-                    line += apply(dumplines[j][i], foreground_color, background_color, styles);
+                    auto align_line_by = [&](const std::string &str, size_t width, Align align,
+                                             const std::string &locale, bool multi_bytes_character) -> std::string {
+                        size_t linesize = display_length(str, locale, multi_bytes_character);
+                        if (linesize >= width) { return apply(str, foreground_color, background_color, styles); }
+                        switch (align) {
+                            default:
+                            case Align::left: {
+                                return apply(str, foreground_color, background_color, styles)
+                                       + apply(std::string(width - linesize, ' '), foreground_color, background_color,
+                                               {});
+                            } break;
+                            case Align::right: {
+                                return apply(std::string(width - linesize, ' '), foreground_color, background_color, {})
+                                       + apply(str, foreground_color, background_color, styles);
+                            } break;
+                            case Align::center: {
+                                size_t remains = width - linesize;
+                                return apply(std::string(remains / 2, ' '), foreground_color, background_color, {})
+                                       + apply(str, foreground_color, background_color, styles)
+                                       + apply(std::string((remains + 1) / 2, ' '), foreground_color, background_color,
+                                               {});
+                            } break;
+                        }
+                    };
+
+                    line += align_line_by(dumplines[j][i], cell.width(), cell.align(), cell.format().locale(),
+                                          cell.format().multi_bytes_character());
                 }
 
                 line += apply(std::string(pr.size, ' '), foreground_color, background_color, {});
@@ -1980,19 +1979,19 @@ int main()
             .border_left_color(Color::red)
             .border_left_background_color(Color::red)
             .background_color(Color::red)
-            .color(Color::red);
+            .color(Color::red)
+            .border_right_color(Color::blue)
+            .border_right_background_color(Color::blue);
 
         colors[1][1]
             .format()
-            .border_left_color(Color::blue)
-            .border_left_background_color(Color::blue)
             .background_color(Color::blue)
-            .color(Color::blue);
+            .color(Color::blue)
+            .border_right_color(Color::green)
+            .border_right_background_color(Color::green);
 
         colors[1][2]
             .format()
-            .border_left_color(Color::green)
-            .border_left_background_color(Color::green)
             .background_color(Color::green)
             .color(Color::green)
             .border_right_color(Color::green)
@@ -2202,9 +2201,6 @@ int main()
 
         std::cout << "Console Table:\n" << table.plaintext() << std::endl;
     }
-
-    std::string str = "ᛏᚺᛁᛊ ᛁᛊ ᚨ ᛊᛏᛟᚱy ᛟᚠᚨ ᛒᛖᚨᚱ ᚨᚾᛞ";
-    std::cout << "size = " << str.size() << ", width = " << display_length(str, "", true) << std::endl;
 
     return 0;
 }
