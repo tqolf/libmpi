@@ -271,7 +271,7 @@ static std::string repeate_to_size(const std::string &s, size_t len)
 
 namespace tabulate
 {
-namespace termcolor
+namespace xterm
 {
 static const std::string reset = "\033[00m";
 
@@ -372,9 +372,38 @@ std::string get_background_color(Color color)
             return background_white;
     }
 }
-} // namespace termcolor
+
+std::string apply(const std::string &str, Color foreground_color, Color background_color,
+                  const std::vector<Style> &styles)
+{
+    std::string applied;
+
+    if (foreground_color != Color::none && background_color != Color::none && styles.size() != 0) {
+        applied += xterm::reset;
+    }
+
+    applied += xterm::get_color(foreground_color);
+    applied += xterm::get_background_color(background_color);
+    for (auto const &style : styles) { applied += xterm::get_style(style); }
+
+    applied += str;
+
+    if (foreground_color != Color::none && background_color != Color::none && styles.size() != 0) {
+        applied += xterm::reset;
+    }
+
+    return applied;
+}
+} // namespace xterm
 } // namespace tabulate
 
+namespace tabulate
+{
+namespace markdown
+{
+
+}
+} // namespace tabulate
 
 namespace tabulate
 {
@@ -1733,35 +1762,21 @@ class Table {
         std::string exported;
         const std::string newline = "\n";
 
-        auto apply = [](const std::string &str, Color foreground_color, Color background_color,
-                        const std::vector<Style> &styles) -> std::string {
-            std::string applied = termcolor::reset;
-
-            applied += termcolor::get_color(foreground_color);
-            applied += termcolor::get_background_color(background_color);
-
-            for (auto const &style : styles) { applied += termcolor::get_style(style); }
-
-            applied += str + termcolor::reset;
-
-            return applied;
-        };
-
         // add header
         if (rows.size() > 0) {
             const auto &header = *rows[0];
             const Format &format = header[0].format();
-            if (format.borders.top.visiable) { exported += header.border_top(apply) + newline; }
-            for (auto const &line : header.dump(apply)) { exported += line + newline; }
-            if (format.borders.bottom.visiable) { exported += header.border_bottom(apply) + newline; }
+            if (format.borders.top.visiable) { exported += header.border_top(xterm::apply) + newline; }
+            for (auto const &line : header.dump(xterm::apply)) { exported += line + newline; }
+            if (format.borders.bottom.visiable) { exported += header.border_bottom(xterm::apply) + newline; }
         }
 
         for (size_t i = 1; i < rows.size(); i++) {
             auto const &row = *rows[i];
-            for (auto const &line : row.dump(apply)) { exported += line + newline; }
+            for (auto const &line : row.dump(xterm::apply)) { exported += line + newline; }
 
             auto const &border = row[0].format().borders.bottom;
-            if (border.visiable) { exported += row.border_bottom(apply) + newline; }
+            if (border.visiable) { exported += row.border_bottom(xterm::apply) + newline; }
         }
 
         return exported;
@@ -1842,6 +1857,16 @@ class Table {
 };
 
 template <>
+inline std::string to_string<Row>(const Row &v)
+{
+    auto lines = v.dump(xterm::apply);
+    std::string ret;
+    for (auto &line : lines) { ret += line + "\n"; }
+    ret.pop_back();
+    return ret;
+}
+
+template <>
 inline std::string to_string<Table>(const Table &v)
 {
     return v.plaintext();
@@ -1854,241 +1879,432 @@ int main()
 {
     using namespace tabulate;
 
+    // Readme
+    {
+        Table readme;
+        readme.format().border_color(Color::yellow);
+
+        readme.add("tabulate for Modern C++");
+        readme[0].format().align(Align::center).color(Color::yellow);
+
+        readme.add("https://github.com/p-ranav/tabulate");
+        readme[1]
+            .format()
+            .align(Align::center)
+            .styles({Style::underline, Style::italic})
+            .color(Color::white)
+            .hide_border_top();
+
+        readme.add("Tabulate is a header-only library for printing aligned, formatted, and "
+                   "colorized tables in Modern C++");
+        readme[2].format().styles({Style::italic}).color(Color::magenta);
+
+        Table highlights;
+        highlights.add("Header-only Library", "Requires C++17", "MIT License");
+        readme.add(highlights);
+        readme[3].format().align(Align::center).hide_border_top();
+
+        Table empty_row;
+        empty_row.format().hide_border();
+        readme.add(empty_row);
+        readme[4].format().hide_border_left().hide_border_right();
+
+        readme.add("Easily format and align content within cells");
+        readme[5].format().align(Align::center);
+
+        Table format;
+        format.add("Horizontal Alignment", "Left aligned", "Center aligned", "Right aligned");
+        format[0].format().align(Align::center);
+        format[0][0].format().color(Color::green); //.column_separator(":")
+
+        format.column(1).format().width(25).align(Align::left);
+        format.column(2).format().width(25).align(Align::center);
+        format.column(3).format().width(25).align(Align::right);
+
+        format.add("Word-Wrapping algorithm taking shamelessly from StackOverflow",
+                   "Long sentences automatically word-wrap based on the width of the column",
+                   "Word-wrapping also plays nicely with alignment rules. For instance, this cell is center "
+                   "aligned.",
+                   "Enforce \ncustom word-wrapping \nby embedding '\\n' \ncharacters in your cell\n content.");
+        format[1][0].format().align(Align::center);
+        format[1][2].format().align(Align::center);
+        format[1][3].format().align(Align::right);
+
+        format.column(0).format().width(23);
+        format.column(1).format().border_left(":");
+
+        readme.add(format);
+
+        readme[5]
+            .format()
+            .border_color(Color::green)
+            .color(Color::cyan)
+            .styles({Style::underline})
+            .padding_top(0)
+            .padding_bottom(0);
+
+        readme[6].format().hide_border_top().padding_top(0);
+
+        readme.add(empty_row);
+        readme[7].format().hide_border_left().hide_border_right();
+
+#if 0
+        Table embedded_table;
+        embedded_table.add(
+            "You can even\n embed tables...",
+            Table().add("within tables",
+                        Table().add("within tables", Table().add("within tables", Table().add("within tables.. ")))));
+
+        readme.add("Nested Representations");
+        readme[8].format().align(Align::center);
+
+        readme.add(embedded_table);
+#else
+        readme.add("");
+#endif
+
+        readme[9].format().hide_border_top().border_color(Color::white).color(Color::yellow);
+
+        readme.add("ᚠ ᚡ ᚢ ᚣ ᚤ ᚥ ᚦ ᚧ ᚨ ᚩ ᚪ ᚫ ᚬ ᚭ ᚮ ᚯ ᚰ ᚱ ᚲ ᚳ ᚴ ᚵ ᚶ ᚷ ᚸ ᚹ ᚺ ᚻ ᚼ ᚽ ᚾ ᚿ ᛀ ᛁ ᛂ ᛃ ᛄ ᛅ ᛆ ᛇ "
+                   "ᛈ ᛉ ᛊ ᛋ ᛌ ᛍ ᛎ ᛏ ᛐ ᛑ ᛒ ᛓ");
+        readme[10].format().background_color(Color::red).hide_border_top().multi_bytes_character(true);
+
+        // Print the table
+        std::cout << readme.plaintext() << "\n\n";
+
+        Table chart;
+        chart.format().color(Color::white).padding_left(0).padding_right(0).hide_border(); // .column_separator("")
+
+        for (size_t i = 0; i < 9; ++i) {
+            Row row;
+            row.add(std::to_string(90 - i * 10));
+            for (size_t j = 0; j <= 50; ++j) { row.add(" "); }
+            chart.add(row);
+        }
+
+        Row row;
+        for (int i = 0; i <= 12; ++i) {
+            if ((i + 1) % 4 == 0) {
+                row.add(std::to_string(i + 1));
+            } else {
+                row.add(" ");
+            }
+        }
+        chart.add(row);
+        chart.add("");
+
+        chart.column(0).format().padding_left(1).padding_right(1).border_left(" ");
+
+        for (size_t i = 1; i <= 18; ++i) { chart.column(i).format().width(2); }
+
+        chart.column(2).format().border_color(Color::white).border_left("|").border_top("-");
+        chart.column(2)[8].format().background_color(Color::red);
+        chart.column(2)[7].format().background_color(Color::red);
+
+        chart.column(3)[8].format().background_color(Color::yellow);
+        chart.column(3)[7].format().background_color(Color::yellow);
+        chart.column(3)[6].format().background_color(Color::yellow);
+
+        chart.column(6)[8].format().background_color(Color::red);
+        chart.column(6)[7].format().background_color(Color::red);
+        chart.column(6)[6].format().background_color(Color::red);
+        chart.column(6)[5].format().background_color(Color::red);
+
+        chart.column(7)[8].format().background_color(Color::yellow);
+        chart.column(7)[7].format().background_color(Color::yellow);
+        chart.column(7)[6].format().background_color(Color::yellow);
+        chart.column(7)[5].format().background_color(Color::yellow);
+        chart.column(7)[4].format().background_color(Color::yellow);
+
+        chart.column(10)[8].format().background_color(Color::red);
+        chart.column(10)[7].format().background_color(Color::red);
+        chart.column(10)[6].format().background_color(Color::red);
+        chart.column(10)[5].format().background_color(Color::red);
+        chart.column(10)[4].format().background_color(Color::red);
+        chart.column(10)[3].format().background_color(Color::red);
+
+        chart.column(11)[8].format().background_color(Color::yellow);
+        chart.column(11)[7].format().background_color(Color::yellow);
+        chart.column(11)[6].format().background_color(Color::yellow);
+        chart.column(11)[5].format().background_color(Color::yellow);
+        chart.column(11)[4].format().background_color(Color::yellow);
+        chart.column(11)[3].format().background_color(Color::yellow);
+        chart.column(11)[2].format().background_color(Color::yellow);
+        chart.column(11)[1].format().background_color(Color::yellow);
+
+        chart[2][15].format().background_color(Color::red);
+        chart[2][16].set("Batch 1");
+        chart.column(16).format().padding_left(1).width(20);
+
+        chart[4][15].format().background_color(Color::yellow);
+        chart[4][16].set("Batch 2");
+
+        Table legend;
+        legend.add("Batch 1", "10", "40", "50", "20", "10", "50");
+        legend.add("Batch 2", "30", "60", "(70)", "50", "40", "30");
+
+        legend[0].format().align(Align::center);
+        legend[1].format().align(Align::center);
+
+        legend.column(0).format().align(Align::right).color(Color::green).background_color(Color::grey);
+
+        legend.column(2).format().color(Color::white).background_color(Color::red);
+
+        legend[1][3].format().styles({Style::italic}).color(Color::yellow);
+
+        chart.column(17).format().width(50);
+
+        chart[4][17].set("Cells, rows, and columns");
+        chart[5][17].set("can be independently formatted.");
+        chart[7][17].set("This cell is green and italic");
+        chart[7][17].format().color(Color::green).styles({Style::italic});
+
+        chart[8][17].set("This one's yellow and right-aligned");
+        chart[8][17].format().color(Color::yellow).align(Align::right);
+
+        chart[9][17].set("This one's on 🔥🔥🔥");
+
+        std::cout << chart.plaintext();
+        std::cout << legend.plaintext() << "\n\n";
+    }
+
+#if 0
     // 0. Quick Start
     {
-        Table universal_constants;
+            Table universal_constants;
 
-        universal_constants.add("Quantity", "Value");
-        universal_constants.add("Characteristic impedance of vacuum", "376.730 313 461... Ω");
-        universal_constants.add("Electric constant (permittivity of free space)", "8.854 187 817... × 10⁻¹²F·m⁻¹");
-        universal_constants.add("Magnetic constant (permeability of free space)",
-                                "4π × 10⁻⁷ N·A⁻² = 1.2566 370 614... × 10⁻⁶ N·A⁻²");
-        universal_constants.add("Gravitational constant (Newtonian constant of gravitation)",
-                                "6.6742(10) × 10⁻¹¹m³·kg⁻¹·s⁻²");
-        universal_constants.add("Planck's constant", "6.626 0693(11) × 10⁻³⁴ J·s");
-        universal_constants.add("Dirac's constant", "1.054 571 68(18) × 10⁻³⁴ J·s");
-        universal_constants.add("Speed of light in vacuum", "299 792 458 m·s⁻¹");
+            universal_constants.add("Quantity", "Value");
+            universal_constants.add("Characteristic impedance of vacuum", "376.730 313 461... Ω");
+            universal_constants.add("Electric constant (permittivity of free space)", "8.854 187 817... × 10⁻¹²F·m⁻¹");
+            universal_constants.add("Magnetic constant (permeability of free space)",
+                                    "4π × 10⁻⁷ N·A⁻² = 1.2566 370 614... × 10⁻⁶ N·A⁻²");
+            universal_constants.add("Gravitational constant (Newtonian constant of gravitation)",
+                                    "6.6742(10) × 10⁻¹¹m³·kg⁻¹·s⁻²");
+            universal_constants.add("Planck's constant", "6.626 0693(11) × 10⁻³⁴ J·s");
+            universal_constants.add("Dirac's constant", "1.054 571 68(18) × 10⁻³⁴ J·s");
+            universal_constants.add("Speed of light in vacuum", "299 792 458 m·s⁻¹");
 
-        universal_constants.format()
-            .styles(Style::bold)
-            .border_top(" ")
-            .border_bottom(" ")
-            .border_left(" ")
-            .border_right(" ")
-            .corner(" ");
+            universal_constants.format()
+                .styles(Style::bold)
+                .border_top(" ")
+                .border_bottom(" ")
+                .border_left(" ")
+                .border_right(" ")
+                .corner(" ");
 
-        universal_constants[0]
-            .format()
-            .padding_top(1)
-            .padding_bottom(1)
-            .align(Align::center)
-            .styles({Style::underline})
-            .background_color(Color::red);
+            universal_constants[0]
+                .format()
+                .padding_top(1)
+                .padding_bottom(1)
+                .align(Align::center)
+                .styles({Style::underline})
+                .background_color(Color::red);
 
-        universal_constants.column(1).format().color(Color::yellow);
+            universal_constants.column(1).format().color(Color::yellow);
 
-        universal_constants[0][1].format().background_color(Color::blue).color(Color::white);
+            universal_constants[0][1].format().background_color(Color::blue).color(Color::white);
 
-        std::cout << "Console Table:\n" << universal_constants.plaintext() << std::endl;
-        // std::cout << "Markdown Table:\n" << universal_constants.markdown() << std::endl;
+            std::cout << "Console Table:\n" << universal_constants.plaintext() << std::endl;
+            // std::cout << "Markdown Table:\n" << universal_constants.markdown() << std::endl;
     }
 
     // 1.1 Word Wrapping
     {
-        Table table;
+            Table table;
 
-        table.add("This paragraph contains a veryveryveryveryveryverylong word. The long word will "
-                  "break and word wrap to the next line.",
-                  "This paragraph \nhas embedded '\\n' \ncharacters and\n will break\n exactly "
-                  "where\n you want it\n to\n break.");
+            table.add("This paragraph contains a veryveryveryveryveryverylong word. The long word will "
+                      "break and word wrap to the next line.",
+                      "This paragraph \nhas embedded '\\n' \ncharacters and\n will break\n exactly "
+                      "where\n you want it\n to\n break.");
 
-        table[0][0].format().width(20);
-        table[0][1].format().width(50);
+            table[0][0].format().width(20);
+            table[0][1].format().width(50);
 
-        std::cout << "Console Table:\n" << table.plaintext() << std::endl;
-        // std::cout << "Markdown Table:\n" << table.markdown() << std::endl;
+            std::cout << "Console Table:\n" << table.plaintext() << std::endl;
+            // std::cout << "Markdown Table:\n" << table.markdown() << std::endl;
     }
 
     // Font Alignment
     {
-        tabulate::Table movies;
+            tabulate::Table movies;
 
-        movies.add("S/N", "Movie Name", "Director", "Estimated Budget", "Release Date");
-        movies.add("tt1979376", "Toy Story 4", "Josh Cooley", 200000000, "21 June 2019");
-        movies.add("tt3263904", "Sully", "Clint Eastwood", 60000000, "9 September 2016");
-        movies.add("tt1535109", "Captain Phillips", "Paul Greengrass", 55000000, " 11 October 2013");
+            movies.add("S/N", "Movie Name", "Director", "Estimated Budget", "Release Date");
+            movies.add("tt1979376", "Toy Story 4", "Josh Cooley", 200000000, "21 June 2019");
+            movies.add("tt3263904", "Sully", "Clint Eastwood", 60000000, "9 September 2016");
+            movies.add("tt1535109", "Captain Phillips", "Paul Greengrass", 55000000, " 11 October 2013");
 
-        // center align 'Director' column
-        movies.column(2).format().align(Align::center);
+            // center align 'Director' column
+            movies.column(2).format().align(Align::center);
 
-        // right align 'Estimated Budget' column
-        movies.column(3).format().align(Align::right);
+            // right align 'Estimated Budget' column
+            movies.column(3).format().align(Align::right);
 
-        // right align 'Release Date' column
-        movies.column(4).format().align(Align::right);
+            // right align 'Release Date' column
+            movies.column(4).format().align(Align::right);
 
-        // Color header cells
-        for (size_t i = 0; i < movies.column_size(); ++i) {
-            movies[0][i].format().color(Color::yellow).styles(Style::bold);
-        }
+            // Color header cells
+            for (size_t i = 0; i < movies.column_size(); ++i) {
+                movies[0][i].format().color(Color::yellow).styles(Style::bold);
+            }
 
-        std::cout << "Console Table:\n" << movies.plaintext() << std::endl;
-        // std::cout << "Markdown Table:\n" << movies.markdown() << std::endl;
+            std::cout << "Console Table:\n" << movies.plaintext() << std::endl;
+            // std::cout << "Markdown Table:\n" << movies.markdown() << std::endl;
     }
 
     // Font Styles
     {
-        Table styled_table;
-        styled_table.add("Bold", "Italic", "Bold & Italic", "Blinking");
-        styled_table.add("Underline", "Crossed", "Dark", "Bold, Italic & Underlined");
+            Table styled_table;
+            styled_table.add("Bold", "Italic", "Bold & Italic", "Blinking");
+            styled_table.add("Underline", "Crossed", "Dark", "Bold, Italic & Underlined");
 
-        styled_table[0][0].format().styles({Style::bold});
+            styled_table[0][0].format().styles({Style::bold});
 
-        styled_table[0][1].format().styles({Style::italic});
+            styled_table[0][1].format().styles({Style::italic});
 
-        styled_table[0][2].format().styles({Style::bold, Style::italic});
+            styled_table[0][2].format().styles({Style::bold, Style::italic});
 
-        styled_table[0][3].format().styles({Style::blink});
+            styled_table[0][3].format().styles({Style::blink});
 
-        styled_table[1][0].format().styles({Style::underline});
+            styled_table[1][0].format().styles({Style::underline});
 
-        styled_table[1][1].format().styles({Style::crossed});
+            styled_table[1][1].format().styles({Style::crossed});
 
-        styled_table[1][2].format().styles({Style::dark});
+            styled_table[1][2].format().styles({Style::dark});
 
-        styled_table[1][3].format().styles({Style::bold, Style::italic, Style::underline});
+            styled_table[1][3].format().styles({Style::bold, Style::italic, Style::underline});
 
-        std::cout << "Console Table:\n" << styled_table.plaintext() << std::endl;
-        // std::cout << "Markdown Table:\n" << styled_table.markdown() << std::endl;
+            std::cout << "Console Table:\n" << styled_table.plaintext() << std::endl;
+            // std::cout << "Markdown Table:\n" << styled_table.markdown() << std::endl;
     }
 
     // Cell Colors
     {
-        Table colors;
+            Table colors;
 
-        colors.add("Font Color is Red", "Font Color is Blue", "Font Color is Green");
-        colors.add("Everything is Red", "Everything is Blue", "Everything is Green");
-        colors.add("Font Background is Red", "Font Background is Blue", "Font Background is Green");
+            colors.add("Font Color is Red", "Font Color is Blue", "Font Color is Green");
+            colors.add("Everything is Red", "Everything is Blue", "Everything is Green");
+            colors.add("Font Background is Red", "Font Background is Blue", "Font Background is Green");
 
-        colors[0][0].format().color(Color::red).styles({Style::bold});
-        colors[0][1].format().color(Color::blue).styles({Style::bold});
-        colors[0][2].format().color(Color::green).styles({Style::bold});
+            colors[0][0].format().color(Color::red).styles({Style::bold});
+            colors[0][1].format().color(Color::blue).styles({Style::bold});
+            colors[0][2].format().color(Color::green).styles({Style::bold});
 
-        colors[1][0]
-            .format()
-            .border_left_color(Color::red)
-            .border_left_background_color(Color::red)
-            .background_color(Color::red)
-            .color(Color::red)
-            .border_right_color(Color::blue)
-            .border_right_background_color(Color::blue);
+            colors[1][0]
+                .format()
+                .border_left_color(Color::red)
+                .border_left_background_color(Color::red)
+                .background_color(Color::red)
+                .color(Color::red)
+                .border_right_color(Color::blue)
+                .border_right_background_color(Color::blue);
 
-        colors[1][1]
-            .format()
-            .background_color(Color::blue)
-            .color(Color::blue)
-            .border_right_color(Color::green)
-            .border_right_background_color(Color::green);
+            colors[1][1]
+                .format()
+                .background_color(Color::blue)
+                .color(Color::blue)
+                .border_right_color(Color::green)
+                .border_right_background_color(Color::green);
 
-        colors[1][2]
-            .format()
-            .background_color(Color::green)
-            .color(Color::green)
-            .border_right_color(Color::green)
-            .border_right_background_color(Color::green);
+            colors[1][2]
+                .format()
+                .background_color(Color::green)
+                .color(Color::green)
+                .border_right_color(Color::green)
+                .border_right_background_color(Color::green);
 
-        colors[2][0].format().background_color(Color::red).styles({Style::bold});
-        colors[2][1].format().background_color(Color::blue).styles({Style::bold});
-        colors[2][2].format().background_color(Color::green).styles({Style::bold});
+            colors[2][0].format().background_color(Color::red).styles({Style::bold});
+            colors[2][1].format().background_color(Color::blue).styles({Style::bold});
+            colors[2][2].format().background_color(Color::green).styles({Style::bold});
 
-        std::cout << "Console Table:\n" << colors.plaintext() << std::endl;
-        // std::cout << "Markdown Table:\n" << colors.markdown() << std::endl;
+            std::cout << "Console Table:\n" << colors.plaintext() << std::endl;
+            // std::cout << "Markdown Table:\n" << colors.markdown() << std::endl;
     }
 
     // Borders and Corners
     {
-        Table table;
+            Table table;
 
-        table.add("ᛏᚺᛁᛊ ᛁᛊ ᚨ ᛊᛏᛟᚱy ᛟᚠᚨ ᛒᛖᚨᚱ ᚨᚾᛞ\n"
-                  "ᚨ ᚹᛟᛚᚠ, ᚹᚺᛟ ᚹᚨᚾᛞᛖᚱᛖᛞ ᛏᚺᛖ\n"
-                  "ᚱᛖᚨᛚᛗᛊ ᚾᛁᚾᛖ ᛏᛟ ᚠᚢᛚᚠᛁᛚᛚ ᚨ ᛈᚱᛟᛗᛁᛊᛖ\n"
-                  "ᛏᛟ ᛟᚾᛖ ᛒᛖᚠᛟᚱᛖ; ᛏᚺᛖy ᚹᚨᛚᚲ ᛏᚺᛖ\n"
-                  "ᛏᚹᛁᛚᛁᚷᚺᛏ ᛈᚨᛏᚺ, ᛞᛖᛊᛏᛁᚾᛖᛞ ᛏᛟ\n"
-                  "ᛞᛁᛊcᛟᚹᛖᚱ ᛏᚺᛖ ᛏᚱᚢᛏᚺ\nᛏᚺᚨᛏ ᛁᛊ ᛏᛟ cᛟᛗᛖ.");
+            table.add("ᛏᚺᛁᛊ ᛁᛊ ᚨ ᛊᛏᛟᚱy ᛟᚠᚨ ᛒᛖᚨᚱ ᚨᚾᛞ\n"
+                      "ᚨ ᚹᛟᛚᚠ, ᚹᚺᛟ ᚹᚨᚾᛞᛖᚱᛖᛞ ᛏᚺᛖ\n"
+                      "ᚱᛖᚨᛚᛗᛊ ᚾᛁᚾᛖ ᛏᛟ ᚠᚢᛚᚠᛁᛚᛚ ᚨ ᛈᚱᛟᛗᛁᛊᛖ\n"
+                      "ᛏᛟ ᛟᚾᛖ ᛒᛖᚠᛟᚱᛖ; ᛏᚺᛖy ᚹᚨᛚᚲ ᛏᚺᛖ\n"
+                      "ᛏᚹᛁᛚᛁᚷᚺᛏ ᛈᚨᛏᚺ, ᛞᛖᛊᛏᛁᚾᛖᛞ ᛏᛟ\n"
+                      "ᛞᛁᛊcᛟᚹᛖᚱ ᛏᚺᛖ ᛏᚱᚢᛏᚺ\nᛏᚺᚨᛏ ᛁᛊ ᛏᛟ cᛟᛗᛖ.");
 
-        table[0][0]
-            .format()
-            .multi_bytes_character(true)
-            // Font styling
-            .styles({Style::bold, Style::dark})
-            .align(Align::center)
-            .color(Color::red)
-            .background_color(Color::yellow)
-            // Corners
-            .corner_top_left("ᛰ")
-            .corner_top_right("ᛯ")
-            .corner_bottom_left("ᛮ")
-            .corner_bottom_right("ᛸ")
-            .corner_top_left_color(Color::cyan)
-            .corner_top_right_color(Color::yellow)
-            .corner_bottom_left_color(Color::green)
-            .corner_bottom_right_color(Color::red)
-            // Borders
-            .border_top("ᛜ")
-            .border_bottom("ᛜ")
-            .border_left("ᚿ")
-            .border_right("ᛆ")
-            .border_left_color(Color::yellow)
-            .border_right_color(Color::green)
-            .border_top_color(Color::cyan)
-            .border_bottom_color(Color::red);
+            table[0][0]
+                .format()
+                .multi_bytes_character(true)
+                // Font styling
+                .styles({Style::bold, Style::dark})
+                .align(Align::center)
+                .color(Color::red)
+                .background_color(Color::yellow)
+                // Corners
+                .corner_top_left("ᛰ")
+                .corner_top_right("ᛯ")
+                .corner_bottom_left("ᛮ")
+                .corner_bottom_right("ᛸ")
+                .corner_top_left_color(Color::cyan)
+                .corner_top_right_color(Color::yellow)
+                .corner_bottom_left_color(Color::green)
+                .corner_bottom_right_color(Color::red)
+                // Borders
+                .border_top("ᛜ")
+                .border_bottom("ᛜ")
+                .border_left("ᚿ")
+                .border_right("ᛆ")
+                .border_left_color(Color::yellow)
+                .border_right_color(Color::green)
+                .border_top_color(Color::cyan)
+                .border_bottom_color(Color::red);
 
-        std::cout << "Console Table:\n" << table.plaintext() << std::endl;
-        // std::cout << "Markdown Table:\n" << table.markdown() << std::endl;
+            std::cout << "Console Table:\n" << table.plaintext() << std::endl;
+            // std::cout << "Markdown Table:\n" << table.markdown() << std::endl;
     }
 
     // Range-based Iteration
     {
-        Table table;
+            Table table;
 
-        table.add("Company", "Contact", "Country");
-        table.add("Alfreds Futterkiste", "Maria Anders", "Germany");
-        table.add("Centro comercial Moctezuma", "Francisco Chang", "Mexico");
-        table.add("Ernst Handel", "Roland Mendel", "Austria");
-        table.add("Island Trading", "Helen Bennett", "UK");
-        table.add("Laughing Bacchus Winecellars", "Yoshi Tannamuri", "Canada");
-        table.add("Magazzini Alimentari Riuniti", "Giovanni Rovelli", "Italy");
+            table.add("Company", "Contact", "Country");
+            table.add("Alfreds Futterkiste", "Maria Anders", "Germany");
+            table.add("Centro comercial Moctezuma", "Francisco Chang", "Mexico");
+            table.add("Ernst Handel", "Roland Mendel", "Austria");
+            table.add("Island Trading", "Helen Bennett", "UK");
+            table.add("Laughing Bacchus Winecellars", "Yoshi Tannamuri", "Canada");
+            table.add("Magazzini Alimentari Riuniti", "Giovanni Rovelli", "Italy");
 
-        // Set width of cells in each column
-        table.column(0).format().width(40);
-        table.column(1).format().width(30);
-        table.column(2).format().width(30);
+            // Set width of cells in each column
+            table.column(0).format().width(40);
+            table.column(1).format().width(30);
+            table.column(2).format().width(30);
 
-        // Iterate over cells in the first row
-        for (auto &cell : table[0]) { cell.format().styles(Style::underline).align(Align::center); }
+            // Iterate over cells in the first row
+            for (auto &cell : table[0]) { cell.format().styles(Style::underline).align(Align::center); }
 
-        // Iterator over cells in the first column
-        for (auto &cell : table.column(0)) {
-            if (cell.get() != "Company") { cell.format().align(Align::right); }
-        }
-
-        // Iterate over rows in the table
-        size_t index = 0;
-        for (auto &row : table) {
-            // row.format().styles(Style::bold);
-
-            // Set blue background color for alternate rows
-            if (index > 0 && index % 2 == 0) {
-                for (auto &cell : row) { cell.format().background_color(Color::blue); }
+            // Iterator over cells in the first column
+            for (auto &cell : table.column(0)) {
+                if (cell.get() != "Company") { cell.format().align(Align::right); }
             }
-            index += 1;
-        }
 
-        std::cout << "Console Table:\n" << table.plaintext() << std::endl;
-        // std::cout << "Markdown Table:\n" << table.markdown() << std::endl;
+            // Iterate over rows in the table
+            size_t index = 0;
+            for (auto &row : table) {
+                // row.format().styles(Style::bold);
+
+                // Set blue background color for alternate rows
+                if (index > 0 && index % 2 == 0) {
+                    for (auto &cell : row) { cell.format().background_color(Color::blue); }
+                }
+                index += 1;
+            }
+
+            std::cout << "Console Table:\n" << table.plaintext() << std::endl;
+            // std::cout << "Markdown Table:\n" << table.markdown() << std::endl;
     }
+#endif
 
-#if 0
+#if 1
     // Nested Tables
     {
         Table class_diagram;
@@ -2123,8 +2339,6 @@ int main()
                 animal.add(animal_methods);
             }
             animal[2].format().hide_border_top();
-
-            std::cout << "Animal:\n" << animal.plaintext() << std::endl;
 
             class_diagram.add(animal);
         }
@@ -2179,6 +2393,7 @@ int main()
     }
 #endif
 
+#if 0
     // UTF-8 Support
     {
         Table table;
@@ -2201,6 +2416,7 @@ int main()
 
         std::cout << "Console Table:\n" << table.plaintext() << std::endl;
     }
+#endif
 
     return 0;
 }
