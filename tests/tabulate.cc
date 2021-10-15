@@ -58,7 +58,7 @@ inline std::string to_string<Color>(const Color &v)
 {
     switch (v) {
         default:
-            return "";
+            return "(none)";
         case Color::grey:
             return "grey";
         case Color::red:
@@ -83,7 +83,7 @@ inline std::string to_string<Style>(const Style &v)
 {
     switch (v) {
         default:
-            return "reset";
+            return "(none)";
         case Style::bold:
             return "bold";
         case Style::dark:
@@ -276,13 +276,14 @@ static std::string align_line_by(const std::string &line, size_t width, Align al
 static std::string repeate_to_size(const std::string &s, size_t len)
 {
     std::string r;
+    size_t swidth = display_length(s, "", true);
     for (size_t i = 0; i < len;) {
-        if (s.size() > len - i) {
+        if (swidth > len - i) {
             r += s.substr(0, len - i);
         } else {
             r += s;
         }
-        i += s.size();
+        i += swidth;
     }
     return r;
 }
@@ -405,39 +406,33 @@ class Format {
         font.color = Color::none;
         font.background_color = Color::none;
 
+        // paddings
+        paddings.left.size = 1;
+        paddings.right.size = 1;
+        paddings.top.size = 0;
+        paddings.bottom.size = 0;
+
         // border-left
         borders.left.visiable = true;
-        borders.left.padding = 1;
-
         borders.left.content = "|";
-
         borders.left.color = Color::none;
         borders.left.backgroud_color = Color::none;
 
         // border-right
         borders.right.visiable = true;
-        borders.right.padding = 1;
-
         borders.right.content = "|";
-
         borders.right.color = Color::none;
         borders.right.backgroud_color = Color::none;
 
         // border-top
         borders.top.visiable = true;
-        borders.top.padding = 0;
-
         borders.top.content = "-";
-
         borders.top.color = Color::none;
         borders.top.backgroud_color = Color::none;
 
         // border-bottom
         borders.bottom.visiable = true;
-        borders.bottom.padding = 0;
-
         borders.bottom.content = "-";
-
         borders.bottom.color = Color::none;
         borders.bottom.backgroud_color = Color::none;
 
@@ -460,11 +455,6 @@ class Format {
         corners.bottom_right.content = "+";
         corners.bottom_right.color = Color::none;
         corners.bottom_right.backgroud_color = Color::none;
-
-        // separators
-        separators.column = "|";
-        separators.color = Color::none;
-        separators.backgroud_color = Color::none;
 
         // shape
         shape.width = 0;
@@ -537,34 +527,34 @@ class Format {
 
     Format &padding(size_t value)
     {
-        borders.left.padding = value;
-        borders.right.padding = value;
-        borders.top.padding = value;
-        borders.bottom.padding = value;
+        paddings.left.size = value;
+        paddings.right.size = value;
+        paddings.top.size = value;
+        paddings.bottom.size = value;
         return *this;
     }
 
     Format &padding_left(size_t value)
     {
-        borders.left.padding = value;
+        paddings.left.size = value;
         return *this;
     }
 
     Format &padding_right(size_t value)
     {
-        borders.right.padding = value;
+        paddings.right.size = value;
         return *this;
     }
 
     Format &padding_top(size_t value)
     {
-        borders.top.padding = value;
+        paddings.top.size = value;
         return *this;
     }
 
     Format &padding_bottom(size_t value)
     {
-        borders.bottom.padding = value;
+        paddings.bottom.size = value;
         return *this;
     }
 
@@ -832,24 +822,6 @@ class Format {
         return *this;
     }
 
-    Format &column_separator(const std::string &value)
-    {
-        separators.column = value;
-        return *this;
-    }
-
-    Format &column_separator_color(Color value)
-    {
-        separators.color = value;
-        return *this;
-    }
-
-    Format &column_separator_background_color(Color value)
-    {
-        separators.backgroud_color = value;
-        return *this;
-    }
-
     const std::string &locale() const
     {
         return internationlization.locale;
@@ -878,11 +850,16 @@ class Format {
     friend class Column;
     friend class Table;
 
+    struct {
+        struct Padding {
+            size_t size;
+        } left, right, top, bottom;
+    } paddings;
+
     // Element padding and Border
     struct {
         struct Border {
             bool visiable;
-            size_t padding;
 
             Color color;
             std::string content;
@@ -898,12 +875,6 @@ class Format {
             Color backgroud_color;
         } top_left, top_right, bottom_left, bottom_right;
     } corners;
-
-    // Element separator
-    struct {
-        std::string column;
-        Color color, backgroud_color;
-    } separators;
 
     struct {
         size_t width; // width limitation
@@ -1352,24 +1323,6 @@ class BatchFormat {
         return *this;
     }
 
-    inline BatchFormat &column_separator(const std::string &value)
-    {
-        for (auto &cell : cells) { cell->format().column_separator(value); }
-        return *this;
-    }
-
-    inline BatchFormat &column_separator_color(Color value)
-    {
-        for (auto &cell : cells) { cell->format().column_separator_color(value); }
-        return *this;
-    }
-
-    inline BatchFormat &column_separator_background_color(Color value)
-    {
-        for (auto &cell : cells) { cell->format().column_separator_background_color(value); }
-        return *this;
-    }
-
     inline BatchFormat &locale(const std::string &value)
     {
         for (auto &cell : cells) { cell->format().locale(value); }
@@ -1441,8 +1394,9 @@ class Row {
         for (auto const &cell : cells) {
             auto &borders = cell->format().borders;
             auto &corner = cell->format().corners.top_right;
+            auto &paddings = cell->format().paddings;
 
-            size_t size = borders.left.padding + cell->width() + borders.right.padding;
+            size_t size = paddings.left.size + cell->width() + paddings.right.size;
             seperator += repeate_to_size(borders.top.content, size);
             seperator += apply(corner.content, corner.color, corner.backgroud_color, {});
         }
@@ -1460,9 +1414,10 @@ class Row {
         }
         for (auto const &cell : cells) {
             auto &borders = cell->format().borders;
+            auto &paddings = cell->format().paddings;
             auto &corner = cell->format().corners.bottom_right;
 
-            size_t size = borders.left.padding + cell->width() + borders.right.padding;
+            size_t size = paddings.left.size + cell->width() + paddings.right.size;
             seperator += repeate_to_size(borders.bottom.content, size);
             seperator += apply(corner.content, corner.color, corner.backgroud_color, {});
         }
@@ -1475,6 +1430,19 @@ class Row {
         size_t max_height = 0;
         std::vector<std::vector<std::string>> dumplines;
         for (auto const &cell : cells) {
+#ifdef __DEBUG__
+            std::cout << "cell: " << cell->get() << std::endl;
+            std::cout << "\tcolor: " << to_string(cell->color()) << std::endl;
+            std::cout << "\tbackground_color: " << to_string(cell->background_color()) << std::endl;
+            if (!cell->styles().empty()) {
+                std::cout << "\tstyles: ";
+                for (auto &style : cell->styles()) {
+                    std::cout << to_string(style);
+                    if (&style != &cell->styles().back()) { std::cout << " "; }
+                }
+                std::cout << std::endl;
+            }
+#endif
             std::vector<std::string> formatted;
             if (cell->format().width() == 0) {
                 formatted.push_back(align_line_by(cell->get(), cell->width(), cell->align(), cell->format().locale(),
@@ -1503,26 +1471,23 @@ class Row {
             }
             for (size_t j = 0; j < cells.size(); j++) {
                 Cell &cell = *cells[j];
+                auto &pl = cell.format().paddings.left;
+                auto &pr = cell.format().paddings.right;
                 auto &bl = cell.format().borders.left;
                 auto &br = cell.format().borders.right;
-                auto &sp = cell.format().separators;
                 auto foreground_color = cell.color();
                 auto background_color = cell.background_color();
                 auto styles = cell.styles();
 
-                line += apply(std::string(bl.padding, ' '), bl.color, bl.backgroud_color, {});
+                line += apply(std::string(pl.size, ' '), bl.color, bl.backgroud_color, {});
                 if (dumplines[j].size() <= i) {
                     line += apply(std::string(cell.width(), ' '), foreground_color, background_color, styles);
                 } else {
                     line += apply(dumplines[j][i], foreground_color, background_color, styles);
                 }
 
-                line += apply(std::string(br.padding, ' '), foreground_color, background_color, {});
-                if (j == cells.size() - 1) {
-                    line += apply(br.content, br.color, br.backgroud_color, {});
-                } else {
-                    line += apply(sp.column, sp.color, sp.backgroud_color, {});
-                }
+                line += apply(std::string(pr.size, ' '), foreground_color, background_color, {});
+                line += apply(br.content, br.color, br.backgroud_color, {});
             }
 
             lines.push_back(line);
@@ -1766,8 +1731,6 @@ class Table {
         // m_format.borders.left.content = "|";
         // m_format.borders.right.content = "|";
 
-        // m_format.separators.column = "|";
-
         auto apply = [](const std::string &str, Color, Color, const std::vector<Style> &) -> std::string {
             return str;
         };
@@ -1847,7 +1810,6 @@ int main()
 {
     using namespace tabulate;
 
-#if 0
     // 0. Quick Start
     {
         Table universal_constants;
@@ -1863,11 +1825,31 @@ int main()
         universal_constants.add("Dirac's constant", "1.054 571 68(18) × 10⁻³⁴ J·s");
         universal_constants.add("Speed of light in vacuum", "299 792 458 m·s⁻¹");
 
-        universal_constants.column(0).format().width(20);
+        universal_constants.format()
+            .styles(Style::bold)
+            .border_top(" ")
+            .border_bottom(" ")
+            .border_left(" ")
+            .border_right(" ")
+            .corner(" ");
+
+        universal_constants[0]
+            .format()
+            .padding_top(1)
+            .padding_bottom(1)
+            .align(Align::center)
+            .styles({Style::underline})
+            .background_color(Color::red);
+
+        universal_constants.column(1).format().color(Color::yellow);
+
+        universal_constants[0][1].format().background_color(Color::blue).color(Color::white);
 
         std::cout << "Console Table:\n" << universal_constants.plaintext() << std::endl;
         // std::cout << "Markdown Table:\n" << universal_constants.markdown() << std::endl;
     }
+
+    return 0;
 
     // 1.1 Word Wrapping
     {
@@ -1937,7 +1919,6 @@ int main()
         std::cout << "Console Table:\n" << styled_table.plaintext() << std::endl;
         // std::cout << "Markdown Table:\n" << styled_table.markdown() << std::endl;
     }
-#endif
 
     // Cell Colors
     {
@@ -2178,6 +2159,9 @@ int main()
 
         std::cout << "Console Table:\n" << table.plaintext() << std::endl;
     }
+
+    std::string str = "ᛏᚺᛁᛊ ᛁᛊ ᚨ ᛊᛏᛟᚱy ᛟᚠᚨ ᛒᛖᚨᚱ ᚨᚾᛞ";
+    std::cout << "size = " << str.size() << ", width = " << display_length(str, "", true) << std::endl;
 
     return 0;
 }
