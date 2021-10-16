@@ -74,11 +74,6 @@ class BencherCollection {
         return instance;
     }
 
-    void set_colorize_syntax(int syntax)
-    {
-        colorize_syntax = syntax;
-    }
-
     void insert(const std::string &name, double avg, double stddev)
     {
         collections.emplace_back(name, avg, stddev);
@@ -86,38 +81,45 @@ class BencherCollection {
 
     void display()
     {
-        tabulate::Table table;
-        // avg: average time(ns)
-        // cv: coefficient of variation
-        table.add_row({"operation with options", "average time(nanoseconds)", "coefficient of variation",
-                       "perfermance ratio to ref"});
-        table[0].format().font_align(tabulate::FontAlign::center);
+        using namespace tabulate;
+
+        Table table("operation with options", "average time(nanoseconds)", "coefficient of variation",
+                    "perfermance ratio to ref");
+        table[0].format().align(Align::center);
 
         int i = 0;
         for (auto const &v : collections) {
             double diff = get_ref(v.name).avg / v.avg;
 
-            if (colorize_syntax == 0) {
-                table.add_row({v.name, std::to_string(v.avg), std::to_string(v.stddev / v.avg), std::to_string(diff)});
+            table.add(v.name, v.avg, v.stddev / v.avg, diff);
 
-                i++;
-                if (diff >= 1.2) {
-                    table[i][3].format().font_color(tabulate::Color::green);
-                    if (diff >= 2.0) { table[i][3].format().font_style({tabulate::FontStyle::bold}); }
-                } else if (diff <= 0.8) {
-                    table[i][3].format().font_color(tabulate::Color::red);
-                    if (diff <= 0.5) { table[i][3].format().font_style({tabulate::FontStyle::bold}); }
+            i++;
+            if (diff >= 1.2) {
+                table[i][3].format().color(Color::green);
+                if (diff >= 2.0) {
+                    table[i][3].format().styles(Style::bold);
+                    if (diff >= 5.0) { table[i][3].format().styles(Style::blink); }
                 }
-            } else if (colorize_syntax == 1) { // generate for markdown
-                // TODO
+            } else if (diff <= 0.8) {
+                table[i][3].format().color(Color::red);
+                if (diff <= 0.5) {
+                    table[i][3].format().styles(Style::bold);
+                    if (diff <= 0.2) { table[i][3].format().styles(Style::blink); }
+                }
             }
         }
-        table.column(1).format().font_align(tabulate::FontAlign::center);
-        table.column(2).format().font_align(tabulate::FontAlign::center);
-        table.column(3).format().font_align(tabulate::FontAlign::center);
+        table.column(1).format().align(Align::center);
+        table.column(2).format().align(Align::center);
+        table.column(3).format().align(Align::center);
 
-        // termcolor::colorize(std::cout);
-        std::cout << table << std::endl;
+        // awk '/BEGIN/{ f = 1; next } /END/{ f = 0 } f' data.txt
+        std::cout << "TERMINAL BEGIN" << std::endl;
+        std::cout << table.xterm() << std::endl;
+        std::cout << "TERMINAL END" << std::endl;
+
+        std::cout << "MARKDOWN BEGIN" << std::endl;
+        std::cout << table.markdown() << std::endl;
+        std::cout << "MARKDOWN END" << std::endl;
     }
 
     void mark_as_ref(const std::string &s)
@@ -148,11 +150,10 @@ class BencherCollection {
     }
 
   private:
-    int colorize_syntax; // auto, 0; markdown, 1
     std::vector<value> references;
     std::vector<value> collections;
 
-    BencherCollection() : colorize_syntax(0) {}
+    BencherCollection() {}
     ~BencherCollection()
     {
         display();

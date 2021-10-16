@@ -25,9 +25,8 @@ jobs:
         run: |
           ${{github.workspace}}/build/tests/benchmark | tee ${{github.workspace}}/build/benchmark.txt || true
           cat ${{github.workspace}}/docs/README.template.md > ${{github.workspace}}/README.md
-          echo -e '\n```' >> ${{github.workspace}}/README.md
-          cat ${{github.workspace}}/build/benchmark.txt | grep -v '.*: avg = .*, stddev = .*' | grep -v '^$' >> ${{github.workspace}}/README.md
-          echo -e '```\n' >> ${{github.workspace}}/README.md
+          echo -e '## Benchmark(libmpi VS openssl)\n' >> ${{github.workspace}}/README.md
+          awk '/MARKDOWN BEGIN/{ f = 1; next } /MARKDOWN END/{ f = 0 } f' benchmark.txt >> ${{github.workspace}}/README.md
           git add ${{github.workspace}}/README.md
 
       - name: Commit files
