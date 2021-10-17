@@ -1962,6 +1962,7 @@ class Table {
             auto const &border = row[0].format().borders.bottom;
             if (border.visiable) { exported += row.border_bottom(xterm::apply) + newline; }
         }
+        exported.erase(exported.size() - newline.size(), newline.size()); // pop last newline
 
         return exported;
     }
@@ -2006,6 +2007,7 @@ class Table {
             auto const &row = *rows[i];
             for (auto const &line : row.dump(markdown::apply)) { exported += line + newline; }
         }
+        exported.erase(exported.size() - newline.size(), newline.size()); // pop last newline
 
         return exported;
     }
