@@ -3,28 +3,28 @@
 #include <time.h>
 #include <math.h>
 
-#define BENCHER(prefix, todo, N, REPEAT)                                                            \
-    double prefix##avg, prefix##stddev;                                                             \
-    do {                                                                                            \
-        double durations[N];                                                                        \
-        for (unsigned __i = 0; __i < N; __i++) {                                                    \
-            struct timespec ts, te;                                                                 \
-            clock_gettime(CLOCK_MONOTONIC, &ts);                                                    \
-            for (unsigned int __j = 0; __j < REPEAT; __j++) { todo; }                               \
-            clock_gettime(CLOCK_MONOTONIC, &te);                                                    \
-            durations[__i] = (te.tv_sec - ts.tv_sec) * (1e9 / static_cast<double>(REPEAT))          \
-                             + (te.tv_nsec - ts.tv_nsec) / static_cast<double>(REPEAT);             \
-        }                                                                                           \
-        long double __t = 0;                                                                        \
-        for (unsigned __i = 0; __i < N; __i++) { __t += static_cast<long double>(durations[__i]); } \
-        prefix##avg = static_cast<double>(__t / N);                                                 \
-                                                                                                    \
-        for (unsigned __i = 0; __i < N; __i++) {                                                    \
-            double diff = durations[__i] - prefix##avg;                                             \
-            __t += static_cast<long double>(diff * diff);                                           \
-        }                                                                                           \
-        __t /= N;                                                                                   \
-        prefix##stddev = static_cast<double>(sqrt(__t));                                            \
+#define BENCHER(prefix, todo, N, REPEAT)                                                                      \
+    double prefix##avg, prefix##stddev;                                                                       \
+    do {                                                                                                      \
+        double durations[N];                                                                                  \
+        for (unsigned __i = 0; __i < N; __i++) {                                                              \
+            struct timespec ts, te;                                                                           \
+            clock_gettime(CLOCK_MONOTONIC, &ts);                                                              \
+            for (unsigned int __j = 0; __j < REPEAT; __j++) { todo; }                                         \
+            clock_gettime(CLOCK_MONOTONIC, &te);                                                              \
+            durations[__i] = static_cast<double>(te.tv_sec - ts.tv_sec) * (1e9 / static_cast<double>(REPEAT)) \
+                             + static_cast<double>(te.tv_nsec - ts.tv_nsec) / static_cast<double>(REPEAT);    \
+        }                                                                                                     \
+        long double __t = 0;                                                                                  \
+        for (unsigned __i = 0; __i < N; __i++) { __t += static_cast<long double>(durations[__i]); }           \
+        prefix##avg = static_cast<double>(__t / N);                                                           \
+                                                                                                              \
+        for (unsigned __i = 0; __i < N; __i++) {                                                              \
+            double diff = durations[__i] - prefix##avg;                                                       \
+            __t += static_cast<long double>(diff * diff);                                                     \
+        }                                                                                                     \
+        __t /= N;                                                                                             \
+        prefix##stddev = static_cast<double>(sqrt(__t));                                                      \
     } while (0)
 
 template <class Tp>

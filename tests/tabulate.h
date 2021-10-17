@@ -419,7 +419,7 @@ namespace tabulate
 // https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
 namespace xterm
 {
-static const std::string term = std::string(getenv("TERM"));
+static const std::string term = std::string(getenv("TERM") != NULL ? getenv("TERM") : "");
 static const std::vector<std::string> terms_supported_truecolor = {"iterm", "linux", "xterm-truecolor"};
 static const bool supported_truecolor =
     std::find(terms_supported_truecolor.begin(), terms_supported_truecolor.end(), term)
