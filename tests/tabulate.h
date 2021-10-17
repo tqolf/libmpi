@@ -178,13 +178,10 @@ namespace tabulate
 template <typename T>
 inline std::string to_string(const T &v)
 {
-    /**
-     * float/double/long double
-     * [unsigned] int/long/long long
-     *
-     * since c++11
-     */
-    return std::to_string(v);
+    std::stringstream ss;
+    ss << v;
+
+    return ss.str();
 }
 
 template <>

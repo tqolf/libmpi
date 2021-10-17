@@ -85,12 +85,11 @@ class BencherCollection {
         Table table;
 
         if (references.size() == 0) {
-            table.add("operation", "average time(nanoseconds)", "coefficient of variation");
+            table.add("description", "average time(nanoseconds)", "coefficient of variation");
         } else {
-            table.add("operation", "average time(nanoseconds)", "reference", "coefficient of variation",
+            table.add("description", "average time(nanoseconds)", "reference", "coefficient of variation",
                       "perfermance ratio");
         }
-        table[0].format().align(Align::center);
 
         int i = 0;
         for (auto const &v : collections) {
@@ -144,9 +143,7 @@ class BencherCollection {
                 table.add(v.name, v.avg, v.stddev / v.avg);
             }
         }
-        table.column(1).format().align(Align::center);
-        table.column(2).format().align(Align::center);
-        table.column(3).format().align(Align::center);
+        table.format().align(Align::center);
 
         // awk '/BEGIN/{ f = 1; next } /END/{ f = 0 } f' data.txt
         std::cout << "TERMINAL BEGIN" << std::endl;
