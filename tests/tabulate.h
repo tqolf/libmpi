@@ -7,7 +7,9 @@
 #include <locale>
 #include <clocale>
 #include <wchar.h>
+#include <math.h>
 #include <iostream>
+#include <algorithm>
 
 #if defined(__GNUC__)
 #pragma GCC diagnostic ignored "-Wswitch-enum"
@@ -92,14 +94,72 @@ struct TrueColor {
         }
     }
 
-    std::tuple<unsigned char, unsigned char, unsigned char> RGB()
-    {
-        return std::make_tuple((hex >> 16) & 0xFF, (hex >> 8) & 0xFF, hex & 0xFF);
-    }
-
-    bool none()
+    bool none() const
     {
         return hex == DEFAULT;
+    }
+
+#define BYTEn(v, n) (((v) >> ((n)*8)) & 0xFF)
+    std::tuple<unsigned char, unsigned char, unsigned char> RGB() const
+    {
+        return std::make_tuple(BYTEn(hex, 2), BYTEn(hex, 1), BYTEn(hex, 0));
+    }
+
+    static TrueColor merge(const TrueColor &a, const TrueColor &b)
+    {
+        int rr = (BYTEn(a.hex, 2) + BYTEn(b.hex, 2) + 1) / 2;
+        int gg = (BYTEn(a.hex, 1) + BYTEn(b.hex, 1) + 1) / 2;
+        int bb = (BYTEn(a.hex, 0) + BYTEn(b.hex, 0) + 1) / 2;
+
+        return TrueColor((rr << 16) | (gg << 8) | bb);
+    }
+
+    static double similarity(const TrueColor &a, const TrueColor &b)
+    {
+        // d = sqrt((r2-r1)^2 + (g2-g1)^2 + (b2-b1)^2)
+
+        int dr = BYTEn(a.hex, 2) - BYTEn(b.hex, 2);
+        int dg = BYTEn(a.hex, 1) - BYTEn(b.hex, 1);
+        int db = BYTEn(a.hex, 0) - BYTEn(b.hex, 0);
+
+        const double r = sqrt(static_cast<double>(255 * 255 * 3));
+        double d = sqrt(static_cast<double>(dr * dr + dg * dg + db * db));
+
+        return d / r;
+    }
+#undef BYTEn
+
+    static Color most_similar(const TrueColor &a)
+    {
+        struct color_distance {
+            Color color;
+            double distance;
+            color_distance(const TrueColor &color, Color base) : color(base)
+            {
+                distance = similarity(color, base);
+            }
+
+            bool operator<(const color_distance &other) const
+            {
+                return (distance < other.distance);
+            }
+        };
+        // clang-format off
+        std::vector<color_distance> distances = {
+            color_distance(a, Color::black),
+            color_distance(a, Color::red),
+            color_distance(a, Color::green),
+            color_distance(a, Color::yellow),
+            color_distance(a, Color::blue),
+            color_distance(a, Color::magenta),
+            color_distance(a, Color::cyan),
+            color_distance(a, Color::white),
+            color_distance(a, Color::none),
+        };
+        // clang-format on
+        std::sort(distances.begin(), distances.end());
+
+        return distances[0].color;
     }
 
   public:
@@ -359,6 +419,12 @@ namespace tabulate
 // https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
 namespace xterm
 {
+static const std::string term = std::string(getenv("TERM"));
+static const std::vector<std::string> terms_supported_truecolor = {"iterm", "linux", "xterm-truecolor"};
+static const bool supported_truecolor =
+    std::find(terms_supported_truecolor.begin(), terms_supported_truecolor.end(), term)
+    != terms_supported_truecolor.end();
+
 static std::string apply(const std::string &str, TrueColor foreground_color, TrueColor background_color,
                          const std::vector<Style> &styles)
 {
@@ -386,11 +452,10 @@ static std::string apply(const std::string &str, TrueColor foreground_color, Tru
             }
         };
 
-        bool sgr = false; // foreground_color.color != Color::none && background_color.color != Color::none;
-        if (sgr) {
+        if (!supported_truecolor) {
             applied += std::string("\033[");
-            applied += std::to_string(to_underlying(foreground_color.color) + 30) + ";";
-            applied += std::to_string(to_underlying(foreground_color.color) + 40) + ";";
+            applied += std::to_string(to_underlying(TrueColor::most_similar(foreground_color.color)) + 30) + ";";
+            applied += std::to_string(to_underlying(TrueColor::most_similar(background_color.color)) + 40) + ";";
 
             if (styles.size() > 0) {
                 for (auto const &style : styles) {

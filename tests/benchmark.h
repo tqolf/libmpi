@@ -82,30 +82,65 @@ class BencherCollection {
     void display()
     {
         using namespace tabulate;
+        Table table;
 
-        Table table("operation with options", "average time(nanoseconds)", "coefficient of variation",
-                    "perfermance ratio to ref");
+        if (references.size() == 0) {
+            table.add("operation", "average time(nanoseconds)", "coefficient of variation");
+        } else {
+            table.add("operation", "average time(nanoseconds)", "reference", "coefficient of variation",
+                      "perfermance ratio");
+        }
         table[0].format().align(Align::center);
 
         int i = 0;
         for (auto const &v : collections) {
-            double diff = get_ref(v.name).avg / v.avg;
+            if (references.size() != 0) {
+                auto ref = get_reference(v.keys[0]);
+                if (ref != references.end()) {
+                    double diff = ref->avg / v.avg;
 
-            table.add(v.name, v.avg, v.stddev / v.avg, diff);
+                    std::string name = v.keys[0] + "(";
+                    if (v.keys.size() > 2) { name += "("; }
+                    for (size_t _i = 1; _i < v.keys.size(); _i++) {
+                        if (_i == v.keys.size() - 1) {
+                            name += v.keys[_i];
+                        } else {
+                            name += v.keys[_i] + ", ";
+                        }
+                    }
+                    if (v.keys.size() > 2) { name += ")"; }
+                    name += " vs ";
+                    if (ref->keys.size() > 2) { name += "("; }
+                    for (size_t _i = 1; _i < ref->keys.size(); _i++) {
+                        if (_i == ref->keys.size() - 1) {
+                            name += ref->keys[_i];
+                        } else {
+                            name += ref->keys[_i] + ", ";
+                        }
+                    }
+                    if (ref->keys.size() > 2) { name += ")"; }
+                    name += ")";
+                    table.add(name, v.avg, ref->avg, v.stddev / v.avg, diff);
 
-            i++;
-            if (diff >= 1.2) {
-                table[i][3].format().color(Color::green);
-                if (diff >= 2.0) {
-                    table[i][3].format().styles(Style::bold);
-                    if (diff >= 5.0) { table[i][3].format().styles(Style::blink); }
+                    i++;
+                    if (diff >= 1.2) {
+                        table[i][4].format().color(Color::green);
+                        if (diff >= 2.0) {
+                            table[i][4].format().styles(Style::bold);
+                            if (diff >= 5.0) { table[i][4].format().styles(Style::blink); }
+                        }
+                    } else if (diff <= 0.8) {
+                        table[i][4].format().color(Color::red);
+                        if (diff <= 0.5) {
+                            table[i][4].format().styles(Style::bold);
+                            if (diff <= 0.2) { table[i][4].format().styles(Style::blink); }
+                        }
+                    }
+                } else {
+                    table.add(v.name, v.avg, "<No Reference>", v.stddev / v.avg, "N/A");
                 }
-            } else if (diff <= 0.8) {
-                table[i][3].format().color(Color::red);
-                if (diff <= 0.5) {
-                    table[i][3].format().styles(Style::bold);
-                    if (diff <= 0.2) { table[i][3].format().styles(Style::blink); }
-                }
+            } else {
+                table.add(v.name, v.avg, v.stddev / v.avg);
             }
         }
         table.column(1).format().align(Align::center);
@@ -128,25 +163,19 @@ class BencherCollection {
             return s == another.name;
         });
         if (it != collections.end()) {
-            references.emplace_back(it->keys[0], it->avg, it->stddev);
+            references.emplace_back(it->name, it->avg, it->stddev);
+            collections.erase(it);
         } else {
             std::cout << "not found" << std::endl;
         }
     }
 
-    value get_ref(const std::string &s)
+    std::vector<value>::iterator get_reference(const std::string &s)
     {
-        std::regex pattern("([\\w\\-]+)");
-        auto key_begin = std::sregex_iterator(s.begin(), s.end(), pattern);
-        if (key_begin != std::sregex_iterator()) {
-            auto it = std::find_if(references.begin(), references.end(), [&](const value &another) {
-                return key_begin->str() == another.name;
-            });
-            if (it != references.end()) { return *it; }
-        }
-
-        static const value notfound("not found", 0, 0);
-        return notfound;
+        value _s(s, 0, 0);
+        return std::find_if(references.begin(), references.end(), [&](const value &another) -> bool {
+            return _s.keys[0] == another.keys[0];
+        });
     }
 
   private:

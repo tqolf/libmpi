@@ -814,7 +814,6 @@ int main(void)
             Bencher bench("MUL2(a * 2 = a + a)", [&]() -> bool {
                 return mpi_add(r, a, a) == 0;
             });
-            BencherCollection::GetInstance().mark_as_ref("MUL2(a * 2 = a + a)");
         }
 
         {
