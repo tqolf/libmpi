@@ -11,20 +11,19 @@ Multiple Precision Integer and Relevant Algorithms, such as Bignum, RSA, DH, ECD
 
 |               operation               | average time(nanoseconds) |    reference     | coefficient of variation | perfermance ratio |
 | :-: | :-: | :-: | :-: | :-: |
-| from-string(mpi vs ossl)              |        2062.009000        |   24094.460400   |         0.026612         | <span style="color:#8000;">**11.684944**</span>         |
-| to-string(mpi vs ossl)                |        589.828400         |   2243.831600    |         0.065074         | <span style="color:#8000;">**3.804211**</span>          |
-| from-octets(mpi vs ossl)              |        184.542600         |    572.228200    |         0.075154         | <span style="color:#8000;">**3.100792**</span>          |
-| to-octets(mpi vs ossl)                |        114.481600         |   1286.378200    |         0.093465         | <span style="color:#8000;">**11.236550**</span>         |
-| add(mpi vs ossl)                      |         44.220600         |    220.983000    |         0.150382         | <span style="color:#8000;">**4.997286**</span>          |
-| add-assign(mpi vs ossl)               |         44.460600         |    226.123200    |         0.150146         | <span style="color:#8000;">**5.085923**</span>          |
-| sub(mpi vs ossl)                      |         66.721000         |    142.342000    |         0.500661         | <span style="color:#8000;">**2.133391**</span>          |
-| sub-assign(mpi vs ossl)               |         51.040800         |    232.143200    |         0.140932         | <span style="color:#8000;">**4.548189**</span>          |
-| mul(mpi vs ossl)                      |        1606.982600        |   9985.841000    |         0.025379         | <span style="color:#8000;">**6.214032**</span>          |
-| sqr(mpi vs ossl)                      |        991.154000         |   6895.437400    |         0.031875         | <span style="color:#8000;">**6.956979**</span>          |
-| div(mpi vs ossl)                      |        3418.548200        |   31261.561800   |         0.017128         | <span style="color:#8000;">**9.144689**</span>          |
-| gcd_consttime(mpi vs ossl)            |      4303897.330435       | 11891873.000000  |         0.003858         | <span style="color:#8000;">**2.763048**</span>          |
-| montgomery-exp(mpi vs ossl)           |      8679738.981818       | 106503744.800000 |         0.000416         | <span style="color:#8000;">**12.270386**</span>         |
-| montgomery-exp-consttime(mpi vs ossl) |      11802136.550000      | 113588004.800000 |         0.000338         | <span style="color:#8000;">**9.624359**</span>          |
-| MUL2(a * 2 = a + a)                   |         40.500600         |  <No Reference>  |         0.157134         | N/A               |
-| MUL2(a * 2 = a << 1)                  |         74.101000         |  <No Reference>  |         0.116172         | N/A               |
-
+| from-string(mpi vs ossl)              |        2130.387600        |   24357.714800   |         0.021688         | <span style="color:#8000;">**11.433466**</span>         |
+| to-string(mpi vs ossl)                |        572.967400         |   2252.049000    |         0.041777         | <span style="color:#8000;">**3.930501**</span>          |
+| from-octets(mpi vs ossl)              |        239.663200         |    550.247000    |         0.064596         | <span style="color:#8000;">**2.295918**</span>          |
+| to-octets(mpi vs ossl)                |        114.321600         |   1281.856600    |         0.093529         | <span style="color:#8000;">**11.212724**</span>         |
+| add(mpi vs ossl)                      |         70.921000         |    222.582800    |         0.118746         | <span style="color:#8000;">**3.138461**</span>          |
+| add-assign(mpi vs ossl)               |         68.280800         |    224.943000    |         0.121105         | <span style="color:#8000;">**3.294381**</span>          |
+| sub(mpi vs ossl)                      |         54.840800         |    142.361800    |         0.135038         | <span style="color:#8000;">**2.595910**</span>          |
+| sub-assign(mpi vs ossl)               |         61.460800         |    226.182800    |         0.127575         | <span style="color:#8000;">**3.680115**</span>          |
+| mul(mpi vs ossl)                      |        1606.460800        |   9894.867800    |         0.025212         | <span style="color:#8000;">**6.159421**</span>          |
+| sqr(mpi vs ossl)                      |        994.632800         |   6913.709400    |         0.033124         | <span style="color:#8000;">**6.951017**</span>          |
+| div(mpi vs ossl)                      |        3102.480000        |   31338.845000   |         0.017963         | <span style="color:#8000;">**10.101224**</span>         |
+| gcd_consttime(mpi vs ossl)            |      3861233.896000       | 11951306.950000  |         0.000766         | <span style="color:#8000;">**3.095204**</span>          |
+| montgomery-exp(mpi vs ossl)           |      8534925.745455       | 107564750.200000 |         0.000991         | <span style="color:#8000;">**12.602892**</span>         |
+| montgomery-exp-consttime(mpi vs ossl) |      11866349.400000      | 114737603.800000 |         0.007274         | <span style="color:#8000;">**9.669158**</span>          |
+| <span style="font-style:italic;">MUL2(a * 2 = a + a)</span>                   |         <span style="font-style:italic;">46.860400</span>         |   <span style="font-style:italic;">No Reference</span>   |         <span style="font-style:italic;">0.146086</span>         | <span style="font-style:italic;">N/A</span>               |
+| <span style="font-style:italic;">MUL2(a * 2 = a << 1)</span>                  |         <span style="font-style:italic;">64.180600</span>         |   <span style="font-style:italic;">No Reference</span>   |         <span style="font-style:italic;">0.134770</span>         | <span style="font-style:italic;">N/A</span>               |
