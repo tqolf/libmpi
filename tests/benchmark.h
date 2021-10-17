@@ -172,9 +172,8 @@ class BencherCollection {
 
     std::vector<value>::iterator get_reference(const std::string &s)
     {
-        value _s(s, 0, 0);
         return std::find_if(references.begin(), references.end(), [&](const value &another) -> bool {
-            return _s.keys[0] == another.keys[0];
+            return s == another.keys[0];
         });
     }
 
