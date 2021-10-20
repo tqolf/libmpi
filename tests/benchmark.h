@@ -87,7 +87,7 @@ class BencherCollection {
         if (references.size() == 0) {
             table.add("description", "average time(nanoseconds)", "coefficient of variation");
         } else {
-            table.add("description", "average time(nanoseconds)", "reference", "coefficient of variation",
+            table.add("description", "average time", "average time(reference)", "coefficient of variation",
                       "perfermance ratio");
         }
 
@@ -137,7 +137,7 @@ class BencherCollection {
                     }
                 } else {
                     auto &row = table.add(v.name, v.avg, "No Reference", v.stddev / v.avg, "N/A");
-                    row.format().styles(Style::italic);
+                    row[2].format().styles(Style::italic);
                 }
             } else {
                 table.add(v.name, v.avg, v.stddev / v.avg);
