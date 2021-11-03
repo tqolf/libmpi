@@ -71,11 +71,6 @@ inline std::ostream &print(std::ostream &os, const details::value &value, const 
 }
 } // namespace logging
 
-#define __log_head(os, sep)  os << std::string(__FILE__) << ":" << __LINE__ << sep
-#define __log_tail(os)       os << std::endl
-#define __log_text(os, text) os << text
-#define __log_args(os, sep, ...)
-
 #define __nargs_0(...)                                                    __nargs_1(__VA_ARGS__, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 0)
 #define __nargs_1(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, ...) q
 
@@ -84,33 +79,44 @@ inline std::ostream &print(std::ostream &os, const details::value &value, const 
 #define __eval_1(...) __eval_2(__eval_2(__eval_2(__eval_2(__VA_ARGS__))))
 #define __eval_2(...) __VA_ARGS__
 
-/* Eval what follows as many times as necessary. */
-#define __print_0(os, ...)      __eval_0(__print_1(os, __VA_ARGS__))
-#define __print_1(os, P, ...)   __print_2(os, __nargs_0(__VA_ARGS__), P, __VA_ARGS__)
-#define __print_2(os, num, ...) __print_3(os, num, __VA_ARGS__)
-#define __print_3(os, num, ...) __arg_##num(os, __VA_ARGS__)
+#define __log_args(vec, ...)        __eval_0(__log_args_1(vec, __VA_ARGS__))
+#define __log_args_1(vec, ...)      __log_args_2(vec, __nargs_0(__VA_ARGS__), __VA_ARGS__)
+#define __log_args_2(vec, num, ...) __log_args_3(vec, num, __VA_ARGS__)
+#define __log_args_3(vec, num, ...) __log_arg_##num(vec, __VA_ARGS__)
 
-#define __arg_1(os, P, arg)      P##1(os, arg)
-#define __arg_2(os, P, arg, ...) P##2(os, arg), __loop(os, P, __VA_ARGS__)
-#define __loop(os, ...)          __loop_helper __empty_helper()()(os, __VA_ARGS__)
-#define __loop_helper()          __print_1
+#define __log_arg_1(vec, arg)      __log_arg(vec, arg)
+#define __log_arg_2(vec, arg, ...) __log_arg(vec, arg), __loop(vec, __VA_ARGS__)
+#define __loop(vec, ...)           __loop_helper __empty_helper()()(vec, __VA_ARGS__)
+#define __loop_helper()            __log_args_1
 #define __empty_helper()
 
-#define __custom_log(os, P, ...)       (__print_0(os, P, __VA_ARGS__), os << std::endl)
-#define __custom_ilog(os, P, sep, ...) (__log_head(os, sep), __custom_log(os, P, __VA_ARGS__))
+#define __log_arg(vec, arg) vec.emplace_back(std::string(NAMEOF(arg)), logging::to_string(arg))
 
-#define __log_P_1(os, arg) logging::print(os, logging::details::value(std::string(NAMEOF(arg)), arg))
-#define __log_P_2(os, arg) __log_P_1(os, arg) << std::endl
-
-#define __ilog_P_1(os, arg) \
-    logging::print(os, logging::details::value(std::string("\t") + std::string(NAMEOF(arg)), arg))
-#define __ilog_P_2(os, arg) __ilog_P_1(os, arg) << std::endl
-
-#define log_always(os, ...)   __log_0(os, __nargs_0(__VA_ARGS__), __VA_ARGS__)
-#define __log_0(os, num, ...) __log_1(os, num, __VA_ARGS__)
-#define __log_1(os, num, ...) __log_arg_##num(os, __VA_ARGS__)
-#define __log_arg_1(os, ...)  __custom_ilog(os, __log_P_, " ", __VA_ARGS__)
-#define __log_arg_2(os, ...)  __custom_ilog(os, __ilog_P_, "\n", __VA_ARGS__)
+#define log_always(os, ...)                                                                   \
+    do {                                                                                      \
+        std::vector<logging::details::value> vec;                                             \
+        __log_args(vec, __VA_ARGS__);                                                         \
+        os << std::string(__FILE__) << ":" << __LINE__ << ": ";                               \
+        bool indent = false;                                                                  \
+        for (auto i = 0; i < vec.size(); i++) {                                               \
+            auto &s = vec[i];                                                                 \
+            bool ml = std::count(s.data.begin(), s.data.end(), '\n') != 0;                    \
+            if (ml) {                                                                         \
+                indent = true;                                                                \
+                os << std::endl << "\t" << s.name << ":" << std::endl;                        \
+                {                                                                             \
+                    std::string line;                                                         \
+                    std::stringstream ss(s.data);                                             \
+                    while (std::getline(ss, line, '\n')) { os << "\t" << line << std::endl; } \
+                }                                                                             \
+            } else {                                                                          \
+                if (indent) { os << "\t"; }                                                   \
+                os << s.name << " = " << s.data;                                              \
+            }                                                                                 \
+            if ((i != vec.size() - 1) && !ml) { os << ", "; }                                 \
+        }                                                                                     \
+        os << std::endl;                                                                      \
+    } while (0)
 
 
 namespace logging

@@ -163,6 +163,25 @@ unsigned int merge(unsigned int hi, unsigned int lo)
 #include "logger.h"
 #include "tabulate.h"
 
+struct data {
+    int ma;
+    bool mb;
+    std::string mc;
+    data() : ma(1), mb(true), mc("str") {}
+};
+
+namespace logging
+{
+template <>
+inline std::string to_string<data>(const std::vector<data> &v)
+{
+    tabulate::Table table("i", "veryveryverylong", "balabala");
+    for (auto const &item : v) { table.add(item.ma, item.mb, item.mc); }
+
+    return table.xterm();
+}
+} // namespace logging
+
 int main()
 {
     int a = 1;
@@ -170,8 +189,9 @@ int main()
     std::string c = "three";
     bool d = true;
     std::vector<int> e{1, 3, 5, 7, 9};
+    std::vector<data> f{data(), data(), data(), data(), data()};
 
-    log_always(a, b, c, d, e);
+    log_always(std::cout, a, b, c, d, e, f, f[0].mc);
 
 #if 0
     BENCHER(reverse_, DoNotOptimize(reverse(__j)), 20, 20000000);
