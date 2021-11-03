@@ -52,10 +52,22 @@ inline std::string to_string(const std::vector<Value> &v)
 
 namespace logging
 {
-template <typename Value>
-inline std::ostream &print(std::ostream &os, const std::string &name, const Value &v, const std::string sep = " = ")
+namespace details
 {
-    return os << name << sep << to_string(v);
+struct value {
+    template <typename T>
+    value(const std::string &name, const T &data) : name(name), data(logging::to_string(data))
+    {
+    }
+
+    std::string name;
+    std::string data;
+};
+} // namespace details
+
+inline std::ostream &print(std::ostream &os, const details::value &value, const std::string sep = " = ")
+{
+    return os << value.name << sep << value.data;
 }
 } // namespace logging
 
@@ -87,10 +99,11 @@ inline std::ostream &print(std::ostream &os, const std::string &name, const Valu
 #define __custom_log(os, P, ...)       (__print_0(os, P, __VA_ARGS__), os << std::endl)
 #define __custom_ilog(os, P, sep, ...) (__log_head(os, sep), __custom_log(os, P, __VA_ARGS__))
 
-#define __log_P_1(os, arg) logging::print(os, std::string(NAMEOF(arg)), arg)
+#define __log_P_1(os, arg) logging::print(os, logging::details::value(std::string(NAMEOF(arg)), arg))
 #define __log_P_2(os, arg) __log_P_1(os, arg) << std::endl
 
-#define __ilog_P_1(os, arg) logging::print(os, std::string("\t") + std::string(NAMEOF(arg)), arg)
+#define __ilog_P_1(os, arg) \
+    logging::print(os, logging::details::value(std::string("\t") + std::string(NAMEOF(arg)), arg))
 #define __ilog_P_2(os, arg) __ilog_P_1(os, arg) << std::endl
 
 #define log_always(os, ...)   __log_0(os, __nargs_0(__VA_ARGS__), __VA_ARGS__)
@@ -98,6 +111,7 @@ inline std::ostream &print(std::ostream &os, const std::string &name, const Valu
 #define __log_1(os, num, ...) __log_arg_##num(os, __VA_ARGS__)
 #define __log_arg_1(os, ...)  __custom_ilog(os, __log_P_, " ", __VA_ARGS__)
 #define __log_arg_2(os, ...)  __custom_ilog(os, __ilog_P_, "\n", __VA_ARGS__)
+
 
 namespace logging
 {

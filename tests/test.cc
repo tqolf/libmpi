@@ -160,8 +160,20 @@ unsigned int merge(unsigned int hi, unsigned int lo)
     }
 }
 
+#include "logger.h"
+#include "tabulate.h"
+
 int main()
 {
+    int a = 1;
+    float b = 2.0;
+    std::string c = "three";
+    bool d = true;
+    std::vector<int> e{1, 3, 5, 7, 9};
+
+    log_always(a, b, c, d, e);
+
+#if 0
     BENCHER(reverse_, DoNotOptimize(reverse(__j)), 20, 20000000);
     BENCHER(reverse_bits_, DoNotOptimize(reverse_bits(__j)), 20, 20000000);
 
@@ -181,4 +193,5 @@ int main()
     std::cout << std::hex << merge(0x09, 0x1000) << std::endl;
     std::cout << std::hex << merge(0x10, 0x1000) << std::endl;
     std::cout << std::hex << merge(0xF1, 0x1000) << std::endl;
+#endif
 }
