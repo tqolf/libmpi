@@ -191,7 +191,13 @@ int main()
     std::vector<int> e{1, 3, 5, 7, 9};
     std::vector<data> f{data(), data(), data(), data(), data()};
 
-    log_always(std::cout, a, b, c, d, e, f, f[0].mc);
+    enum flags {
+        FLAG1 = 0x1,
+        FLAG2 = 0x2,
+        FLAG3 = 0x4,
+    } g = FLAG2, h = static_cast<flags>(FLAG1|FLAG3);
+
+    llogi(a, b, c, d, e, f, f[0].mc, g, h);
 
 #if 0
     BENCHER(reverse_, DoNotOptimize(reverse(__j)), 20, 20000000);
