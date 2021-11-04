@@ -84,13 +84,12 @@ inline std::ostream &print(std::ostream &os, const details::value &value, const 
 #define __log_args_2(vec, num, ...) __log_args_3(vec, num, __VA_ARGS__)
 #define __log_args_3(vec, num, ...) __log_arg_##num(vec, __VA_ARGS__)
 
+#define __log_arg(vec, arg)        vec.emplace_back(std::string(NAMEOF(arg)), logging::to_string(arg))
 #define __log_arg_1(vec, arg)      __log_arg(vec, arg)
 #define __log_arg_2(vec, arg, ...) __log_arg(vec, arg), __loop(vec, __VA_ARGS__)
 #define __loop(vec, ...)           __loop_helper __empty_helper()()(vec, __VA_ARGS__)
 #define __loop_helper()            __log_args_1
 #define __empty_helper()
-
-#define __log_arg(vec, arg) vec.emplace_back(std::string(NAMEOF(arg)), logging::to_string(arg))
 
 #define log_always(os, ...)                                                                   \
     do {                                                                                      \
@@ -110,7 +109,10 @@ inline std::ostream &print(std::ostream &os, const details::value &value, const 
                     while (std::getline(ss, line, '\n')) { os << "\t" << line << std::endl; } \
                 }                                                                             \
             } else {                                                                          \
-                if (indent) { os << "\t"; }                                                   \
+                if (indent) {                                                                 \
+                    os << "\t";                                                               \
+                    indent = false;                                                           \
+                }                                                                             \
                 os << s.name << " = " << s.data;                                              \
             }                                                                                 \
             if ((i != vec.size() - 1) && !ml) { os << ", "; }                                 \
