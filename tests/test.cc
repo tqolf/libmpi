@@ -1,12 +1,25 @@
+#include <stdio.h>
 #include <stdint.h>
 #include <assert.h>
 #include <iostream>
 
+#include "logger.h"
+#include "tabulate.h"
 #include "benchmark.h"
+
+template <typename T>
+T reverse(T n);
 
 unsigned char reverse(unsigned char n)
 {
 #ifdef USE_SMALL_LOOKUP_TABLE
+    // clang-format off
+    static const unsigned char lookup[16] = {
+        0x0, 0x8, 0x4, 0xc, 0x2, 0xa, 0x6, 0xe,
+        0x1, 0x9, 0x5, 0xd, 0x3, 0xb, 0x7, 0xf,
+    };
+    // clang-format on
+
     // Detailed breakdown of the math
     //  + lookup reverse of bottom nibble
     //  |       + grab bottom nibble
@@ -16,15 +29,12 @@ unsigned char reverse(unsigned char n)
     //  |       |        |     | |       + grab top nibble
     //  V       V        V     V V       V
     // (lookup[n&0b1111] << 4) | lookup[n>>4]
-    static const unsigned char lookup[16] = {
-        0x0, 0x8, 0x4, 0xc, 0x2, 0xa, 0x6, 0xe, 0x1, 0x9, 0x5, 0xd, 0x3, 0xb, 0x7, 0xf,
-    };
 
     // Reverse the top and bottom nibble then swap them.
     return (lookup[n & 0b1111] << 4) | lookup[n >> 4];
 #else
     // clang-format off
-    static const unsigned char table[] = {
+    static const unsigned char reversed[] = {
         0x00, 0x80, 0x40, 0xc0, 0x20, 0xa0, 0x60, 0xe0,
         0x10, 0x90, 0x50, 0xd0, 0x30, 0xb0, 0x70, 0xf0,
         0x08, 0x88, 0x48, 0xc8, 0x28, 0xa8, 0x68, 0xe8,
@@ -59,7 +69,8 @@ unsigned char reverse(unsigned char n)
         0x1f, 0x9f, 0x5f, 0xdf, 0x3f, 0xbf, 0x7f, 0xff,
     };
     // clang-format on
-    return table[n];
+
+    return reversed[n];
 #endif
 }
 
@@ -68,45 +79,20 @@ unsigned int reverse(unsigned int n)
     unsigned int m = n;
     unsigned char *p = (unsigned char *)(&m);
 
-    for (unsigned i = 0; i < sizeof(unsigned int) / 2; i++) {
-        unsigned char h = p[i], l = p[sizeof(unsigned int) - 1 - i];
-        p[i] = reverse(l);
-        p[sizeof(unsigned int) - 1 - i] = reverse(h);
-    }
-
-    return m;
-}
-
-unsigned int reverse_1(unsigned int n)
-{
-    unsigned int m = n;
-    unsigned char *p = (unsigned char *)(&m);
-
     if (sizeof(unsigned int) == 4) {
-        unsigned int r = reverse(p[3]);
-        r = r << 8 | reverse(p[2]);
-        r = r << 8 | reverse(p[1]);
-        r = r << 8 | reverse(p[0]);
+        return (reverse(p[0]) << 24) | (reverse(p[1]) << 16) | (reverse(p[2]) << 8) | reverse(p[3]);
+    } else {
+        for (unsigned i = 0; i < sizeof(unsigned int) / 2; i++) {
+            unsigned char h = p[i], l = p[sizeof(unsigned int) - 1 - i];
+            p[i] = reverse(l);
+            p[sizeof(unsigned int) - 1 - i] = reverse(h);
+        }
 
-        return r;
+        return m;
     }
-
-    return m;
 }
 
-unsigned int reverse_2(unsigned int n)
-{
-    unsigned int m = n;
-    unsigned char *p = (unsigned char *)(&m);
-
-    if (sizeof(unsigned int) == 4) {
-        return (reverse(p[3]) << 24) | (reverse(p[2]) << 16) | (reverse(p[1]) << 8) | reverse(p[0]);
-    }
-
-    return m;
-}
-
-unsigned int reverse_bits(unsigned int num)
+unsigned int reverse_ref(unsigned int num)
 {
     unsigned int count = sizeof(num) * 8 - 1;
     unsigned int reverse_num = num;
@@ -146,28 +132,20 @@ static int clz(unsigned int x)
     return debruijn32[x * 0x076be629 >> 27];
 }
 
-unsigned int merge(unsigned int hi, unsigned int lo)
+int merge(unsigned int &merged, unsigned int hi, unsigned int lo)
 {
-    unsigned int hclz = clz(hi);
-    unsigned int lclz = clz(lo);
-    if (lclz + hclz >= sizeof(unsigned int) * 8) {
-        unsigned int fbits = lclz + hclz - sizeof(unsigned int) * 8;
-        std::cout << "unused bits: " << fbits << std::endl;
+    auto hbits = clz(hi);
+    auto lbits = clz(lo);
+    merged = lo | reverse(hi);
 
-        return lo | reverse(hi);
-    } else {
-        return lo;
-    }
+    return static_cast<int>(lbits + hbits) - static_cast<int>(sizeof(unsigned int) * 8);
 }
-
-#include "logger.h"
-#include "tabulate.h"
 
 struct data {
     int ma;
     bool mb;
     std::string mc;
-    data() : ma(1), mb(true), mc("str") {}
+    data() : ma(1), mb(true), mc("long string") {}
 };
 
 namespace logging
@@ -175,8 +153,22 @@ namespace logging
 template <>
 inline std::string to_string<data>(const std::vector<data> &v)
 {
-    tabulate::Table table("i", "veryveryverylong", "balabala");
+    using namespace tabulate;
+    Table table("i", "veryveryverylong", "balabala");
+    table[0].format().align(Align::center);
     for (auto const &item : v) { table.add(item.ma, item.mb, item.mc); }
+
+    // Iterate over rows in the table
+    size_t index = 0;
+    for (auto &row : table) {
+        row.format().styles(Style::bold);
+
+        // Set blue background color for alternate rows
+        if (index > 0 && index % 2 == 0) {
+            for (auto &cell : row) { cell.format().background_color(Color::blue); }
+        }
+        index += 1;
+    }
 
     return table.xterm();
 }
@@ -184,40 +176,55 @@ inline std::string to_string<data>(const std::vector<data> &v)
 
 int main()
 {
-    int a = 1;
-    float b = 2.0;
-    std::string c = "three";
-    bool d = true;
-    std::vector<int> e{1, 3, 5, 7, 9};
-    std::vector<data> f{data(), data(), data(), data(), data()};
+    {
+        int a = 1;
+        float b = 2.0;
+        std::string c = "three";
+        bool d = true;
+        std::vector<int> e{1, 3, 5, 7, 9};
+        std::vector<data> f{data(), data(), data(), data(), data()};
 
-    enum flags {
-        FLAG1 = 0x1,
-        FLAG2 = 0x2,
-        FLAG3 = 0x4,
-    } g = FLAG2, h = static_cast<flags>(FLAG1|FLAG3);
+        enum flags {
+            FLAG1 = 0x1,
+            FLAG2 = 0x2,
+            FLAG3 = 0x4,
+        } g = FLAG2,
+          h = static_cast<flags>(FLAG1 | FLAG3);
 
-    llogi(a, b, c, d, e, f, f[0].mc, g, h);
+        llogi(a, b, c, d, e, f, f[0].mc, g, h);
+    }
 
-#if 0
-    BENCHER(reverse_, DoNotOptimize(reverse(__j)), 20, 20000000);
-    BENCHER(reverse_bits_, DoNotOptimize(reverse_bits(__j)), 20, 20000000);
+    {
+        struct {
+            unsigned int hi, lo;
+        } datas[] = {
+            {.hi = 0x01, .lo = 0x1000},
+            {.hi = 0x09, .lo = 0x1000},
+            {.hi = 0x10, .lo = 0x1000},
+            {.hi = 0xF1, .lo = 0x1000},
+        };
 
-    std::cout << "reverse(): avg = " << reverse_avg << ", stddev = " << reverse_stddev << std::endl;
-    std::cout << "reverse_bits(): avg = " << reverse_bits_avg << ", stddev = " << reverse_bits_stddev << std::endl;
-    std::cout << "perf-diff: " << reverse_bits_avg / reverse_avg << std::endl;
+        std::cout << std::endl;
+        for (auto const &data : datas) {
+            int rbits;
+            unsigned int merged;
 
-    BENCHER(reverse1_, DoNotOptimize(reverse_1(__j)), 20, 20000000);
-    std::cout << "reverse1(): avg = " << reverse1_avg << ", stddev = " << reverse1_stddev << std::endl;
-    std::cout << "perf-diff: " << reverse_bits_avg / reverse1_avg << std::endl;
+            printf("merge(0x%02X, 0x%04X): ", data.hi, data.lo);
+            if ((rbits = merge(merged, data.hi, data.lo)) >= 0) {
+                printf("0x%08X, remain-bits = %2d\n", merged, rbits);
+            } else {
+                printf("failed.\n");
+            }
+        }
+    }
 
-    BENCHER(reverse2_, DoNotOptimize(reverse_2(__j)), 20, 20000000);
-    std::cout << "reverse2(): avg = " << reverse2_avg << ", stddev = " << reverse2_stddev << std::endl;
-    std::cout << "perf-diff: " << reverse_bits_avg / reverse2_avg << std::endl;
+    {
+        BENCHER(reverse_, DoNotOptimize(reverse(__j)), 20, 20000000);
+        BENCHER(reverse_ref_, DoNotOptimize(reverse_ref(__j)), 20, 20000000);
 
-    std::cout << std::hex << merge(0x01, 0x1000) << std::endl;
-    std::cout << std::hex << merge(0x09, 0x1000) << std::endl;
-    std::cout << std::hex << merge(0x10, 0x1000) << std::endl;
-    std::cout << std::hex << merge(0xF1, 0x1000) << std::endl;
-#endif
+        std::cout << std::endl;
+        std::cout << "reverse: avg = " << reverse_avg << ", stddev = " << reverse_stddev << std::endl;
+        std::cout << "reverse(ref): avg = " << reverse_ref_avg << ", stddev = " << reverse_ref_stddev << std::endl;
+        std::cout << "perf-diff: " << reverse_ref_avg / reverse_avg << std::endl;
+    }
 }
