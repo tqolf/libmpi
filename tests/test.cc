@@ -142,10 +142,10 @@ int merge(unsigned int &merged, unsigned int hi, unsigned int lo)
 }
 
 struct data {
-    int ma;
-    bool mb;
+    std::string ma;
+    std::string mb;
     std::string mc;
-    data() : ma(1), mb(true), mc("long string") {}
+    data(const std::string &a, const std::string &b, const std::string &c) : ma(a), mb(b), mc(c) {}
 };
 
 namespace logging
@@ -154,7 +154,7 @@ template <>
 inline std::string to_string<data>(const std::vector<data> &v)
 {
     using namespace tabulate;
-    Table table("i", "veryveryverylong", "balabala");
+    Table table("Company", "Contact", "Country");
     table[0].format().align(Align::center);
     for (auto const &item : v) { table.add(item.ma, item.mb, item.mc); }
 
@@ -182,7 +182,14 @@ int main()
         std::string c = "three";
         bool d = true;
         std::vector<int> e{1, 3, 5, 7, 9};
-        std::vector<data> f{data(), data(), data(), data(), data()};
+        std::vector<data> f{
+            data("Alfreds Futterkiste", "Maria Anders", "Germany"),
+            data("Centro comercial Moctezuma", "Francisco Chang", "Mexico"),
+            data("Ernst Handel", "Roland Mendel", "Austria"),
+            data("Island Trading", "Helen Bennett", "UK"),
+            data("Laughing Bacchus Winecellars", "Yoshi Tannamuri", "Canada"),
+            data("Magazzini Alimentari Riuniti", "Giovanni Rovelli", "Italy"),
+        };
 
         enum flags {
             FLAG1 = 0x1,
