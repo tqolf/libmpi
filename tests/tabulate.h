@@ -1,5 +1,3 @@
-#pragma once
-
 #include <string>
 #include <vector>
 #include <cctype>
@@ -13,6 +11,7 @@
 #include <iostream>
 #include <algorithm>
 #include <regex>
+#include <iomanip>
 
 #if defined(__GNUC__)
 #pragma GCC diagnostic ignored "-Wswitch-enum"
@@ -239,7 +238,7 @@ template <>
 inline std::string to_string<TrueColor>(const TrueColor &v)
 {
     std::stringstream ss;
-    ss << "#" << std::hex << v.hex;
+    ss << "#" << std::setfill('0') << std::setw(6) << std::hex << v.hex;
 
     return std::string(ss.str());
 }
@@ -575,14 +574,12 @@ static std::string stringformatter(const std::string &str, TrueColor foreground_
         }
         applied += "\">";
     }
-
-    if (bold) { applied += "**"; }
-    if (crossed) { applied += "~~"; }
     applied += str;
-    if (crossed) { applied += "~~"; }
-    if (bold) { applied += "**"; }
-
     if (have) { applied += "</span>"; }
+
+    if (bold) { applied = "**" + applied; }
+    if (crossed) { applied = "~~" + applied + "~~"; }
+    if (bold) { applied += "**"; }
 
     return applied;
 }
@@ -1673,11 +1670,13 @@ class Row {
             auto &corner = cells[0]->format().corners.bottom_left;
             seperator += stringformatter(corner.content, corner.color, corner.background_color, {});
         }
-        for (auto const &cell : cells) {
-            auto &borders = cell->format().borders;
-            auto &corner = cell->format().corners.bottom_right;
 
-            size_t size = borders.left.padding + cell->width() + borders.right.padding;
+        for (size_t i = 0; i < cells.size(); i++) {
+            auto const &cell = *cells[i];
+            auto const &borders = cell.format().borders;
+            auto const &corner = cell.format().corners.bottom_right;
+
+            size_t size = borders.left.padding + cell.width() + borders.right.padding;
             seperator += stringformatter(repeate_to_size(borders.bottom.content, size), borders.bottom.color,
                                          borders.bottom.background_color, {});
             seperator += stringformatter(corner.content, corner.color, corner.background_color, {});
@@ -1776,6 +1775,61 @@ class Row {
             }
 
             lines.push_back(line);
+        }
+
+        return lines;
+    }
+
+    std::vector<std::string> dump(StringFormatter strfmt, BorderFormatter borfmt, CornerFormatter corfmt, bool showtop,
+                                  bool showbottom) const
+    {
+        size_t max_height = 0;
+        std::vector<std::vector<std::string>> dumplines;
+        for (auto const &cell : cells) {
+#ifdef __DEBUG__
+            std::cout << "cell: " << cell->get() << std::endl;
+            std::cout << "\tcolor: " << to_string(cell->color()) << std::endl;
+            std::cout << "\tbackground_color: " << to_string(cell->background_color()) << std::endl;
+            if (!cell->styles().empty()) {
+                std::cout << "\tstyles: ";
+                for (auto &style : cell->styles()) {
+                    std::cout << to_string(style);
+                    if (&style != &cell->styles().back()) { std::cout << " "; }
+                }
+                std::cout << std::endl;
+            }
+#endif
+            std::vector<std::string> wrapped;
+            if (cell->width() == 0) {
+                wrapped.push_back(cell->get());
+            } else {
+                wrapped = wrap_to_lines(cell->get(), cell->width(), cell->format().locale(), true);
+#ifdef __DEBUG__
+                std::cout << "wrap to " << wrapped.size() << " lines" << std::endl;
+#endif
+            }
+            dumplines.push_back(wrapped);
+            max_height = std::max(wrapped.size(), max_height);
+        }
+
+        std::vector<std::string> lines;
+        for (size_t i = 0; i < cells.size(); i++) {
+            auto const cell = cells[i];
+            auto const prev = i > 0 ? cells[i - 1] : nullptr;
+            auto const next = i < cells.size() ? cells[i + 1] : nullptr;
+            // padding top
+            if (showtop) {
+                //
+            }
+
+            // cell content
+            {
+            }
+
+            // padding bottom
+            if (showbottom) {
+                //
+            }
         }
 
         return lines;
