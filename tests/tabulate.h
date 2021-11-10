@@ -538,8 +538,6 @@ static std::string stringformatter(const std::string &str, TrueColor foreground_
 
     bool have = !foreground_color.none() || !background_color.none() || styles.size() != 0;
 
-    bool bold = false;
-    bool crossed = false;
     if (have) {
         applied += "<span style=\"";
 
@@ -556,16 +554,20 @@ static std::string stringformatter(const std::string &str, TrueColor foreground_
         for (auto const &style : styles) {
             switch (style) {
                 case Style::bold:
-                    bold = true;
-                    break;
-                case Style::crossed:
-                    crossed = true;
+                    applied += "font-weight:bold;";
                     break;
                 case Style::italic:
                     applied += "font-style:italic;";
                     break;
+                // text-decoration: none|underline|overline|line-through|blink
+                case Style::crossed:
+                    applied += "text-decoration:line-through;";
+                    break;
                 case Style::underline:
                     applied += "text-decoration:underline;";
+                    break;
+                case Style::blink:
+                    applied += "text-decoration:blink;";
                     break;
                 default:
                     // unsupported, do nothing
@@ -574,12 +576,10 @@ static std::string stringformatter(const std::string &str, TrueColor foreground_
         }
         applied += "\">";
     }
-    applied += str;
-    if (have) { applied += "</span>"; }
 
-    if (bold) { applied = "**" + applied; }
-    if (crossed) { applied = "~~" + applied + "~~"; }
-    if (bold) { applied += "**"; }
+    applied += str;
+
+    if (have) { applied += "</span>"; }
 
     return applied;
 }
