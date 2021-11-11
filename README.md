@@ -27,3 +27,5 @@ Multiple Precision Integer and Relevant Algorithms, such as Bignum, RSA, DH, ECD
 | montgomery-exp-consttime(mpi vs ossl) | 1.43875e+07  |       1.41059e+08       |        0.0229953         |      <span style="color:#008000;font-weight:bold;text-decoration:blink;">9.80427</span>      |
 |          MUL2(a * 2 = a + a)          |   36.0218    |      <span style="font-style:italic;">No Reference</span>       |         0.16662          |        N/A        |
 |         MUL2(a * 2 = a << 1)          |    79.824    |      <span style="font-style:italic;">No Reference</span>       |         0.204801         |        N/A        |
+
+<span style="color:#008000;font-weight:bold;text-decoration:blink;">12.7804</span>
