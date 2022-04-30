@@ -205,7 +205,8 @@ class ProfilerCache {
     ProfilerCache() {}
     ~ProfilerCache()
     {
-        tabulate::Table table(title);
+        tabulate::Table table;
+        table.set_title(title);
         make_summary_table(table);
 
         /**
