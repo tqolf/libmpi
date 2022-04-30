@@ -20,7 +20,7 @@ INSTALL(FILES ${CMAKE_BINARY_DIR}/include/mpn/mpn-conf.h
 )
 
 ADD_LIBRARY(mpn mpn-binary.c mpn-asm.c mpn-optimizer.c mpn-montgomery.c)
-TARGET_STRIP_PATH_PREFIX(mpn)
+TARGET_CONFIGURE(mpn)
 INSTALL(TARGETS mpn ARCHIVE DESTINATION lib LIBRARY DESTINATION lib)
 
 OPTION(MPN_NO_ASM "disable asm for mpn" OFF)

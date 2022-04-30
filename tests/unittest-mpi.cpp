@@ -1361,8 +1361,6 @@ TEST(RSA, cipher)
 int main(int argc, char **argv)
 {
     verifier::get()->set_verbose(true);
-
-    CRYPTO_mem_ctrl(CRYPTO_MEM_CHECK_ON);
     testing::InitGoogleTest(&argc, argv);
 
     return RUN_ALL_TESTS();

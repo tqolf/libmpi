@@ -17,6 +17,16 @@
 #include <time.h>
 #include <math.h>
 
+#include <string>
+#include <regex>
+#include <algorithm>
+#include <iostream>
+#include <functional>
+#include <map>
+#include <vector>
+#include <unordered_map>
+#include "tabulate.h"
+
 template <class Tp>
 inline void DoNotOptimize(Tp const &value)
 {
@@ -62,14 +72,6 @@ inline void DoNotOptimize(Tp &value)
         prefix##stddev = static_cast<double>(sqrt(__t));                                                      \
     } while (0)
 
-#include <string>
-#include <vector>
-#include <regex>
-#include <algorithm>
-#include <iostream>
-#include <functional>
-#include "tabulate.h"
-
 class ProfilerCache {
   public:
     static ProfilerCache &Instance()
@@ -85,7 +87,7 @@ class ProfilerCache {
 
     void mark_as_ref(const std::string &s)
     {
-        auto it = std::find_if(collections.begin(), collections.end(), [&](const value &another) {
+        auto it = std::find_if(collections.begin(), collections.end(), [&](const ProfileData &another) {
             return s == another.name;
         });
         if (it != collections.end()) {
@@ -97,12 +99,12 @@ class ProfilerCache {
     }
 
   private:
-    struct value {
+    struct ProfileData {
         double avg;
         double stddev;
         std::string name;
         std::vector<std::string> keys;
-        value(const std::string &name_, double avg_, double stddev_) : avg(avg_), stddev(stddev_), name(name_)
+        ProfileData(const std::string &name_, double avg_, double stddev_) : avg(avg_), stddev(stddev_), name(name_)
         {
             std::regex pattern("([\\w\\-]+)");
             auto key_end = std::sregex_iterator();
@@ -113,14 +115,11 @@ class ProfilerCache {
             }
         }
     };
-    std::vector<value> references;
-    std::vector<value> collections;
+    std::vector<ProfileData> references;
+    std::vector<ProfileData> collections;
 
-    void summary()
+    void make_summary_table(tabulate::Table &table)
     {
-        using namespace tabulate;
-        Table table;
-
         if (references.size() == 0) {
             table.add("description", "average time(nanoseconds)", "coefficient of variation");
         } else {
@@ -131,7 +130,7 @@ class ProfilerCache {
         int i = 0;
         for (auto const &v : collections) {
             if (references.size() != 0) {
-                auto ref = std::find_if(references.begin(), references.end(), [&](const value &another) -> bool {
+                auto ref = std::find_if(references.begin(), references.end(), [&](const ProfileData &another) -> bool {
                     return v.keys[0] == another.keys[0];
                 });
                 if (ref != references.end()) {
@@ -170,59 +169,64 @@ class ProfilerCache {
 
                     i++;
                     if (diff >= 1.2) {
-                        table[i][4].format().color(Color::green);
+                        table[i][4].format().color(tabulate::Color::green);
                         if (diff >= 2.0) {
-                            table[i][4].format().styles(Style::bold);
+                            table[i][4].format().styles(tabulate::Style::bold);
                             if (diff >= 5.0) {
-                                table[i][4].format().styles(Style::blink);
+                                table[i][4].format().styles(tabulate::Style::blink);
                             }
                         }
                     } else if (diff <= 0.8) {
-                        table[i][4].format().color(Color::red);
+                        table[i][4].format().color(tabulate::Color::red);
                         if (diff <= 0.5) {
-                            table[i][4].format().styles(Style::bold);
+                            table[i][4].format().styles(tabulate::Style::bold);
                             if (diff <= 0.2) {
-                                table[i][4].format().styles(Style::blink);
+                                table[i][4].format().styles(tabulate::Style::blink);
                             }
                         }
                     }
                 } else {
                     auto &row = table.add(v.name, v.avg, "No Reference", v.stddev / v.avg, "N/A");
-                    row[2].format().styles(Style::italic);
+                    row[2].format().styles(tabulate::Style::italic);
                 }
             } else {
                 table.add(v.name, v.avg, v.stddev / v.avg);
             }
         }
-        table.format().align(Align::center);
-
-        // awk '/BEGIN/{ f = 1; next } /END/{ f = 0 } f' data.txt
-        std::cout << "TERMINAL BEGIN" << std::endl;
-        std::cout << table.xterm() << std::endl;
-        std::cout << "TERMINAL END" << std::endl;
-
-        std::cout << "MARKDOWN BEGIN" << std::endl;
-        std::cout << table.markdown() << std::endl;
-        std::cout << "MARKDOWN END" << std::endl;
+        table.format().align(tabulate::Align::center);
     }
 
     ProfilerCache() {}
     ~ProfilerCache()
     {
-        summary();
+        tabulate::Table table;
+        make_summary_table(table);
+
+        /**
+         * output all supported format, and you can catch one or more via
+         *
+         * awk '/BEGIN/{ f = 1; next } /END/{ f = 0 } f' all-formats.txt
+         *
+         */
+        std::cout << "-----BEGIN XTERN TABLE-----" << std::endl;
+        std::cout << table.xterm() << std::endl;
+        std::cout << "-----END XTERN TABLE-----" << std::endl;
+
+        std::cout << "-----BEGIN MARKDOWN TABLE-----" << std::endl;
+        std::cout << table.markdown() << std::endl;
+        std::cout << "-----END MARKDOWN TABLE-----" << std::endl;
     }
 };
 
 class Profiler {
   public:
     Profiler(const std::string &name, std::function<bool(void)> task, size_t repeat = 0, const size_t N = 5)
-        : ok(true), title(name)
     {
         if (repeat == 0) { // auto checking
             struct timespec ts, te;
             clock_gettime(CLOCK_MONOTONIC, &ts);
             if (!task()) {
-                ok = false;
+                std::cout << name << ": failed" << std::endl;
                 return;
             }
             clock_gettime(CLOCK_MONOTONIC, &te);
@@ -241,36 +245,8 @@ class Profiler {
             }
         }
 
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wvla-extension"
-#elif defined(__GNUC__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wvla-extension"
-#endif
         BENCHER(_, task(), N, repeat);
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#elif defined(__GNUC__)
-#pragma GCC diagnostic pop
-#endif
-        avg = _avg;
-        stddev = _stddev;
-        ProfilerCache::Instance().insert(title, avg, stddev);
+        ProfilerCache::Instance().insert(name, _avg, _stddev);
+        std::cout << name << ": avg = " << _avg << ", stddev = " << _stddev << std::endl;
     }
-
-    ~Profiler()
-    {
-        if (ok) {
-            std::cout << title << ": avg = " << avg << ", stddev = " << stddev << std::endl;
-        } else {
-            std::cout << title << ": failed" << std::endl;
-        }
-    }
-
-  private:
-    bool ok;
-    double avg;
-    double stddev;
-    std::string title;
 };

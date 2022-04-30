@@ -26,7 +26,7 @@ jobs:
           ${{github.workspace}}/build/tests/benchmark | tee ${{github.workspace}}/build/benchmark.txt
           cat ${{github.workspace}}/docs/README.template.md > ${{github.workspace}}/README.md
           echo -e '## Benchmark(libmpi VS openssl)\n' >> ${{github.workspace}}/README.md
-          awk '/MARKDOWN BEGIN/{ f = 1; next } /MARKDOWN END/{ f = 0 } f' benchmark.txt >> ${{github.workspace}}/README.md
+          awk '/-----BEGIN MARKDOWN TABLE-----/{ f = 1; next } /-----END MARKDOWN TABLE-----/{ f = 0 } f' benchmark.txt >> ${{github.workspace}}/README.md
           git add ${{github.workspace}}/README.md
 
       - name: Commit files
