@@ -14,11 +14,7 @@ MACRO (target_configure target)
     ENDIF ()
   ENDIF ()
 
-  # warnings
-  IF (MSVC)
-    TARGET_COMPILE_DEFINITIONS(${target} PRIVATE _CRT_SECURE_NO_WARNINGS)
-    TARGET_COMPILE_OPTIONS(${target} PRIVATE /Oy /W3)
-  ELSE ()
+  IF (STRICT_WARNING)
     # Note clang-cl is odd and sets both CLANG and MSVC.
     # We base our configuration primarily on our normal Clang one.
     TARGET_COMPILE_OPTIONS(
@@ -122,29 +118,6 @@ MACRO (target_configure target)
         $<$<COMPILE_LANG_AND_ID:CXX,AppleClang,Clang>:-Wmissing-prototypes>
     )
 
-    IF (SMALL_FOOTPRINT)
-      TARGET_COMPILE_OPTIONS(
-        ${target}
-        PRIVATE -Os
-                $<$<COMPILE_LANG_AND_ID:C,AppleClang,Clang>:-flto=thin>
-                $<$<COMPILE_LANG_AND_ID:CXX,AppleClang,Clang>:-flto=thin>
-                $<$<COMPILE_LANG_AND_ID:ASM,AppleClang,Clang>:-flto=thin>
-                $<$<COMPILE_LANG_AND_ID:C,GNUCC,GNUCXX>:--specs=nosys.specs
-                --specs=nano.specs>
-                $<$<COMPILE_LANG_AND_ID:CXX,GNUCC,GNUCXX>:--specs=nosys.specs
-                --specs=nano.specs>
-                $<$<COMPILE_LANG_AND_ID:ASM,GNUCC,GNUCXX>:--specs=nosys.specs
-                --specs=nano.specs>
-      )
-    ENDIF ()
-    TARGET_COMPILE_OPTIONS(
-      ${target} PRIVATE $<IF:$<CONFIG:Debug>,-O0 -g3,-O2 -g>
-    )
-
-    TARGET_COMPILE_DEFINITIONS(
-      ${target} PRIVATE $<IF:$<CONFIG:Debug>,__DEBUG__,__RELEASE__ NDEBUG>
-    )
-
     TARGET_COMPILE_OPTIONS(
       ${target} PRIVATE $<$<COMPILE_LANG_AND_ID:C,GNUCC>:-Wc++-compat>
     )
@@ -154,7 +127,33 @@ MACRO (target_configure target)
               $<$<VERSION_GREATER:$<CXX_COMPILER_VERSION>,4.7.99>:-Wshadow>
               # $<$<VERSION_GREATER:$<ASM_COMPILER_VERSION>,4.7.99>:-Wshadow>
     )
+  ELSE ()
+    TARGET_COMPILE_OPTIONS(
+      ${target} PRIVATE $<$<COMPILE_LANGUAGE:C,CXX,ASM>: -Wall -Wextra>
+    )
   ENDIF ()
+
+  IF (SMALL_FOOTPRINT)
+    TARGET_COMPILE_OPTIONS(
+      ${target}
+      PRIVATE -Os
+              $<$<COMPILE_LANG_AND_ID:C,AppleClang,Clang>:-flto=thin>
+              $<$<COMPILE_LANG_AND_ID:CXX,AppleClang,Clang>:-flto=thin>
+              $<$<COMPILE_LANG_AND_ID:ASM,AppleClang,Clang>:-flto=thin>
+              $<$<COMPILE_LANG_AND_ID:C,GNUCC,GNUCXX>:--specs=nosys.specs
+              --specs=nano.specs>
+              $<$<COMPILE_LANG_AND_ID:CXX,GNUCC,GNUCXX>:--specs=nosys.specs
+              --specs=nano.specs>
+              $<$<COMPILE_LANG_AND_ID:ASM,GNUCC,GNUCXX>:--specs=nosys.specs
+              --specs=nano.specs>
+    )
+  ENDIF ()
+
+  TARGET_COMPILE_OPTIONS(${target} PRIVATE $<IF:$<CONFIG:Debug>,-O0 -g3,-O2 -g>)
+
+  TARGET_COMPILE_DEFINITIONS(
+    ${target} PRIVATE $<IF:$<CONFIG:Debug>,__DEBUG__,__RELEASE__ NDEBUG>
+  )
 
   # Enable position-independent code globally.
   # True by default for SHARED and MODULE library targets and False otherwise
@@ -336,7 +335,7 @@ MACRO (target_configure target)
       ${target}
       PUBLIC
         $<$<COMPILE_LANG_AND_ID:C,AppleClang,Clang,GNUCC,GNUCXX>:-std=gnu11>
-        $<$<COMPILE_LANG_AND_ID:CXX,AppleClang,Clang,GNUCC,GNUCXX>:-std=gnu++14>
+        $<$<COMPILE_LANG_AND_ID:CXX,AppleClang,Clang,GNUCC,GNUCXX>:-std=gnu++17>
     )
   ENDIF ()
 

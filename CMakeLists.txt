@@ -4,6 +4,8 @@ PROJECT("Cryptograph Algorithms Implementation")
 INCLUDE(CMakePackageConfigHelpers)
 INCLUDE(cmake/target_configure.cmake)
 
+ADD_COMPILE_OPTIONS(-Wno-deprecated-declarations)
+
 IF (NOT DEFINED ARCH)
   # MATCHES "^(os|ios|android|linux|win32)$
   IF (${CMAKE_SYSTEM_PROCESSOR} MATCHES "^(x86_64|amd64)$")
