@@ -98,6 +98,11 @@ class ProfilerCache {
         }
     }
 
+    void set_title(std::string title)
+    {
+        this->title = std::move(title);
+    }
+
   private:
     struct ProfileData {
         double avg;
@@ -115,6 +120,7 @@ class ProfilerCache {
             }
         }
     };
+    std::string title;
     std::vector<ProfileData> references;
     std::vector<ProfileData> collections;
 
@@ -199,7 +205,7 @@ class ProfilerCache {
     ProfilerCache() {}
     ~ProfilerCache()
     {
-        tabulate::Table table;
+        tabulate::Table table(title);
         make_summary_table(table);
 
         /**
@@ -208,9 +214,9 @@ class ProfilerCache {
          * awk '/BEGIN/{ f = 1; next } /END/{ f = 0 } f' all-formats.txt
          *
          */
-        std::cout << "-----BEGIN XTERN TABLE-----" << std::endl;
+        std::cout << "-----BEGIN XTERM TABLE-----" << std::endl;
         std::cout << table.xterm() << std::endl;
-        std::cout << "-----END XTERN TABLE-----" << std::endl;
+        std::cout << "-----END XTERM TABLE-----" << std::endl;
 
         std::cout << "-----BEGIN MARKDOWN TABLE-----" << std::endl;
         std::cout << table.markdown() << std::endl;

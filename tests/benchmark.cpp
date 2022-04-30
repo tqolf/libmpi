@@ -51,6 +51,8 @@ static size_t random_size(unsigned int min = 0, unsigned int max = 8192)
 
 int main(void)
 {
+    ProfilerCache::Instance().set_title("Performance: libmpi vs OpenSSL/BN");
+
     // create mpi from hex string
     // and convert mpi to hex string
     {
