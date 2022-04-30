@@ -1,3 +1,19 @@
+/**
+ * Copyright 2022 Kiran Nowak(kiran.nowak@gmail.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include <string>
 #include <vector>
 #include <cctype>
@@ -279,9 +295,13 @@ static size_t compute_width(const std::string &text, const std::string &locale, 
     std::regex e("\x1b(?:[@-Z\\-_]|\\[[0-?]*[ -/]*[@-~])");
     std::string str = std::regex_replace(text, e, "");
 
-    if (!wchar_enabled) { return str.length(); }
+    if (!wchar_enabled) {
+        return str.length();
+    }
 
-    if (str.size() == 0) { return 0; }
+    if (str.size() == 0) {
+        return 0;
+    }
 
     // XXX: Markus Kuhn's open-source wcswidth.c
 #if defined(__unix__) || defined(__unix) || defined(__APPLE__)
@@ -292,19 +312,25 @@ static size_t compute_width(const std::string &text, const std::string &locale, 
 
         // Convert from narrow std::string to wide string
         wchar_t stackbuff[128], *wstr = stackbuff;
-        if (str.size() > 128) { wstr = new wchar_t[str.size()]; }
+        if (str.size() > 128) {
+            wstr = new wchar_t[str.size()];
+        }
 
         std::mbstowcs(wstr, str.c_str(), str.size());
 
         // Compute display width of wide string
         int len = wcswidth(wstr, str.size());
 
-        if (wstr != stackbuff) { delete[] wstr; }
+        if (wstr != stackbuff) {
+            delete[] wstr;
+        }
 
         // Restore old locale
         std::locale::global(old_locale);
 
-        if (len >= 0) { return len; }
+        if (len >= 0) {
+            return len;
+        }
     }
 #endif
 
@@ -334,7 +360,9 @@ static std::vector<std::string> explode_string(const std::string &input, const s
         std::vector<size_t> indices;
         for (auto &c : separators) {
             auto index = input.find(c, start);
-            if (index != std::string::npos) { indices.push_back(index); }
+            if (index != std::string::npos) {
+                indices.push_back(index);
+            }
         }
         if (indices.size() > 0) {
             return *std::min_element(indices.begin(), indices.end());
@@ -374,7 +402,9 @@ static std::vector<std::string> wrap_to_lines(const std::string &str, size_t wid
     {
         std::string line;
         std::stringstream ss(str);
-        while (std::getline(ss, line, '\n')) { lines.push_back(line); }
+        while (std::getline(ss, line, '\n')) {
+            lines.push_back(line);
+        }
     }
 
     std::vector<std::string> wrapped_lines;
@@ -433,7 +463,9 @@ namespace xterm
 static bool has_truecolor()
 {
     const char *term = getenv("TERM");
-    if (term == NULL) { term = ""; };
+    if (term == NULL) {
+        term = "";
+    };
     static const std::vector<std::string> terms_supported_truecolor = {"iterm", "linux", "xterm-truecolor"};
 
     return std::find(terms_supported_truecolor.begin(), terms_supported_truecolor.end(), term)
@@ -504,7 +536,9 @@ static std::string stringformatter(const std::string &str, TrueColor foreground_
 
     applied += str;
 
-    if (have) { applied += "\033[00m"; }
+    if (have) {
+        applied += "\033[00m";
+    }
 
     return applied;
 }
@@ -579,7 +613,9 @@ static std::string stringformatter(const std::string &str, TrueColor foreground_
 
     applied += str;
 
-    if (have) { applied += "</span>"; }
+    if (have) {
+        applied += "</span>";
+    }
 
     return applied;
 }
@@ -1231,320 +1267,426 @@ class BatchFormat {
 
     inline BatchFormat &width(size_t value)
     {
-        for (auto &cell : cells) { cell->format().width(value); }
+        for (auto &cell : cells) {
+            cell->format().width(value);
+        }
         return *this;
     }
 
     inline BatchFormat &align(Align value)
     {
-        for (auto &cell : cells) { cell->format().align(value); }
+        for (auto &cell : cells) {
+            cell->format().align(value);
+        }
         return *this;
     }
 
     inline BatchFormat &color(TrueColor value)
     {
-        for (auto &cell : cells) { cell->format().color(value); }
+        for (auto &cell : cells) {
+            cell->format().color(value);
+        }
         return *this;
     }
 
     inline BatchFormat &background_color(TrueColor value)
     {
-        for (auto &cell : cells) { cell->format().background_color(value); }
+        for (auto &cell : cells) {
+            cell->format().background_color(value);
+        }
         return *this;
     }
 
     inline BatchFormat &styles(Style value)
     {
-        for (auto &cell : cells) { cell->format().styles(value); }
+        for (auto &cell : cells) {
+            cell->format().styles(value);
+        }
         return *this;
     }
 
     template <typename... Args>
     inline BatchFormat &styles(Args... values)
     {
-        for (auto &cell : cells) { cell->format().styles(values...); }
+        for (auto &cell : cells) {
+            cell->format().styles(values...);
+        }
         return *this;
     }
 
     inline BatchFormat &border_padding(size_t value)
     {
-        for (auto &cell : cells) { cell->format().border_padding(value); }
+        for (auto &cell : cells) {
+            cell->format().border_padding(value);
+        }
         return *this;
     }
 
     inline BatchFormat &border_left_padding(size_t value)
     {
-        for (auto &cell : cells) { cell->format().border_left_padding(value); }
+        for (auto &cell : cells) {
+            cell->format().border_left_padding(value);
+        }
         return *this;
     }
 
     inline BatchFormat &border_right_padding(size_t value)
     {
-        for (auto &cell : cells) { cell->format().border_right_padding(value); }
+        for (auto &cell : cells) {
+            cell->format().border_right_padding(value);
+        }
         return *this;
     }
 
     inline BatchFormat &border_top_padding(size_t value)
     {
-        for (auto &cell : cells) { cell->format().border_top_padding(value); }
+        for (auto &cell : cells) {
+            cell->format().border_top_padding(value);
+        }
         return *this;
     }
 
     inline BatchFormat &border_bottom_padding(size_t value)
     {
-        for (auto &cell : cells) { cell->format().border_bottom_padding(value); }
+        for (auto &cell : cells) {
+            cell->format().border_bottom_padding(value);
+        }
         return *this;
     }
 
     inline BatchFormat &border(const std::string &value)
     {
-        for (auto &cell : cells) { cell->format().border(value); }
+        for (auto &cell : cells) {
+            cell->format().border(value);
+        }
         return *this;
     }
 
     inline BatchFormat &border_color(TrueColor value)
     {
-        for (auto &cell : cells) { cell->format().border_color(value); }
+        for (auto &cell : cells) {
+            cell->format().border_color(value);
+        }
         return *this;
     }
 
     inline BatchFormat &border_background_color(TrueColor value)
     {
-        for (auto &cell : cells) { cell->format().border_background_color(value); }
+        for (auto &cell : cells) {
+            cell->format().border_background_color(value);
+        }
         return *this;
     }
 
     inline BatchFormat &border_left(const std::string &value)
     {
-        for (auto &cell : cells) { cell->format().border_left(value); }
+        for (auto &cell : cells) {
+            cell->format().border_left(value);
+        }
         return *this;
     }
 
     inline BatchFormat &border_left_color(TrueColor value)
     {
-        for (auto &cell : cells) { cell->format().border_left_color(value); }
+        for (auto &cell : cells) {
+            cell->format().border_left_color(value);
+        }
         return *this;
     }
 
     inline BatchFormat &border_left_background_color(TrueColor value)
     {
-        for (auto &cell : cells) { cell->format().border_left_background_color(value); }
+        for (auto &cell : cells) {
+            cell->format().border_left_background_color(value);
+        }
         return *this;
     }
 
     inline BatchFormat &border_right(const std::string &value)
     {
-        for (auto &cell : cells) { cell->format().border_right(value); }
+        for (auto &cell : cells) {
+            cell->format().border_right(value);
+        }
         return *this;
     }
 
     inline BatchFormat &border_right_color(TrueColor value)
     {
-        for (auto &cell : cells) { cell->format().border_right_color(value); }
+        for (auto &cell : cells) {
+            cell->format().border_right_color(value);
+        }
         return *this;
     }
 
     inline BatchFormat &border_right_background_color(TrueColor value)
     {
-        for (auto &cell : cells) { cell->format().border_right_background_color(value); }
+        for (auto &cell : cells) {
+            cell->format().border_right_background_color(value);
+        }
         return *this;
     }
 
     inline BatchFormat &border_top(const std::string &value)
     {
-        for (auto &cell : cells) { cell->format().border_top(value); }
+        for (auto &cell : cells) {
+            cell->format().border_top(value);
+        }
         return *this;
     }
 
     inline BatchFormat &border_top_color(TrueColor value)
     {
-        for (auto &cell : cells) { cell->format().border_top_color(value); }
+        for (auto &cell : cells) {
+            cell->format().border_top_color(value);
+        }
         return *this;
     }
 
     inline BatchFormat &border_top_background_color(TrueColor value)
     {
-        for (auto &cell : cells) { cell->format().border_top_background_color(value); }
+        for (auto &cell : cells) {
+            cell->format().border_top_background_color(value);
+        }
         return *this;
     }
 
     inline BatchFormat &border_bottom(const std::string &value)
     {
-        for (auto &cell : cells) { cell->format().border_bottom(value); }
+        for (auto &cell : cells) {
+            cell->format().border_bottom(value);
+        }
         return *this;
     }
 
     inline BatchFormat &border_bottom_color(TrueColor value)
     {
-        for (auto &cell : cells) { cell->format().border_bottom_color(value); }
+        for (auto &cell : cells) {
+            cell->format().border_bottom_color(value);
+        }
         return *this;
     }
 
     inline BatchFormat &border_bottom_background_color(TrueColor value)
     {
-        for (auto &cell : cells) { cell->format().border_bottom_background_color(value); }
+        for (auto &cell : cells) {
+            cell->format().border_bottom_background_color(value);
+        }
         return *this;
     }
 
     inline BatchFormat &show_border()
     {
-        for (auto &cell : cells) { cell->format().show_border(); }
+        for (auto &cell : cells) {
+            cell->format().show_border();
+        }
         return *this;
     }
 
     inline BatchFormat &hide_border()
     {
-        for (auto &cell : cells) { cell->format().hide_border(); }
+        for (auto &cell : cells) {
+            cell->format().hide_border();
+        }
         return *this;
     }
 
     inline BatchFormat &show_border_top()
     {
-        for (auto &cell : cells) { cell->format().show_border_top(); }
+        for (auto &cell : cells) {
+            cell->format().show_border_top();
+        }
         return *this;
     }
 
     inline BatchFormat &hide_border_top()
     {
-        for (auto &cell : cells) { cell->format().hide_border_top(); }
+        for (auto &cell : cells) {
+            cell->format().hide_border_top();
+        }
         return *this;
     }
 
     inline BatchFormat &show_border_bottom()
     {
-        for (auto &cell : cells) { cell->format().show_border_bottom(); }
+        for (auto &cell : cells) {
+            cell->format().show_border_bottom();
+        }
         return *this;
     }
 
     inline BatchFormat &hide_border_bottom()
     {
-        for (auto &cell : cells) { cell->format().hide_border_bottom(); }
+        for (auto &cell : cells) {
+            cell->format().hide_border_bottom();
+        }
         return *this;
     }
 
     inline BatchFormat &show_border_left()
     {
-        for (auto &cell : cells) { cell->format().show_border_left(); }
+        for (auto &cell : cells) {
+            cell->format().show_border_left();
+        }
         return *this;
     }
 
     inline BatchFormat &hide_border_left()
     {
-        for (auto &cell : cells) { cell->format().hide_border_left(); }
+        for (auto &cell : cells) {
+            cell->format().hide_border_left();
+        }
         return *this;
     }
 
     inline BatchFormat &show_border_right()
     {
-        for (auto &cell : cells) { cell->format().show_border_right(); }
+        for (auto &cell : cells) {
+            cell->format().show_border_right();
+        }
         return *this;
     }
 
     inline BatchFormat &hide_border_right()
     {
-        for (auto &cell : cells) { cell->format().hide_border_right(); }
+        for (auto &cell : cells) {
+            cell->format().hide_border_right();
+        }
         return *this;
     }
 
     inline BatchFormat &corner(const std::string &value)
     {
-        for (auto &cell : cells) { cell->format().corner(value); }
+        for (auto &cell : cells) {
+            cell->format().corner(value);
+        }
         return *this;
     }
 
     inline BatchFormat &corner_color(TrueColor value)
     {
-        for (auto &cell : cells) { cell->format().corner_color(value); }
+        for (auto &cell : cells) {
+            cell->format().corner_color(value);
+        }
         return *this;
     }
 
     inline BatchFormat &corner_background_color(TrueColor value)
     {
-        for (auto &cell : cells) { cell->format().corner_background_color(value); }
+        for (auto &cell : cells) {
+            cell->format().corner_background_color(value);
+        }
         return *this;
     }
 
     inline BatchFormat &corner_top_left(const std::string &value)
     {
-        for (auto &cell : cells) { cell->format().corner_top_left(value); }
+        for (auto &cell : cells) {
+            cell->format().corner_top_left(value);
+        }
         return *this;
     }
 
     inline BatchFormat &corner_top_left_color(TrueColor value)
     {
-        for (auto &cell : cells) { cell->format().corner_top_left_color(value); }
+        for (auto &cell : cells) {
+            cell->format().corner_top_left_color(value);
+        }
         return *this;
     }
 
     inline BatchFormat &corner_top_left_background_color(TrueColor value)
     {
-        for (auto &cell : cells) { cell->format().corner_top_left_background_color(value); }
+        for (auto &cell : cells) {
+            cell->format().corner_top_left_background_color(value);
+        }
         return *this;
     }
 
     inline BatchFormat &corner_top_right(const std::string &value)
     {
-        for (auto &cell : cells) { cell->format().corner_top_right(value); }
+        for (auto &cell : cells) {
+            cell->format().corner_top_right(value);
+        }
         return *this;
     }
 
     inline BatchFormat &corner_top_right_color(TrueColor value)
     {
-        for (auto &cell : cells) { cell->format().corner_top_right_color(value); }
+        for (auto &cell : cells) {
+            cell->format().corner_top_right_color(value);
+        }
         return *this;
     }
 
     inline BatchFormat &corner_top_right_background_color(TrueColor value)
     {
-        for (auto &cell : cells) { cell->format().corner_top_right_background_color(value); }
+        for (auto &cell : cells) {
+            cell->format().corner_top_right_background_color(value);
+        }
         return *this;
     }
 
     inline BatchFormat &corner_bottom_left(const std::string &value)
     {
-        for (auto &cell : cells) { cell->format().corner_bottom_left(value); }
+        for (auto &cell : cells) {
+            cell->format().corner_bottom_left(value);
+        }
         return *this;
     }
 
     inline BatchFormat &corner_bottom_left_color(TrueColor value)
     {
-        for (auto &cell : cells) { cell->format().corner_bottom_left_color(value); }
+        for (auto &cell : cells) {
+            cell->format().corner_bottom_left_color(value);
+        }
         return *this;
     }
 
     inline BatchFormat &corner_bottom_left_background_color(TrueColor value)
     {
-        for (auto &cell : cells) { cell->format().corner_bottom_left_background_color(value); }
+        for (auto &cell : cells) {
+            cell->format().corner_bottom_left_background_color(value);
+        }
         return *this;
     }
 
     inline BatchFormat &corner_bottom_right(const std::string &value)
     {
-        for (auto &cell : cells) { cell->format().corner_bottom_right(value); }
+        for (auto &cell : cells) {
+            cell->format().corner_bottom_right(value);
+        }
         return *this;
     }
 
     inline BatchFormat &corner_bottom_right_color(TrueColor value)
     {
-        for (auto &cell : cells) { cell->format().corner_bottom_right_color(value); }
+        for (auto &cell : cells) {
+            cell->format().corner_bottom_right_color(value);
+        }
         return *this;
     }
 
     inline BatchFormat &corner_bottom_right_background_color(TrueColor value)
     {
-        for (auto &cell : cells) { cell->format().corner_bottom_right_background_color(value); }
+        for (auto &cell : cells) {
+            cell->format().corner_bottom_right_background_color(value);
+        }
         return *this;
     }
 
     inline BatchFormat &locale(const std::string &value)
     {
-        for (auto &cell : cells) { cell->format().locale(value); }
+        for (auto &cell : cells) {
+            cell->format().locale(value);
+        }
         return *this;
     }
 
     inline BatchFormat &multi_bytes_character(bool value)
     {
-        for (auto &cell : cells) { cell->format().multi_bytes_character(value); }
+        for (auto &cell : cells) {
+            cell->format().multi_bytes_character(value);
+        }
         return *this;
     }
 
@@ -1579,7 +1721,9 @@ class Row {
     {
         if (index >= cells.size()) {
             size_t size = index - cells.size() + 1;
-            for (size_t i = 0; i < size; i++) { add(""); }
+            for (size_t i = 0; i < size; i++) {
+                add("");
+            }
         }
         return *cells[index];
     }
@@ -1636,7 +1780,9 @@ class Row {
                 }
             }
             // std::cout << "padline: \"" << padline << "\"" << std::endl;
-            for (size_t i = 0; i < cells[0]->format().borders.top.padding; i++) { seperator += "\n" + padline; }
+            for (size_t i = 0; i < cells[0]->format().borders.top.padding; i++) {
+                seperator += "\n" + padline;
+            }
         }
 
         return seperator;
@@ -1663,7 +1809,9 @@ class Row {
                     padline += stringformatter(corner.content, corner.color, corner.background_color, {});
                 }
             }
-            for (size_t i = 0; i < cells[0]->format().borders.top.padding; i++) { seperator += padline + "\n"; }
+            for (size_t i = 0; i < cells[0]->format().borders.top.padding; i++) {
+                seperator += padline + "\n";
+            }
         }
 
         if (cells.size() > 0) {
@@ -1698,7 +1846,9 @@ class Row {
                 std::cout << "\tstyles: ";
                 for (auto &style : cell->styles()) {
                     std::cout << to_string(style);
-                    if (&style != &cell->styles().back()) { std::cout << " "; }
+                    if (&style != &cell->styles().back()) {
+                        std::cout << " ";
+                    }
                 }
                 std::cout << std::endl;
             }
@@ -1723,7 +1873,9 @@ class Row {
 
             if (cells.size() > 0) {
                 auto const &bl = cells[0]->format().borders.left;
-                if (bl.visiable) { line += stringformatter(bl.content, bl.color, bl.background_color, {}); }
+                if (bl.visiable) {
+                    line += stringformatter(bl.content, bl.color, bl.background_color, {});
+                }
             }
             for (size_t j = 0; j < cells.size(); j++) {
                 Cell &cell = *cells[j];
@@ -1771,7 +1923,9 @@ class Row {
                 }
 
                 line += stringformatter(std::string(pr.padding, ' '), Color::none, background_color, {});
-                if (br.visiable) { line += stringformatter(br.content, br.color, br.background_color, {}); }
+                if (br.visiable) {
+                    line += stringformatter(br.content, br.color, br.background_color, {});
+                }
             }
 
             lines.push_back(line);
@@ -1794,7 +1948,9 @@ class Row {
                 std::cout << "\tstyles: ";
                 for (auto &style : cell->styles()) {
                     std::cout << to_string(style);
-                    if (&style != &cell->styles().back()) { std::cout << " "; }
+                    if (&style != &cell->styles().back()) {
+                        std::cout << " ";
+                    }
                 }
                 std::cout << std::endl;
             }
@@ -1984,7 +2140,9 @@ class Table {
     Row &add_multiple(const Container<Value, Allocator> &multiple)
     {
         Row &row = __add_row();
-        for (auto const &value : multiple) { row.add(value); }
+        for (auto const &value : multiple) {
+            row.add(value);
+        }
         __on_add_auto_update();
 
         return row;
@@ -1994,7 +2152,9 @@ class Table {
     {
         if (index >= rows.size()) {
             size_t size = index + 1 - rows.size();
-            for (size_t i = 0; i < size; i++) { add(); }
+            for (size_t i = 0; i < size; i++) {
+                add();
+            }
         }
         return *rows[index];
     }
@@ -2034,7 +2194,9 @@ class Table {
         for (auto &row : rows) {
             if (row->size() <= index) {
                 size_t size = index - row->size() + 1;
-                for (size_t i = 0; i < size; i++) { row->add(""); }
+                for (size_t i = 0; i < size; i++) {
+                    row->add("");
+                }
             }
             column.add(row->cell(index));
         }
@@ -2045,7 +2207,9 @@ class Table {
     size_t column_size()
     {
         size_t max_size = 0;
-        for (auto const &row : rows) { max_size = std::max(max_size, row->size()); }
+        for (auto const &row : rows) {
+            max_size = std::max(max_size, row->size());
+        }
         return max_size;
     }
 
@@ -2060,17 +2224,27 @@ class Table {
         if (rows.size() > 0) {
             const auto &header = *rows[0];
             const Format &format = header[0].format();
-            if (format.borders.top.visiable) { exported += header.border_top(xterm::stringformatter) + newline; }
-            for (auto const &line : header.dump(xterm::stringformatter)) { exported += line + newline; }
-            if (format.borders.bottom.visiable) { exported += header.border_bottom(xterm::stringformatter) + newline; }
+            if (format.borders.top.visiable) {
+                exported += header.border_top(xterm::stringformatter) + newline;
+            }
+            for (auto const &line : header.dump(xterm::stringformatter)) {
+                exported += line + newline;
+            }
+            if (format.borders.bottom.visiable) {
+                exported += header.border_bottom(xterm::stringformatter) + newline;
+            }
         }
 
         for (size_t i = 1; i < rows.size(); i++) {
             auto const &row = *rows[i];
-            for (auto const &line : row.dump(xterm::stringformatter)) { exported += line + newline; }
+            for (auto const &line : row.dump(xterm::stringformatter)) {
+                exported += line + newline;
+            }
 
             auto const &border = row[0].format().borders.bottom;
-            if (border.visiable) { exported += row.border_bottom(xterm::stringformatter) + newline; }
+            if (border.visiable) {
+                exported += row.border_bottom(xterm::stringformatter) + newline;
+            }
         }
         if (exported.size() >= newline.size()) {
             exported.erase(exported.size() - newline.size(), newline.size()); // pop last newline
@@ -2124,7 +2298,9 @@ class Table {
 
         for (size_t i = 1; i < rows.size(); i++) {
             auto const &row = *rows[i];
-            for (auto const &line : row.dump(markdown::stringformatter)) { exported += line + newline; }
+            for (auto const &line : row.dump(markdown::stringformatter)) {
+                exported += line + newline;
+            }
         }
         if (exported.size() >= newline.size()) {
             exported.erase(exported.size() - newline.size(), newline.size()); // pop last newline
@@ -2167,7 +2343,9 @@ class Table {
 
         // append new cells
         Row &last_row = *rows[rows.size() - 1];
-        for (size_t i = 0; i < last_row.size(); i++) { cells.push_back(last_row.cell(i)); }
+        for (size_t i = 0; i < last_row.size(); i++) {
+            cells.push_back(last_row.cell(i));
+        }
     }
 };
 
@@ -2177,7 +2355,9 @@ inline std::string to_string<Row>(const Row &v)
     auto lines = v.dump(xterm::stringformatter);
     std::string ret;
     ret += v.border_top(xterm::stringformatter);
-    for (auto &line : lines) { ret += line + "\n"; }
+    for (auto &line : lines) {
+        ret += line + "\n";
+    }
     ret += v.border_bottom(xterm::stringformatter);
     return ret;
 }

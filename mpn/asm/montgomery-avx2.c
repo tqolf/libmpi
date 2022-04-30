@@ -1,3 +1,19 @@
+/**
+ * Copyright 2022 Kiran Nowak(kiran.nowak@gmail.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 // target cpu: > __ARCH32E_L9
 #include <assert.h>
 
@@ -16,13 +32,19 @@
 #define EXP_DIGIT_MASK_AVX2 (EXP_DIGIT_BASE_AVX2 - 1)
 
 /* basic operations */
-void mont_mul1024_avx2(uint64_t *pR, const uint64_t *pA, const uint64_t *pB, const uint64_t *pModulus, int mLen, uint64_t m0);
-void mont_mul4n_avx2(uint64_t *pR, const uint64_t *pA, const uint64_t *pB, const uint64_t *pModulus, int mLen, uint64_t m0, uint64_t *pScratchBuffer);
-void mont_mul4n1_avx2(uint64_t *pR, const uint64_t *pA, const uint64_t *pB, const uint64_t *pModulus, int mLen, uint64_t m0, uint64_t *pScratchBuffer);
-void mont_mul4n2_avx2(uint64_t *pR, const uint64_t *pA, const uint64_t *pB, const uint64_t *pModulus, int mLen, uint64_t m0, uint64_t *pScratchBuffer);
-void mont_mul4n3_avx2(uint64_t *pR, const uint64_t *pA, const uint64_t *pB, const uint64_t *pModulus, int mLen, uint64_t m0, uint64_t *pScratchBuffer);
+void mont_mul1024_avx2(uint64_t *pR, const uint64_t *pA, const uint64_t *pB, const uint64_t *pModulus, int mLen,
+                       uint64_t m0);
+void mont_mul4n_avx2(uint64_t *pR, const uint64_t *pA, const uint64_t *pB, const uint64_t *pModulus, int mLen,
+                     uint64_t m0, uint64_t *pScratchBuffer);
+void mont_mul4n1_avx2(uint64_t *pR, const uint64_t *pA, const uint64_t *pB, const uint64_t *pModulus, int mLen,
+                      uint64_t m0, uint64_t *pScratchBuffer);
+void mont_mul4n2_avx2(uint64_t *pR, const uint64_t *pA, const uint64_t *pB, const uint64_t *pModulus, int mLen,
+                      uint64_t m0, uint64_t *pScratchBuffer);
+void mont_mul4n3_avx2(uint64_t *pR, const uint64_t *pA, const uint64_t *pB, const uint64_t *pModulus, int mLen,
+                      uint64_t m0, uint64_t *pScratchBuffer);
 
-void mont_sqr1024_avx2(uint64_t *pR, const uint64_t *pA, const uint64_t *pModulus, int mLen, uint64_t k0, uint64_t *pBuffer);
+void mont_sqr1024_avx2(uint64_t *pR, const uint64_t *pA, const uint64_t *pModulus, int mLen, uint64_t k0,
+                       uint64_t *pBuffer);
 void sqr1024_avx2(uint64_t *pR, const uint64_t *pA, int aLen, uint64_t *pBuffer);
 void sqr_avx2(uint64_t *pR, const uint64_t *pA, int aLen, uint64_t *pBuffer);
 
@@ -113,7 +135,8 @@ static int dig27_regular(uint32_t *pRegular, int regLen, const uint64_t *pRep27,
 }
 
 /* mont_mul wraper */
-MPN_INLINE void __mont_mul_avx2(uint64_t *pR, const uint64_t *pA, const uint64_t *pB, const uint64_t *pModulus, int mLen, uint64_t k0, uint64_t *pBuffer)
+MPN_INLINE void __mont_mul_avx2(uint64_t *pR, const uint64_t *pA, const uint64_t *pB, const uint64_t *pModulus,
+                                int mLen, uint64_t k0, uint64_t *pBuffer)
 {
     if (mLen == 38) { /* corresponds to 1024-bit regular representation */
         mont_mul1024_avx2(pR, pA, pB, pModulus, mLen, k0);
@@ -137,7 +160,8 @@ MPN_INLINE void __mont_mul_avx2(uint64_t *pR, const uint64_t *pA, const uint64_t
 }
 
 /* mont_sqr wraper */
-MPN_INLINE void __mont_sqr_avx2(uint64_t *pR, const uint64_t *pA, const uint64_t *pModulus, int mLen, uint64_t k0, uint64_t *pBuffer)
+MPN_INLINE void __mont_sqr_avx2(uint64_t *pR, const uint64_t *pA, const uint64_t *pModulus, int mLen, uint64_t k0,
+                                uint64_t *pBuffer)
 {
     if (mLen == 38) /* corresponds to 1024-bit regular representation */
         mont_sqr1024_avx2(pR, pA, pModulus, mLen, k0, pBuffer);
@@ -164,8 +188,9 @@ unsigned int mont_exp_win_buffer_avx2(int modulusBits)
     unsigned int redNum = num_of_variable_avx2(modulusBits);       /* "sizeof" variable */
     unsigned int redBufferNum = num_of_variable_buff_avx2(redNum); /* "sizeof" variable  buffer */
 
-    unsigned int bufferNum = CACHE_LINE_SIZE / (int32_t)sizeof(mpn_limb_t) + mont_scramble_buffer_size(redNum, w) /* pre-computed table */
-                             + redBufferNum * 7;                                                                  /* addition 7 variables */
+    unsigned int bufferNum = CACHE_LINE_SIZE / (int32_t)sizeof(mpn_limb_t)
+                             + mont_scramble_buffer_size(redNum, w) /* pre-computed table */
+                             + redBufferNum * 7;                    /* addition 7 variables */
     return bufferNum;
 }
 #endif /* MPI_USE_SLIDING_WINDOW_EXP */
@@ -184,8 +209,9 @@ unsigned int mont_exp_win_buffer_avx2(int modulusBits)
  *    redM[redBufferLen]
  *    redBuffer[redBufferLen*3]
  */
-unsigned int mont_exp_bin_avx2(mpn_limb_t *dataY, const mpn_limb_t *dataX, unsigned int nsX, const mpn_limb_t *dataE, unsigned int bitsizeE, const mpn_limb_t *dataM, unsigned int bitsizeM, const mpn_limb_t *dataRR, mpn_limb_t k0,
-                               mpn_limb_t *pBuffer)
+unsigned int mont_exp_bin_avx2(mpn_limb_t *dataY, const mpn_limb_t *dataX, unsigned int nsX, const mpn_limb_t *dataE,
+                               unsigned int bitsizeE, const mpn_limb_t *dataM, unsigned int bitsizeM,
+                               const mpn_limb_t *dataRR, mpn_limb_t k0, mpn_limb_t *pBuffer)
 {
     unsigned int nsM = MPN_BITS_TO_LIMBS(bitsizeM);
     unsigned int nsE = MPN_BITS_TO_LIMBS(bitsizeE);
@@ -236,7 +262,8 @@ unsigned int mont_exp_bin_avx2(mpn_limb_t *dataY, const mpn_limb_t *dataX, unsig
             __mont_sqr_avx2(redY, redY, redM, redLen, k0, redBuffer);
 
             /* and multiply Y = Y*X */
-            if (eValue & ((mpn_limb_t)1 << (MPN_LIMB_BITS - 1))) __mont_mul_avx2(redY, redY, redX, redM, redLen, k0, redBuffer);
+            if (eValue & ((mpn_limb_t)1 << (MPN_LIMB_BITS - 1)))
+                __mont_mul_avx2(redY, redY, redX, redM, redLen, k0, redBuffer);
         }
 
         /* execute rest bits of E */
@@ -248,7 +275,8 @@ unsigned int mont_exp_bin_avx2(mpn_limb_t *dataY, const mpn_limb_t *dataX, unsig
                 __mont_sqr_avx2(redY, redY, redM, redLen, k0, redBuffer);
 
                 /* and multiply: Y = Y*X */
-                if (eValue & ((mpn_limb_t)1 << (MPN_LIMB_BITS - 1))) __mont_mul_avx2(redY, redY, redX, redM, redLen, k0, redBuffer);
+                if (eValue & ((mpn_limb_t)1 << (MPN_LIMB_BITS - 1)))
+                    __mont_mul_avx2(redY, redY, redX, redM, redLen, k0, redBuffer);
             }
         }
     }
@@ -272,8 +300,9 @@ unsigned int mont_exp_bin_avx2(mpn_limb_t *dataY, const mpn_limb_t *dataX, unsig
  *    redM[redBufferLen]
  *    redBuffer[redBufferLen*3]
  */
-unsigned int mont_exp_bin_sscm_avx2(mpn_limb_t *dataY, const mpn_limb_t *dataX, unsigned int nsX, const mpn_limb_t *dataE, unsigned int bitsizeE, const mpn_limb_t *dataM, unsigned int bitsizeM, const mpn_limb_t *dataRR, mpn_limb_t k0,
-                                    mpn_limb_t *pBuffer)
+unsigned int mont_exp_bin_sscm_avx2(mpn_limb_t *dataY, const mpn_limb_t *dataX, unsigned int nsX,
+                                    const mpn_limb_t *dataE, unsigned int bitsizeE, const mpn_limb_t *dataM,
+                                    unsigned int bitsizeM, const mpn_limb_t *dataRR, mpn_limb_t k0, mpn_limb_t *pBuffer)
 {
     unsigned int nsM = MPN_BITS_TO_LIMBS(bitsizeM);
     unsigned int nsE = MPN_BITS_TO_LIMBS(bitsizeE);
@@ -357,8 +386,9 @@ unsigned int mont_exp_bin_sscm_avx2(mpn_limb_t *dataY, const mpn_limb_t *dataX, 
  *    redBuffer[redBufferLen*3]
  *    redE[redBufferLen]
  */
-unsigned int mont_exp_win_avx2(mpn_limb_t *dataY, const mpn_limb_t *dataX, unsigned int nsX, const mpn_limb_t *dataE, unsigned int bitsizeE, const mpn_limb_t *dataM, unsigned int bitsizeM, const mpn_limb_t *dataRR, mpn_limb_t k0,
-                               mpn_limb_t *pBuffer)
+unsigned int mont_exp_win_avx2(mpn_limb_t *dataY, const mpn_limb_t *dataX, unsigned int nsX, const mpn_limb_t *dataE,
+                               unsigned int bitsizeE, const mpn_limb_t *dataM, unsigned int bitsizeM,
+                               const mpn_limb_t *dataRR, mpn_limb_t k0, mpn_limb_t *pBuffer)
 {
     unsigned int nsM = MPN_BITS_TO_LIMBS(bitsizeM);
     unsigned int nsE = MPN_BITS_TO_LIMBS(bitsizeE);
@@ -472,8 +502,9 @@ unsigned int mont_exp_win_avx2(mpn_limb_t *dataY, const mpn_limb_t *dataX, unsig
  *    redBuffer[redBufferLen*3]
  *    redE[redBufferLen]
  */
-unsigned int mont_exp_win_sscm_avx2(mpn_limb_t *dataY, const mpn_limb_t *dataX, unsigned int nsX, const mpn_limb_t *dataE, unsigned int bitsizeE, const mpn_limb_t *dataM, unsigned int bitsizeM, const mpn_limb_t *dataRR, mpn_limb_t k0,
-                                    mpn_limb_t *pBuffer)
+unsigned int mont_exp_win_sscm_avx2(mpn_limb_t *dataY, const mpn_limb_t *dataX, unsigned int nsX,
+                                    const mpn_limb_t *dataE, unsigned int bitsizeE, const mpn_limb_t *dataM,
+                                    unsigned int bitsizeM, const mpn_limb_t *dataRR, mpn_limb_t k0, mpn_limb_t *pBuffer)
 {
     unsigned int nsM = MPN_BITS_TO_LIMBS(bitsizeM);
     unsigned int nsE = MPN_BITS_TO_LIMBS(bitsizeE);

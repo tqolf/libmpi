@@ -17,7 +17,7 @@
 #include <mpn/mpn-binary.h>
 #include <mpn/mpn-montgomery.h>
 
-#include "benchmark.h"
+#include "profiler.h"
 
 #include <vector>
 #include <iostream>
@@ -63,19 +63,19 @@ int main(void)
                                   // is empty
 
             {
-                Bencher bench("from-string(ossl)", [&]() -> bool {
+                Profiler bench("from-string(ossl)", [&]() -> bool {
                     BN_hex2bn(&r, val.c_str());
                     return true;
                 });
-                BencherCollection::GetInstance().mark_as_ref("from-string(ossl)");
+                ProfilerCache::Instance().mark_as_ref("from-string(ossl)");
             }
 
             {
-                Bencher bench("to-string(ossl)", [&]() -> bool {
+                Profiler bench("to-string(ossl)", [&]() -> bool {
                     free(BN_bn2hex(r));
                     return true;
                 });
-                BencherCollection::GetInstance().mark_as_ref("to-string(ossl)");
+                ProfilerCache::Instance().mark_as_ref("to-string(ossl)");
             }
 
             BN_free(r);
@@ -86,13 +86,13 @@ int main(void)
             mpi_t *r = NULL;
 
             {
-                Bencher bench("from-string(mpi)", [&]() -> bool {
+                Profiler bench("from-string(mpi)", [&]() -> bool {
                     return mpi_from_string(&r, val.c_str()) == 0;
                 });
             }
 
             {
-                Bencher bench("to-string(mpi)", [&]() -> bool {
+                Profiler bench("to-string(mpi)", [&]() -> bool {
                     free(mpi_to_string(r));
                     return true;
                 });
@@ -117,19 +117,19 @@ int main(void)
             BIGNUM *r = BN_new();
 
             {
-                Bencher bench("from-octets(ossl)", [&]() -> bool {
+                Profiler bench("from-octets(ossl)", [&]() -> bool {
                     BN_bin2bn(buffer.data(), static_cast<int>(buffer.size()), r);
                     return true;
                 });
-                BencherCollection::GetInstance().mark_as_ref("from-octets(ossl)");
+                ProfilerCache::Instance().mark_as_ref("from-octets(ossl)");
             }
 
             {
-                Bencher bench("to-octets(ossl)", [&]() -> bool {
+                Profiler bench("to-octets(ossl)", [&]() -> bool {
                     BN_bn2bin(r, buffer.data());
                     return true;
                 });
-                BencherCollection::GetInstance().mark_as_ref("to-octets(ossl)");
+                ProfilerCache::Instance().mark_as_ref("to-octets(ossl)");
             }
 
             BN_free(r);
@@ -140,13 +140,13 @@ int main(void)
             mpi_t *r = NULL;
 
             {
-                Bencher bench("from-octets(mpi)", [&]() -> bool {
+                Profiler bench("from-octets(mpi)", [&]() -> bool {
                     return mpi_from_octets(&r, buffer.data(), buffer.size()) == 0;
                 });
             }
 
             {
-                Bencher bench("to-octets(mpi)", [&]() -> bool {
+                Profiler bench("to-octets(mpi)", [&]() -> bool {
                     mpi_to_octets(r, buffer.data(), buffer.size(), NULL);
                     return true;
                 });
@@ -178,11 +178,11 @@ int main(void)
             BN_bin2bn(abuffer.data(), static_cast<int>(abuffer.size()), a);
             BN_bin2bn(bbuffer.data(), static_cast<int>(bbuffer.size()), b);
 
-            Bencher bench("add(ossl)", [&]() -> bool {
+            Profiler bench("add(ossl)", [&]() -> bool {
                 BN_add(r, a, b);
                 return true;
             });
-            BencherCollection::GetInstance().mark_as_ref("add(ossl)");
+            ProfilerCache::Instance().mark_as_ref("add(ossl)");
 
             BN_free(a);
             BN_free(b);
@@ -199,7 +199,7 @@ int main(void)
             size_t sz = (mpi_bits(a) >= mpi_bits(b) ? mpi_bits(a) : mpi_bits(b)) + 1;
             mpi_t *r = mpi_create(sz);
 
-            Bencher bench("add(mpi)", [&]() -> bool {
+            Profiler bench("add(mpi)", [&]() -> bool {
                 return mpi_add(r, a, b) == 0;
             });
 
@@ -230,11 +230,11 @@ int main(void)
             BN_bin2bn(rbuffer.data(), static_cast<int>(rbuffer.size()), r);
             BN_bin2bn(bbuffer.data(), static_cast<int>(bbuffer.size()), b);
 
-            Bencher bench("add-assign(ossl)", [&]() -> bool {
+            Profiler bench("add-assign(ossl)", [&]() -> bool {
                 BN_add(r, r, b);
                 return true;
             });
-            BencherCollection::GetInstance().mark_as_ref("add-assign(ossl)");
+            ProfilerCache::Instance().mark_as_ref("add-assign(ossl)");
 
             BN_free(b);
             BN_free(r);
@@ -251,7 +251,7 @@ int main(void)
             size_t sz = (mpi_bits(r) >= mpi_bits(b) ? mpi_bits(r) : mpi_bits(b)) + 1;
             r = mpi_expand(r, sz);
 
-            Bencher bench("add-assign(mpi)", [&]() -> bool {
+            Profiler bench("add-assign(mpi)", [&]() -> bool {
                 return mpi_add(r, r, b) == 0;
             });
 
@@ -282,11 +282,11 @@ int main(void)
             BN_bin2bn(abuffer.data(), static_cast<int>(abuffer.size()), a);
             BN_bin2bn(bbuffer.data(), static_cast<int>(bbuffer.size()), b);
 
-            Bencher bench("sub(ossl)", [&]() -> bool {
+            Profiler bench("sub(ossl)", [&]() -> bool {
                 BN_sub(r, a, b);
                 return true;
             });
-            BencherCollection::GetInstance().mark_as_ref("sub(ossl)");
+            ProfilerCache::Instance().mark_as_ref("sub(ossl)");
 
             BN_free(a);
             BN_free(b);
@@ -303,7 +303,7 @@ int main(void)
             size_t sz = (mpi_bits(a) >= mpi_bits(b) ? mpi_bits(a) : mpi_bits(b));
             mpi_t *r = mpi_create(sz);
 
-            Bencher bench("sub(mpi)", [&]() -> bool {
+            Profiler bench("sub(mpi)", [&]() -> bool {
                 return mpi_sub(r, a, b) == 0;
             });
 
@@ -334,11 +334,11 @@ int main(void)
             BN_bin2bn(rbuffer.data(), static_cast<int>(rbuffer.size()), r);
             BN_bin2bn(bbuffer.data(), static_cast<int>(bbuffer.size()), b);
 
-            Bencher bench("sub-assign(ossl)", [&]() -> bool {
+            Profiler bench("sub-assign(ossl)", [&]() -> bool {
                 BN_sub(r, r, b);
                 return true;
             });
-            BencherCollection::GetInstance().mark_as_ref("sub-assign(ossl)");
+            ProfilerCache::Instance().mark_as_ref("sub-assign(ossl)");
 
             BN_free(b);
             BN_free(r);
@@ -355,7 +355,7 @@ int main(void)
             size_t sz = (mpi_bits(r) >= mpi_bits(b) ? mpi_bits(r) : mpi_bits(b));
             r = mpi_expand(r, sz);
 
-            Bencher bench("sub-assign(mpi)", [&]() -> bool {
+            Profiler bench("sub-assign(mpi)", [&]() -> bool {
                 return mpi_sub(r, r, b) == 0;
             });
 
@@ -388,11 +388,11 @@ int main(void)
 
             BN_CTX *ctx = BN_CTX_new();
 
-            Bencher bench("mul(ossl)", [&]() -> bool {
+            Profiler bench("mul(ossl)", [&]() -> bool {
                 BN_mul(r, a, b, ctx);
                 return true;
             });
-            BencherCollection::GetInstance().mark_as_ref("mul(ossl)");
+            ProfilerCache::Instance().mark_as_ref("mul(ossl)");
 
             BN_CTX_free(ctx);
 
@@ -412,7 +412,7 @@ int main(void)
             size_t sz = mpi_bits(a) + mpi_bits(b) + MPN_LIMB_BITS;
             mpi_t *r = mpi_create(sz);
 
-            Bencher bench("mul(mpi)", [&]() -> bool {
+            Profiler bench("mul(mpi)", [&]() -> bool {
                 return mpi_mul(r, a, b) == 0;
             });
 
@@ -437,11 +437,11 @@ int main(void)
 
             BN_CTX *ctx = BN_CTX_new();
 
-            Bencher bench("sqr(ossl)", [&]() -> bool {
+            Profiler bench("sqr(ossl)", [&]() -> bool {
                 BN_sqr(r, a, ctx);
                 return true;
             });
-            BencherCollection::GetInstance().mark_as_ref("sqr(ossl)");
+            ProfilerCache::Instance().mark_as_ref("sqr(ossl)");
 
             BN_CTX_free(ctx);
 
@@ -457,7 +457,7 @@ int main(void)
 
             mpi_t *r = mpi_create((a != NULL ? a->size : 0) * 2 * MPN_LIMB_BITS);
 
-            Bencher bench("sqr(mpi)", [&]() -> bool {
+            Profiler bench("sqr(mpi)", [&]() -> bool {
                 return mpi_sqr(r, a) == 0;
             });
 
@@ -496,11 +496,11 @@ int main(void)
 
             BN_CTX *ctx = BN_CTX_new();
 
-            Bencher bench("div(ossl)", [&]() -> bool {
+            Profiler bench("div(ossl)", [&]() -> bool {
                 BN_div(q, r, a, b, ctx);
                 return true;
             });
-            BencherCollection::GetInstance().mark_as_ref("div(ossl)");
+            ProfilerCache::Instance().mark_as_ref("div(ossl)");
 
             BN_CTX_free(ctx);
 
@@ -527,7 +527,7 @@ int main(void)
             mpi_t *q = mpi_create(qsize);
             mpi_t *r = mpi_create(rsize);
 
-            Bencher bench("div(mpi)", [&]() -> bool {
+            Profiler bench("div(mpi)", [&]() -> bool {
                 return mpi_div(q, r, a, b) == 0;
             });
 
@@ -573,11 +573,11 @@ int main(void)
 
             BN_CTX *ctx = BN_CTX_new();
 
-            Bencher bench("gcd_consttime(ossl)", [&]() -> bool {
+            Profiler bench("gcd_consttime(ossl)", [&]() -> bool {
                 BN_gcd(r, a, b, ctx);
                 return true;
             });
-            BencherCollection::GetInstance().mark_as_ref("gcd_consttime(ossl)");
+            ProfilerCache::Instance().mark_as_ref("gcd_consttime(ossl)");
 
             BN_CTX_free(ctx);
 
@@ -597,14 +597,14 @@ int main(void)
 
             // Daniel J. Bernsteion and Bo-Yin Yang's constant-time gcd algorithm
             {
-                Bencher bench("gcd_consttime(mpi)", [&]() -> bool {
+                Profiler bench("gcd_consttime(mpi)", [&]() -> bool {
                     return mpi_gcd_consttime(r, a, b, NULL) == 0;
                 });
             }
 
             // Lehmer's gcd algorithm
             if (0) { // FIXME: have bugs
-                Bencher bench("gcd(mpi)", [&]() -> bool {
+                Profiler bench("gcd(mpi)", [&]() -> bool {
                     return mpi_gcd(r, a, b, NULL) == 0;
                 });
             }
@@ -659,17 +659,17 @@ int main(void)
             BIGNUM *r = BN_new();
 
             {
-                Bencher bench("montgomery-exp(ossl)", [&]() -> bool {
+                Profiler bench("montgomery-exp(ossl)", [&]() -> bool {
                     return BN_mod_exp_mont(r, g, e, n, ctx, mont) == 1;
                 });
-                BencherCollection::GetInstance().mark_as_ref("montgomery-exp(ossl)");
+                ProfilerCache::Instance().mark_as_ref("montgomery-exp(ossl)");
             }
 
             {
-                Bencher bench("montgomery-exp-consttime(ossl)", [&]() -> bool {
+                Profiler bench("montgomery-exp-consttime(ossl)", [&]() -> bool {
                     return BN_mod_exp_mont_consttime(r, g, e, n, ctx, mont) == 1;
                 });
-                BencherCollection::GetInstance().mark_as_ref("montgomery-exp-consttime(ossl)");
+                ProfilerCache::Instance().mark_as_ref("montgomery-exp-consttime(ossl)");
             }
 
             BN_CTX_free(ctx);
@@ -695,13 +695,13 @@ int main(void)
             mpi_t *r = mpi_create(mpi_bits(n));
 
             {
-                Bencher bench("montgomery-exp(mpi)", [&]() -> bool {
+                Profiler bench("montgomery-exp(mpi)", [&]() -> bool {
                     return mpi_montgomery_exp(r, g, e, mont) == 0;
                 });
             }
 
             {
-                Bencher bench("montgomery-exp-consttime(mpi)", [&]() -> bool {
+                Profiler bench("montgomery-exp-consttime(mpi)", [&]() -> bool {
                     return mpi_montgomery_exp_consttime(r, g, e, mont) == 0;
                 });
             }
@@ -723,10 +723,10 @@ int main(void)
         {
             BIGNUM *prime = BN_new();
 
-            Bencher bench("generate_prime(ossl)", [&]() -> bool {
+            Profiler bench("generate_prime(ossl)", [&]() -> bool {
                 return BN_generate_prime_ex(prime, bits, 0, NULL, NULL, NULL) == 1;
             });
-            BencherCollection::GetInstance().mark_as_ref("generate_prime(ossl)");
+            ProfilerCache::Instance().mark_as_ref("generate_prime(ossl)");
 
             BN_free(prime);
         }
@@ -735,7 +735,7 @@ int main(void)
         if (0) { // FIXME
             mpi_t *prime = mpi_create(bits);
 
-            Bencher bench("generate_prime(mpi)", [&]() -> bool {
+            Profiler bench("generate_prime(mpi)", [&]() -> bool {
                 return mpi_generate_prime(
                            prime, bits, 0, NULL, NULL,
                            [](void *state, unsigned char *buffer, unsigned int size) -> int {
@@ -765,10 +765,10 @@ int main(void)
             BN_generate_prime_ex(r, bits, 0, NULL, NULL, NULL);
             BN_bn2bin(r, prime.data());
 
-            Bencher bench("is_prime(ossl)", [&]() -> bool {
+            Profiler bench("is_prime(ossl)", [&]() -> bool {
                 return BN_is_prime_fasttest_ex(r, BN_prime_checks, NULL, 0, NULL) == 1;
             });
-            BencherCollection::GetInstance().mark_as_ref("is_prime(ossl)");
+            ProfilerCache::Instance().mark_as_ref("is_prime(ossl)");
 
             BN_free(r);
         }
@@ -777,7 +777,7 @@ int main(void)
             mpi_t *r = NULL;
             mpi_from_octets(&r, prime.data(), prime.size());
 
-            Bencher bench("is_prime(mpi)", [&]() -> bool {
+            Profiler bench("is_prime(mpi)", [&]() -> bool {
                 return mpi_is_prime(
                            r, 0, 0, NULL,
                            [](void *state, unsigned char *buffer, unsigned int size) -> int {
@@ -811,13 +811,13 @@ int main(void)
         mpi_t *r = mpi_create(mpi_bits(a) + 1);
 
         {
-            Bencher bench("MUL2(a * 2 = a + a)", [&]() -> bool {
+            Profiler bench("MUL2(a * 2 = a + a)", [&]() -> bool {
                 return mpi_add(r, a, a) == 0;
             });
         }
 
         {
-            Bencher bench("MUL2(a * 2 = a << 1)", [&]() -> bool {
+            Profiler bench("MUL2(a * 2 = a << 1)", [&]() -> bool {
                 return mpi_lshift(r, a, 1) == 0;
             });
         }

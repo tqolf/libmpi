@@ -1,3 +1,19 @@
+/**
+ * Copyright 2022 Kiran Nowak(kiran.nowak@gmail.com)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include <assert.h>
 
 #include "mpn-binary.h"
@@ -125,9 +141,11 @@ static void dig52_regular(uint64_t *out, const uint64_t *in, int outBitSize)
 }
 
 /* ams functions */
-typedef void (*cpAMM52)(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *m, uint64_t k0, int len, uint64_t *res);
+typedef void (*cpAMM52)(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *m, uint64_t k0, int len,
+                        uint64_t *res);
 
-static void AMM52(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *m, uint64_t k0, int len, uint64_t *res)
+static void AMM52(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *m, uint64_t k0, int len,
+                  uint64_t *res)
 {
 #define NUM64 ((int32_t)(sizeof(__m512i) / sizeof(uint64_t)))
 
@@ -211,7 +229,8 @@ static void AMM52(uint64_t *out, const uint64_t *a, const uint64_t *b, const uin
     }
 }
 
-static void AMM52x20(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *m, uint64_t k0, int len, uint64_t *res)
+static void AMM52x20(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *m, uint64_t k0, int len,
+                     uint64_t *res)
 {
     __mmask8 k2 = (__mmask8)_mm512_kmov(0x0f); /* mask of the 0-3 elments */
 
@@ -289,7 +308,8 @@ static void AMM52x20(uint64_t *out, const uint64_t *a, const uint64_t *b, const 
     }
 }
 
-static void AMM52x40(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *m, uint64_t k0, int len, uint64_t *res)
+static void AMM52x40(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *m, uint64_t k0, int len,
+                     uint64_t *res)
 {
     /* load a */
     __m512i A0 = _mm512_loadu_si512(a);
@@ -383,7 +403,8 @@ static void AMM52x40(uint64_t *out, const uint64_t *a, const uint64_t *b, const 
     }
 }
 
-static void AMM52x60(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *m, uint64_t k0, int len, uint64_t *res)
+static void AMM52x60(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *m, uint64_t k0, int len,
+                     uint64_t *res)
 {
     __mmask8 k2 = (__mmask8)_mm512_kmov(0x0f); /* mask of the 0-3 elments */
 
@@ -506,7 +527,8 @@ static void AMM52x60(uint64_t *out, const uint64_t *a, const uint64_t *b, const 
     }
 }
 
-static void AMM52x79(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *m, uint64_t k0, int len, uint64_t *res)
+static void AMM52x79(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *m, uint64_t k0, int len,
+                     uint64_t *res)
 {
     __mmask8 k2 = (__mmask8)_mm512_kmov(0x7f); /* mask of the 0-7 elments */
 
@@ -651,7 +673,8 @@ static void AMM52x79(uint64_t *out, const uint64_t *a, const uint64_t *b, const 
 //#define _EXP_AVX512_DEBUG_
 #ifdef _EXP_AVX512_DEBUG_
 #include "pcpmontred.h"
-void debugToConvMontDomain(mpn_limb_t *pR, const mpn_limb_t *redInp, const mpn_limb_t *redM, int almMM_bitsize, const mpn_limb_t *pM, const mpn_limb_t *pRR, int nsM, mpn_limb_t k0, mpn_limb_t *pBuffer)
+void debugToConvMontDomain(mpn_limb_t *pR, const mpn_limb_t *redInp, const mpn_limb_t *redM, int almMM_bitsize,
+                           const mpn_limb_t *pM, const mpn_limb_t *pRR, int nsM, mpn_limb_t k0, mpn_limb_t *pBuffer)
 {
     uint64_t one[32] = {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     uint64_t redT[32];
@@ -685,8 +708,9 @@ unsigned int gsMontExpWinBuffer_avx512(int modulusBits)
     unsigned int redNum = num_of_variable_avx512(modulusBits);       /* "sizeof" variable */
     unsigned int redBufferNum = num_of_variable_buff_avx512(redNum); /* "sizeof" variable  buffer */
 
-    unsigned int bufferNum = CACHE_LINE_SIZE / (int32_t)sizeof(mpn_limb_t) + mont_scramble_buffer_size(redNum, w) /* pre-computed table */
-                             + redBufferNum * 7;                                                                  /* addition 7 variables */
+    unsigned int bufferNum = CACHE_LINE_SIZE / (int32_t)sizeof(mpn_limb_t)
+                             + mont_scramble_buffer_size(redNum, w) /* pre-computed table */
+                             + redBufferNum * 7;                    /* addition 7 variables */
     return bufferNum;
 }
 #endif /* MPI_USE_SLIDING_WINDOW_EXP */
@@ -704,7 +728,9 @@ unsigned int gsMontExpWinBuffer_avx512(int modulusBits)
 //    redM[redBufferLen]
 //    redBuffer[redBufferLen*3]
 */
-unsigned int gsMontExpBin_BNU_avx512(mpn_limb_t *dataY, const mpn_limb_t *dataX, unsigned int nsX, const mpn_limb_t *dataE, unsigned int bitsizeE, MPZ_MOD_ENGINE *pMont, mpn_limb_t *pBuffer)
+unsigned int gsMontExpBin_BNU_avx512(mpn_limb_t *dataY, const mpn_limb_t *dataX, unsigned int nsX,
+                                     const mpn_limb_t *dataE, unsigned int bitsizeE, MPZ_MOD_ENGINE *pMont,
+                                     mpn_limb_t *pBuffer)
 {
     const mpn_limb_t *dataM = MOD_MODULUS(pMont);
     const mpn_limb_t *dataRR = MOD_MNT_R2(pMont);
@@ -791,7 +817,8 @@ unsigned int gsMontExpBin_BNU_avx512(mpn_limb_t *dataY, const mpn_limb_t *dataX,
                 ammFunc(redY, redY, redY, redM, k0, redLen, redBuffer);
 
                 /* and multiply: Y = Y*X */
-                if (eValue & ((mpn_limb_t)1 << (MPN_LIMB_BITS - 1))) ammFunc(redY, redY, redX, redM, k0, redLen, redBuffer);
+                if (eValue & ((mpn_limb_t)1 << (MPN_LIMB_BITS - 1)))
+                    ammFunc(redY, redY, redX, redM, k0, redLen, redBuffer);
             }
         }
     }
@@ -816,7 +843,9 @@ unsigned int gsMontExpBin_BNU_avx512(mpn_limb_t *dataY, const mpn_limb_t *dataX,
 //    redM[redBufferLen]
 //    redBuffer[redBufferLen*3]
 */
-unsigned int gsMontExpBin_BNU_sscm_avx512(mpn_limb_t *dataY, const mpn_limb_t *dataX, unsigned int nsX, const mpn_limb_t *dataE, unsigned int bitsizeE, MPZ_MOD_ENGINE *pMont, mpn_limb_t *pBuffer)
+unsigned int gsMontExpBin_BNU_sscm_avx512(mpn_limb_t *dataY, const mpn_limb_t *dataX, unsigned int nsX,
+                                          const mpn_limb_t *dataE, unsigned int bitsizeE, MPZ_MOD_ENGINE *pMont,
+                                          mpn_limb_t *pBuffer)
 {
     const mpn_limb_t *dataM = MOD_MODULUS(pMont);
     const mpn_limb_t *dataRR = MOD_MNT_R2(pMont);
@@ -924,7 +953,9 @@ unsigned int gsMontExpBin_BNU_sscm_avx512(mpn_limb_t *dataY, const mpn_limb_t *d
 //    redE[redBufferLen]
 //    redBuffer[redBufferLen*3]
 */
-unsigned int gsMontExpWin_BNU_avx512(mpn_limb_t *dataY, const mpn_limb_t *dataX, unsigned int nsX, const mpn_limb_t *dataE, unsigned int bitsizeE, MPZ_MOD_ENGINE *pMont, mpn_limb_t *pBuffer)
+unsigned int gsMontExpWin_BNU_avx512(mpn_limb_t *dataY, const mpn_limb_t *dataX, unsigned int nsX,
+                                     const mpn_limb_t *dataE, unsigned int bitsizeE, MPZ_MOD_ENGINE *pMont,
+                                     mpn_limb_t *pBuffer)
 {
     const mpn_limb_t *dataM = MOD_MODULUS(pMont);
     const mpn_limb_t *dataRR = MOD_MNT_R2(pMont);
@@ -1063,7 +1094,9 @@ unsigned int gsMontExpWin_BNU_avx512(mpn_limb_t *dataY, const mpn_limb_t *dataX,
 //    redBuffer[redBufferLen*3]
 //    redE[redBufferLen]
 */
-unsigned int gsMontExpWin_BNU_sscm_avx512(mpn_limb_t *dataY, const mpn_limb_t *dataX, unsigned int nsX, const mpn_limb_t *dataE, unsigned int bitsizeE, MPZ_MOD_ENGINE *pMont, mpn_limb_t *pBuffer)
+unsigned int gsMontExpWin_BNU_sscm_avx512(mpn_limb_t *dataY, const mpn_limb_t *dataX, unsigned int nsX,
+                                          const mpn_limb_t *dataE, unsigned int bitsizeE, MPZ_MOD_ENGINE *pMont,
+                                          mpn_limb_t *pBuffer)
 {
     const mpn_limb_t *dataM = MOD_MODULUS(pMont);
     const mpn_limb_t *dataRR = MOD_MNT_R2(pMont);
