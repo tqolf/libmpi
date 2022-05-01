@@ -222,6 +222,10 @@ class ProfilerCache {
         std::cout << "-----BEGIN MARKDOWN TABLE-----" << std::endl;
         std::cout << table.markdown() << std::endl;
         std::cout << "-----END MARKDOWN TABLE-----" << std::endl;
+
+        std::cout << "-----BEGIN LATEX TABLE-----" << std::endl;
+        std::cout << table.latex() << std::endl;
+        std::cout << "-----END LATEX TABLE-----" << std::endl;
     }
 };
 

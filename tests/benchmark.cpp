@@ -468,6 +468,7 @@ int main(void)
         }
     }
 
+#if 0
     // division, modular
     {
         std::vector<unsigned char> abuffer, bbuffer;
@@ -794,7 +795,7 @@ int main(void)
             mpi_destory(r);
         }
     }
-
+#endif
 
     std::cout << std::endl;
     // MUL2: r = a * 2 = a + a = a << 1

@@ -362,6 +362,16 @@ static std::string lstrip(const std::string &s)
     return trimed;
 }
 
+std::string replace_all(std::string str, const std::string &from, const std::string &to)
+{
+    size_t curr = 0;
+    while ((curr = str.find(from, curr)) != std::string::npos) {
+        str.replace(curr, from.length(), to);
+        curr += to.length(); // Handles case where 'to' is a substring of 'from'
+    }
+    return str;
+}
+
 static std::vector<std::string> explode_string(const std::string &input, const std::vector<std::string> &separators)
 {
     auto first_of = [](const std::string &input, size_t start, const std::vector<std::string> &separators) -> size_t {
@@ -452,6 +462,9 @@ static std::string expand_to_size(const std::string &s, size_t len, bool multi_b
     std::string r;
     if (s == "") {
         return std::string(' ', len);
+    }
+    if (len == 0) {
+        return s;
     }
     size_t swidth = compute_width(s, "", multi_bytes_character);
     for (size_t i = 0; i < len;) {
@@ -1649,9 +1662,9 @@ class Row {
             line +=
                 cornerformatter(Which::top_left, cells[0].get(), nullptr, nullptr, nullptr, nullptr, stringformatter);
             for (size_t i = 0; i < cells.size(); i++) {
-                auto const cell = cells[i].get();
-                auto const left = i > 0 ? cells[i - 1].get() : nullptr;
-                auto const right = i < cells.size() ? cells[i + 1].get() : nullptr;
+                auto cell = cells[i].get();
+                auto left = i > 0 ? cells[i - 1].get() : nullptr;
+                auto right = (i + 1 < cells.size()) ? cells[i + 1].get() : nullptr;
 
                 auto &borders = cell->format().borders;
                 size_t size = borders.left.padding + cell->width() + borders.right.padding;
@@ -1665,10 +1678,10 @@ class Row {
         if (cells[0]->format().borders.top.padding > 0) {
             std::string padline;
             for (size_t i = 0; i < cells.size(); i++) {
-                auto const cell = cells[i].get();
+                auto cell = cells[i].get();
                 auto &borders = cell->format().borders;
-                auto const left = i > 0 ? cells[i - 1].get() : nullptr;
-                auto const right = i < cells.size() ? cells[i + 1].get() : nullptr;
+                auto left = i > 0 ? cells[i - 1].get() : nullptr;
+                auto right = (i + 1 < cells.size()) ? cells[i + 1].get() : nullptr;
                 size_t size = borders.left.padding + cell->width() + borders.right.padding;
 
                 padline += borderformatter(Which::left, cell, left, right, nullptr, nullptr, 1, stringformatter);
@@ -1685,23 +1698,16 @@ class Row {
         // border padding words padding sepeartor padding words padding sepeartor border
         for (size_t i = 0; i < max_height; i++) {
             std::string line;
-
-            if (cells.size() > 0) {
-                auto const &bl = cells[0]->format().borders.left;
-                if (bl.visiable) {
-                    line += stringformatter(bl.content, bl.color, bl.background_color, {});
-                }
-            }
+            line += borderformatter(Which::left, cells[0].get(), nullptr, cells.size() >= 2 ? cells[1].get() : nullptr,
+                                    nullptr, nullptr, 1, stringformatter);
             for (size_t j = 0; j < cells.size(); j++) {
-                Cell &cell = *cells[j];
-                auto &pl = cell.format().borders.left;
-                auto &pr = cell.format().borders.right;
-                auto &br = cell.format().borders.right;
-                auto foreground_color = cell.color();
-                auto background_color = cell.background_color();
-                auto styles = cell.styles();
+                auto cell = cells[j].get();
+                auto left = i > 0 ? cells[i - 1].get() : nullptr;
+                auto right = (i + 1 < cells.size()) ? cells[i + 1].get() : nullptr;
+                auto foreground_color = cell->color();
+                auto background_color = cell->background_color();
                 size_t cell_offset = 0, empty_lines = max_height - dumplines[j].size();
-                auto alignment = cell.format().align();
+                auto alignment = cell->format().align();
                 if (alignment & Align::bottom) {
                     cell_offset = empty_lines;
                 } else if (alignment & Align::top) {
@@ -1709,42 +1715,42 @@ class Row {
                 } else { // DEFAULT: align center in vertical
                     cell_offset = empty_lines / 2;
                 }
-
-                line += stringformatter(std::string(pl.padding, ' '), Color::none, background_color, {});
+                line += stringformatter(std::string(cell->format().borders.left.padding, ' '), Color::none,
+                                        background_color, {});
                 if (i < cell_offset || i >= dumplines[j].size() + cell_offset) {
-                    line += stringformatter(std::string(cell.width(), ' '), Color::none, background_color, styles);
+                    line +=
+                        stringformatter(std::string(cell->width(), ' '), Color::none, background_color, cell->styles());
                 } else {
                     auto align_line_by = [&](const std::string &str, size_t width, Align align,
                                              const std::string &locale, bool multi_bytes_character) -> std::string {
                         size_t linesize = compute_width(str, locale, multi_bytes_character);
                         if (linesize >= width) {
-                            return stringformatter(str, foreground_color, background_color, styles);
+                            return stringformatter(str, foreground_color, background_color, cell->styles());
                         }
                         if (align & Align::hcenter) {
                             size_t remains = width - linesize;
                             return stringformatter(std::string(remains / 2, ' '), Color::none, background_color, {})
-                                   + stringformatter(str, foreground_color, background_color, styles)
+                                   + stringformatter(str, foreground_color, background_color, cell->styles())
                                    + stringformatter(std::string((remains + 1) / 2, ' '), Color::none, background_color,
                                                      {});
                         } else if (align & Align::right) {
                             return stringformatter(std::string(width - linesize, ' '), Color::none, background_color,
                                                    {})
-                                   + stringformatter(str, foreground_color, background_color, styles);
+                                   + stringformatter(str, foreground_color, background_color, cell->styles());
                         } else { // DEFAULT: align left in horizontal
-                            return stringformatter(str, foreground_color, background_color, styles)
+                            return stringformatter(str, foreground_color, background_color, cell->styles())
                                    + stringformatter(std::string(width - linesize, ' '), Color::none, background_color,
                                                      {});
                         }
                     };
 
-                    line += align_line_by(dumplines[j][i - cell_offset], cell.width(), alignment,
-                                          cell.format().locale(), cell.format().multi_bytes_character());
+                    line += align_line_by(dumplines[j][i - cell_offset], cell->width(), alignment,
+                                          cell->format().locale(), cell->format().multi_bytes_character());
                 }
 
-                line += stringformatter(std::string(pr.padding, ' '), Color::none, background_color, {});
-                if (br.visiable) {
-                    line += stringformatter(br.content, br.color, br.background_color, {});
-                }
+                line += stringformatter(std::string(cell->format().borders.right.padding, ' '), Color::none,
+                                        background_color, {});
+                line += borderformatter(Which::right, cell, left, right, nullptr, nullptr, 1, stringformatter);
             }
 
             lines.push_back(line);
@@ -1754,10 +1760,10 @@ class Row {
         if (cells.back()->format().borders.bottom.padding > 0) {
             std::string padline;
             for (size_t i = 0; i < cells.size(); i++) {
-                auto const cell = cells[i].get();
+                auto cell = cells[i].get();
                 auto &borders = cell->format().borders;
-                auto const left = i > 0 ? cells[i - 1].get() : nullptr;
-                auto const right = i < cells.size() ? cells[i + 1].get() : nullptr;
+                auto left = i > 0 ? cells[i - 1].get() : nullptr;
+                auto right = (i + 1 < cells.size()) ? cells[i + 1].get() : nullptr;
                 size_t size = borders.left.padding + cell->width() + borders.right.padding;
 
                 padline += borderformatter(Which::left, cell, left, right, nullptr, nullptr, 1, stringformatter);
@@ -1776,9 +1782,9 @@ class Row {
             line += cornerformatter(Which::bottom_left, cells[0].get(), nullptr, nullptr, nullptr, nullptr,
                                     stringformatter);
             for (size_t i = 0; i < cells.size(); i++) {
-                auto const cell = cells[i].get();
-                auto const left = i > 0 ? cells[i - 1].get() : nullptr;
-                auto const right = i < cells.size() ? cells[i + 1].get() : nullptr;
+                auto cell = cells[i].get();
+                auto left = i > 0 ? cells[i - 1].get() : nullptr;
+                auto right = (i + 1 < cells.size()) ? cells[i + 1].get() : nullptr;
 
                 auto &borders = cell->format().borders;
                 size_t size = borders.left.padding + cell->width() + borders.right.padding;
@@ -2367,45 +2373,152 @@ class Table : public std::enable_shared_from_this<Table> {
     {
         std::string exported;
 
-        // add header
-        for (auto const &line : rows[0]->dump(tabulate::markdown::stringformatter, tabulate::markdown::borderformatter,
-                                              tabulate::markdown::cornerformatter, false, false)) {
-            exported += line + NEWLINE;
-        }
+        auto format_cell = [](Cell &cell) {
+            std::string applied;
 
-        // add alignentment
-        {
-            std::string alignment = "|";
-            for (auto const &cell : *rows[0]) {
-                switch (cell.align()) {
-                    case Align::left:
-                        alignment += " :--";
-                        break;
-                    case Align::right:
-                        alignment += " --:";
-                        break;
-                    case Align::center:
-                        alignment += " :-:";
-                        break;
-                    default:
-                        alignment += " ---";
-                        break;
+            auto styles = cell.format().styles();
+            auto foreground_color = cell.format().color();
+            auto background_color = cell.format().background_color();
+            bool have = !foreground_color.none() || !background_color.none() || styles.size() != 0;
+
+            if (have) {
+                applied += "<span style=\"";
+
+                if (!foreground_color.none()) {
+                    // color: <color>
+                    applied += "color:" + to_string(foreground_color) + ";";
                 }
-                alignment += " |";
-            }
-            exported += alignment + NEWLINE;
-        }
 
-        for (size_t i = 1; i < rows.size(); i++) {
-            auto const &row = *rows[i];
-            for (auto const &line : row.dump(tabulate::markdown::stringformatter, tabulate::markdown::borderformatter,
-                                             tabulate::markdown::cornerformatter, false, false)) {
-                exported += line + NEWLINE;
+                if (!background_color.none()) {
+                    // color: <color>
+                    applied += "background-color:" + to_string(background_color) + ";";
+                }
+
+                for (auto const &style : styles) {
+                    switch (style) {
+                        case Style::bold:
+                            applied += "font-weight:bold;";
+                            break;
+                        case Style::italic:
+                            applied += "font-style:italic;";
+                            break;
+                        // text-decoration: none|underline|overline|line-through|blink
+                        case Style::crossed:
+                            applied += "text-decoration:line-through;";
+                            break;
+                        case Style::underline:
+                            applied += "text-decoration:underline;";
+                            break;
+                        case Style::blink:
+                            applied += "text-decoration:blink;";
+                            break;
+                        default:
+                            // unsupported, do nothing
+                            break;
+                    }
+                }
+                applied += "\">";
+            }
+
+            applied += cell.get();
+
+            if (have) {
+                applied += "</span>";
+            }
+
+            return applied;
+        };
+
+        for (size_t i = 0; i < rows.size(); i++) {
+            exported += "| ";
+            for (auto cell : *rows[i]) {
+                exported += format_cell(cell) + " | ";
+            }
+            exported += NEWLINE;
+
+            if (i == 0) {
+                // add alignentment
+                std::string alignment = "|";
+                for (auto const &cell : *rows[0]) {
+                    switch (cell.align()) {
+                        case Align::left:
+                            alignment += " :--";
+                            break;
+                        case Align::right:
+                            alignment += " --:";
+                            break;
+                        case Align::center:
+                            alignment += " :-:";
+                            break;
+                        default:
+                            alignment += " ---";
+                            break;
+                    }
+                    alignment += " |";
+                }
+                exported += alignment + NEWLINE;
             }
         }
         if (exported.size() >= NEWLINE.size()) {
             exported.erase(exported.size() - NEWLINE.size(), NEWLINE.size()); // pop last NEWLINE
         }
+
+        return exported;
+    }
+
+    std::string latex(size_t indentation = 0) const
+    {
+        std::string exported = "\\begin{table}[ht]" + NEWLINE;
+        if (!title.empty()) {
+            exported += "\\caption{" + title + "}" + NEWLINE;
+            exported += "\\centering" + NEWLINE; // used for centering table
+        }
+        exported += "\\begin{tabular}";
+
+        // add alignment header
+        {
+            exported += "{";
+            for (auto &cell : *rows[0]) {
+                if (cell.align() & Align::left) {
+                    exported += 'l';
+                } else if (cell.align() & Align::hcenter) {
+                    exported += 'c';
+                } else if (cell.align() & Align::right) {
+                    exported += 'r';
+                }
+            }
+            exported += "}" + NEWLINE;
+        }
+        exported += "\\hline\\hline" + NEWLINE; // %inserts double horizontal lines
+
+        // iterate content and put text into the table.
+        for (size_t i = 0; i < rows.size(); i++) {
+            auto &row = *rows[i];
+            // apply row content indentation
+            if (indentation != 0) {
+                exported += std::string(indentation, ' ');
+            }
+
+            for (size_t j = 0; j < row.size(); j++) {
+                auto cell = row[j];
+                auto transfer = [](Cell &cell) {
+                    std::string tmp = replace_all(cell.get(), "#", "\\#");
+                    if (!(cell.format().background_color().none())) {
+                        tmp += "\\cellcolor[HTML]{" + to_string(cell.format().background_color()) + "} ";
+                    }
+                    return tmp;
+                };
+                exported += transfer(cell);
+                exported += (j < row.size() - 1) ? " & " : " \\\\";
+            }
+            exported += NEWLINE;
+            if (i == 0) {
+                exported += "\\hline" + NEWLINE;
+            }
+        }
+        exported += "\\hline" + NEWLINE;
+        exported += "\\end{tabular}" + NEWLINE;
+        exported += "\\end{table}";
 
         return exported;
     }
