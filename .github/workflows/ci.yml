@@ -1,0 +1,44 @@
+name: ci
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.distro }}
+
+    strategy:
+      matrix:
+        distro: [ubuntu-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install requirements
+        id: requirements
+        run: |
+          case "${{ matrix.distro }}" in
+            ubuntu*|jessie|stretch|buster|bullseye)
+              sudo apt-get update -q -y
+              sudo apt-get install -q -y gcc g++ git nasm libgtest-dev openssl cmake
+              ;;
+            macos*)
+              brew install nasm googletest openssl@1.1 openssl@3
+              brew link openssl --force
+              echo ::set-output name=LDFLAGS::"-L/usr/local/opt/openssl@1.1/lib"
+              echo ::set-output name=CPPFLAGS::"-I/usr/local/opt/openssl@1.1/include"
+              ;;
+            fedora*)
+              sudo dnf -y update
+              sudo dnf -y install gcc g++ git nasm gtest openssl cmake
+              ;;
+            alpine*)
+              apk update
+              apk add gcc g++ git nasm gtest openssl cmake
+              ;;
+          esac
+
+      - name: Configure
+        run: cmake -B ${{github.workspace}}/build -DCMAKE_VERBOSE_MAKEFILE=ON -DMPN_NO_ASM=ON -DCMAKE_CXX_FLAGS=${{ steps.requirements.outputs.CPPFLAGS }} -DCMAKE_EXE_LINKER_FLAGS=${{ steps.requirements.outputs.LDFLAGS }}
+
+      - name: Build
+        run: cmake --build ${{github.workspace}}/build

@@ -1,0 +1,79 @@
+name: multiarch
+
+on: [push, pull_request]
+
+jobs:
+  build_job:
+    # The host should always be linux
+    runs-on: ubuntu-18.04
+    name: Build on ${{ matrix.distro }} ${{ matrix.arch }}
+
+    # Run steps on a matrix of 3 arch/distro combinations
+    strategy:
+      matrix:
+        include:
+          - arch: aarch64
+            distro: ubuntu18.04
+          # - arch: armv7
+          #   distro: ubuntu20.04
+          - arch: s390x
+            distro: fedora_latest
+          # - arch: ppc64le
+          #   distro: alpine_latest
+
+    steps:
+      - uses: actions/checkout@v2.1.0
+      - name: Building
+        uses: uraimo/run-on-arch-action@v2.1.1
+        id: build
+        with:
+          arch: ${{ matrix.arch }}
+          distro: ${{ matrix.distro }}
+
+          # Not required, but speeds up builds
+          githubToken: ${{ github.token }}
+
+          # Mount the github.workspace directory as /workspace in the container
+          dockerRunArgs: |
+            --volume "${{ github.workspace }}:/workspace"
+
+          # Pass some environment variables to the container
+          env: |
+            workspace: /workspace
+
+          # The shell to run commands with in the container
+          shell: /bin/bash
+
+          # Install some dependencies in the container. This speeds up builds if
+          # you are also using githubToken. Any dependencies installed here will
+          # be part of the container image that gets cached, so subsequent
+          # builds don't have to re-install them. The image layer is cached
+          # publicly in your project's package repository, so it is vital that
+          # no secrets are present in the container state or logs.
+          install: |
+            case "${{ matrix.distro }}" in
+              ubuntu*|jessie|stretch|buster|bullseye)
+                apt-get update -q -y
+                apt-get install -q -y gcc g++ nasm libgtest-dev openssl cmake
+                ;;
+              macos*)
+                brew update
+                brew install nasm googletest openssl
+                brew link openssl --force
+                export LDFLAGS="-L/usr/local/opt/openssl@1.1/lib"
+                export CPPFLAGS="-I/usr/local/opt/openssl@1.1/include"
+                ;;
+              fedora*)
+                dnf -y update
+                dnf -y install gcc g++ nasm gtest openssl cmake
+                ;;
+              alpine*)
+                apk update
+                apk add gcc g++ nasm gtest openssl cmake
+                ;;
+            esac
+
+          # Configure and Build
+          run: |
+            mkdir -p ${workspace}/build && cd ${workspace}/build
+            cmake .. && make

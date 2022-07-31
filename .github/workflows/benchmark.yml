@@ -1,0 +1,42 @@
+name: benchmark
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: [ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install requirements
+        run: |
+          sudo apt-get update -q -y
+          sudo apt-get install -q -y gcc g++ git nasm libgtest-dev openssl cmake
+
+      - name: Configure
+        run: cmake -B ${{github.workspace}}/build -DMPN_NO_ASM=ON -DBUILD_VENDOR=ON
+
+      - name: Build
+        run: cmake --build ${{github.workspace}}/build
+
+      - name: Run Benchmark
+        working-directory: ${{github.workspace}}/build
+        run: |
+          ${{github.workspace}}/build/tests/benchmark | tee ${{github.workspace}}/build/benchmark.txt
+          cat ${{github.workspace}}/docs/README.template.md > ${{github.workspace}}/README.md
+          echo -e '## Benchmark(libmpi VS openssl)\n' >> ${{github.workspace}}/README.md
+          awk '/-----BEGIN MARKDOWN TABLE-----/{ f = 1; next } /-----END MARKDOWN TABLE-----/{ f = 0 } f' benchmark.txt >> ${{github.workspace}}/README.md
+          git add ${{github.workspace}}/README.md
+
+      - name: Commit files
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git commit -m "Update performance data" -a
+
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
