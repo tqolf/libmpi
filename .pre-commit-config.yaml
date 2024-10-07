@@ -2,7 +2,7 @@ fail_fast: false
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.2.0
+    rev: v5.0.0
     hooks:
       - id: check-added-large-files
       - id: trailing-whitespace
@@ -15,7 +15,7 @@ repos:
       - id: check-symlinks
       - id: end-of-file-fixer
       - id: pretty-format-json
-  - repo: git://github.com/doublify/pre-commit-clang-format
+  - repo: https://github.com/doublify/pre-commit-clang-format
     rev: 62302476d0da01515660132d76902359bed0f782
     hooks:
       - id: clang-format
